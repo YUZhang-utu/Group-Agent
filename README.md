@@ -1,6 +1,7 @@
-# AIDD Macrocycle Agent
+# Group-Agent: AIDD Macrocycle Agent
 
-Local-first foundation for a resumable AIDD screening agent. The first milestone
+An automated, local-first, resumable AIDD workflow for collaborative drug design.
+The first milestone
 imports batch MOL2 libraries into a versioned SQLite registry while keeping all
 structures and metadata local.
 
