@@ -1,0 +1,10 @@
+{
+  "backend": "alphafold3",
+  "repository": "/opt/alphafold3",
+  "python": "/opt/conda/envs/alphafold3/bin/python",
+  "model_parameters": "/secure/models/alphafold3",
+  "databases": "/shared/databases/alphafold3",
+  "runner": "/opt/alphafold3/run_alphafold.py",
+  "license_acknowledged": false
+}
+

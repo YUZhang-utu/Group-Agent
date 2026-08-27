@@ -1,0 +1,10 @@
+{
+  "backend": "alphafold2",
+  "repository": "/opt/alphafold",
+  "python": "/opt/conda/envs/alphafold2/bin/python",
+  "model_parameters": "/secure/models/alphafold2",
+  "databases": "/shared/databases/alphafold2",
+  "runner": "/opt/alphafold/run_alphafold.py",
+  "model_preset": "monomer"
+}
+

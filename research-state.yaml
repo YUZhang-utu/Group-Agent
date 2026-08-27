@@ -1,0 +1,71 @@
+project: aidd-macrocycle-agent
+objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
+stage: inner_loop
+current_experiment: E007-deployable-structure-and-search-toolchain
+registered_libraries:
+  - library_id: LIB-AFA68EE6888C
+    name: macrocycles-v1
+    source_path: D:\\agent\\projects\\aidd_macrocycle_agent\\6aa
+    source_files: 2
+    molecule_count: 100000
+    conformer_count: 299999
+    atom_count: 34556550
+    validation:
+      invalid_records: 0
+      issues: 0
+      status: passed
+    conformer_distribution:
+      molecules_with_3_conformers: 99999
+      molecules_with_2_conformers: 1
+    known_exception:
+      molecule_id: MOL-3E22C7F32643
+      source_name: c--A-Wnme-PdFnme-dW-dLnme-c
+      present_conformers: [1, 2]
+      missing_conformers: [0]
+privacy:
+  experimental_data_visible_to_llm: false
+  compute_and_storage: local
+next_actions:
+  - choose the fixed storage root and create the first real user and Project
+  - register the real Cluster Profile and verified host key
+  - deploy and verify the cluster-side library replica and runner
+  - validate the workstation Conda environment on the desktop
+  - add canonical SMILES to the molecular registry and build similarity indices
+  - implement bound-ligand extraction from acquired mmCIF files
+  - activate that Project
+  - define its campaign name, biological target, organism, and UniProt accession
+  - define the desired binding site and functional/conformational state
+  - run the RCSB candidate search and compare structures at the human checkpoint
+completed_experiments:
+  - E001-batch-MOL2-registry-bootstrap
+  - E002-campaign-target-state-machine
+  - E003-multi-user-task-context-foundation
+  - E004-project-centric-optional-workflows-and-provenance
+  - E005-cross-platform-slurm-bridge
+  - E006-multi-structure-and-ligand-similarity
+implementation_status:
+  campaign_schema: completed
+  rcsb_adapter: completed
+  human_structure_selection_checkpoint: completed
+  tests: 27_passed
+  production_registry_migration: completed
+  multi_user_task_context: completed
+  task_workspace_isolation: completed
+  active_task_enforcement: completed
+  project_centric_public_workflow: completed
+  optional_method_runs: completed
+  artifact_lineage_and_manifest_import: completed
+  path_containment: completed
+  cluster_profiles: completed
+  openssh_and_putty_transports: completed
+  slurm_bundle_export: completed
+  submission_receipt_import: completed
+  multi_structure_comparison_sets: completed
+  pocket_alignment_core: completed
+  pymol_review_generation: completed
+  ligand_similarity_adapters: implemented_environment_pending
+  reproducible_conda_environments: completed_desktop_validation_pending
+  rcsb_mmcif_acquisition: completed
+  alphafold3_input_adapter: completed_runtime_validation_pending
+  persistent_morgan_index: completed_rdkit_validation_pending
+  persistent_usrcat_index: completed
