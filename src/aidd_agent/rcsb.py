@@ -49,15 +49,21 @@ def search_structures(uniprot_id: str, *, max_resolution: float | None = 3.0,
     detail = post_json(GRAPHQL_URL, {"query": graphql, "variables": {"ids": ids}})
     candidates = []
     for entry in detail.get("data", {}).get("entries", []) or []:
+        if not entry or not entry.get("rcsb_id"):
+            continue
         resolutions = (entry.get("rcsb_entry_info") or {}).get("resolution_combined") or []
+        experiments = entry.get("exptl") or []
+        nonpolymer_entities = entry.get("nonpolymer_entities") or []
         candidates.append({
             "pdb_id": entry["rcsb_id"].upper(),
             "title": (entry.get("struct") or {}).get("title", ""),
-            "experimental_method": ((entry.get("exptl") or [{}])[0]).get("method"),
+            "experimental_method": next(
+                (item.get("method") for item in experiments if item and item.get("method")), None
+            ),
             "resolution_angstrom": min(resolutions) if resolutions else None,
             "deposition_date": (entry.get("rcsb_accession_info") or {}).get("deposit_date"),
             "ligand_ids": sorted({(x.get("pdbx_entity_nonpoly") or {}).get("comp_id")
-                                  for x in entry.get("nonpolymer_entities", [])
+                                  for x in nonpolymer_entities if x
                                   if (x.get("pdbx_entity_nonpoly") or {}).get("comp_id")}),
         })
     candidates.sort(key=lambda x: (x["resolution_angstrom"] is None,

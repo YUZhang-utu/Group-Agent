@@ -95,3 +95,20 @@ def test_mocked_rcsb_search_preserves_selection_metadata() -> None:
                            "experimental_method": "X-RAY DIFFRACTION",
                            "resolution_angstrom": 2.1, "deposition_date": "2024-02-03",
                            "ligand_ids": ["ATP"]}]
+
+
+def test_rcsb_search_accepts_null_optional_lists() -> None:
+    def post(url: str, payload: dict) -> dict:
+        if "search.rcsb" in url:
+            return {"result_set": [{"identifier": "3abc"}]}
+        return {"data": {"entries": [None, {
+            "rcsb_id": "3ABC", "struct": None, "exptl": None,
+            "rcsb_entry_info": {"resolution_combined": [2.4]},
+            "rcsb_accession_info": None, "nonpolymer_entities": None,
+        }]}}
+
+    _, candidates = search_structures("P00001", post_json=post)
+    assert candidates == [{
+        "pdb_id": "3ABC", "title": "", "experimental_method": None,
+        "resolution_angstrom": 2.4, "deposition_date": None, "ligand_ids": [],
+    }]
