@@ -68,3 +68,9 @@
 - Real RCSB GraphQL responses may encode optional lists such as
   `nonpolymer_entities` as JSON null. The adapter now normalizes these values to
   empty lists instead of aborting the complete candidate search.
+- The university workstation can download a selected Campaign candidate and
+  open its mmCIF structure in PyMOL from the terminal. This visual review does
+  not change the Campaign's formal receptor selection state.
+- The current validated interface is still deterministic CLI orchestration.
+  Codex has not yet been connected as the natural-language controller that
+  resolves active context and invokes these tools from prompts.

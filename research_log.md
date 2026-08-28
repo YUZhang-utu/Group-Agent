@@ -106,3 +106,10 @@
   command to download and visually inspect individual Campaign candidates. Then
   define the ATP-pocket residues, compare multiple structures, and record a
   human-reviewed selection rationale.
+- Confirmed on the university environment that a selected PDB candidate can be
+  downloaded and opened successfully in PyMOL from the terminal. This completes
+  the single-structure GUI smoke test; no final PDB selection was recorded.
+- Clarified the next architecture boundary: the existing CLI is the validated
+  execution and provenance layer, while Codex natural-language orchestration is
+  not yet integrated. The next implementation should map prompts to active
+  User/Project/Task/Campaign context and audited tool calls.

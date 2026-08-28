@@ -414,7 +414,10 @@ before a receptor is selected.
 - The WEE1 target was bound successfully.
 - The RCSB search registered 25 candidates after one null-metadata parser fix.
 - The full automated suite passes 29 tests.
-- Visual PyMOL inspection and final structure selection remain pending.
+- Terminal-driven single-structure PyMOL inspection was validated successfully
+  in the university environment.
+- Multi-structure comparison, Codex natural-language orchestration, and final
+  structure selection remain pending.
 
 ### Classification
 

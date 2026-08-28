@@ -39,8 +39,9 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - add a Campaign-aware terminal command to download and open one candidate in PyMOL
-  - visually inspect selected WEE1 structures without freezing the Campaign selection
+  - connect Codex as the natural-language orchestration layer over the validated CLI
+  - add Campaign-aware context resolution so prompts do not require repeated IDs
+  - generate a multi-structure PyMOL review with aligned WEE1 candidates
   - define a WEE1 ATP-pocket residue set and compare multiple candidate structures
   - record the final receptor-selection rationale before receptor preparation
   - register the real Cluster Profile and verified host key
@@ -81,7 +82,8 @@ implementation_status:
   reproducible_conda_environments: completed_desktop_validation_pending
   rcsb_mmcif_acquisition: completed
   real_wee1_rcsb_search: completed_25_candidates
-  terminal_pymol_single_structure_review: next
+  terminal_pymol_single_structure_review: validated
+  codex_natural_language_orchestration: pending
   alphafold3_input_adapter: completed_runtime_validation_pending
   persistent_morgan_index: completed_rdkit_validation_pending
   persistent_usrcat_index: completed
