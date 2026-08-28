@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 import numpy as np
 import pytest
@@ -54,6 +55,9 @@ def test_pymol_review_script_is_project_scoped(tmp_path: Path) -> None:
         )
 
 
-def test_similarity_dependency_error_is_actionable() -> None:
+def test_similarity_dependency_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Simulate a machine without RDKit even when the chemistry test environment
+    # has it installed. This keeps the optional-dependency test deterministic.
+    monkeypatch.setitem(sys.modules, "rdkit", None)
     with pytest.raises(ChemistryDependencyError, match="RDKit is required"):
         search_morgan_2d("CCO", [("MOL-1", "CCO")])
