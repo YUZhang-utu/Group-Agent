@@ -13,5 +13,3 @@ dependencies:
   - pymol-open-source>=3
   - pytest>=8
   - pip
-  - pip:
-      - -e .

@@ -15,6 +15,7 @@ cd software/Group-Agent
 module load miniconda  # use the site's actual Conda/Miniforge module name
 conda env create -f environments/aidd-workstation.yml
 conda activate aidd-workstation
+python -m pip install --no-deps -e .
 aidd-agent doctor
 pytest -q
 ```
@@ -22,6 +23,8 @@ pytest -q
 If the site has no Conda module, install Miniforge under the user's home or the
 group software directory, subject to site policy. A Windows virtual environment
 must not be copied to Linux; the YAML recreates equivalent packages for Linux.
+The explicit editable install is required: Conda environment files are not
+guaranteed to evaluate relative pip paths from the repository root.
 
 ## Initialize a test deployment
 

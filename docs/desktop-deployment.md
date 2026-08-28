@@ -13,6 +13,7 @@ From an Anaconda/Miniforge prompt in the repository root:
 ```powershell
 conda env create -f environments/aidd-workstation.yml
 conda activate aidd-workstation
+python -m pip install --no-deps -e .
 aidd-agent doctor
 pytest -q
 ```
