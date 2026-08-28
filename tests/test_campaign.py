@@ -8,7 +8,7 @@ from aidd_agent.campaign import (
 )
 from aidd_agent.rcsb import search_structures
 from aidd_agent.registry import connect, initialize
-from aidd_agent.context import create_user
+from aidd_agent.context import activate_task, create_task, create_user
 from aidd_agent.project_context import activate_project, create_scientific_project
 
 
@@ -25,7 +25,10 @@ def setup_campaign(path: Path, workspace: Path) -> tuple[str, str]:
         project_id = create_scientific_project(
             connection, user_id, "Kinase Discovery", "Find selective binders", workspace)
         activate_project(connection, user_id, project_id)
-        campaign_id = create_campaign(connection, user_id, project_id,
+        task_id = create_task(connection, user_id, project_id, "Structure Selection",
+                              "Select a target structure")
+        activate_task(connection, user_id, task_id)
+        campaign_id = create_campaign(connection, user_id, project_id, task_id,
                                       "macrocycle-campaign", "Find selective binders")
         set_target(connection, user_id, campaign_id, name="Example kinase", organism="Homo sapiens",
                    uniprot_id="P00001", gene_name="EXK")
@@ -60,7 +63,9 @@ def test_invalid_transitions_and_rationale_are_rejected(tmp_path: Path) -> None:
         project_id = create_scientific_project(
             connection, user_id, "Project", "Objective", tmp_path / "storage")
         activate_project(connection, user_id, project_id)
-        campaign_id = create_campaign(connection, user_id, project_id, "c", "o")
+        task_id = create_task(connection, user_id, project_id, "Task", "Objective")
+        activate_task(connection, user_id, task_id)
+        campaign_id = create_campaign(connection, user_id, project_id, task_id, "c", "o")
         with pytest.raises(CampaignStateError):
             register_structure_candidates(connection, user_id, campaign_id, [candidate()], {})
         set_target(connection, user_id, campaign_id, name="T", organism="human")

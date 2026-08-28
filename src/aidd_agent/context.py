@@ -87,16 +87,23 @@ def _write_task_workspace(path: Path, task: dict[str, str]) -> None:
 
 
 def create_task(connection: sqlite3.Connection, user_id: str, project_id: str,
-                name: str, objective: str, workspace_root: Path) -> str:
-    project = connection.execute(
-        "SELECT * FROM project WHERE id=? AND owner_user_id=?", (project_id, user_id)
-    ).fetchone()
-    if not project:
-        raise AccessDeniedError(f"User {user_id} does not own project {project_id}")
-    user = _require_user(connection, user_id)
+                name: str, objective: str, workspace_root: Path | None = None) -> str:
+    from .project_context import require_active_project, require_project_owner
+
+    project = require_project_owner(connection, user_id, project_id)
+    require_active_project(connection, user_id, project_id)
+    if not name.strip() or not objective.strip():
+        raise ValueError("Task name and objective are required")
     task_id = stable_id("TSK")
     task_slug = slugify(name)
-    workspace = (workspace_root / user["username"] / project["slug"] / task_slug).resolve()
+    if workspace_root is None:
+        workspace = (
+            Path(project["workspace_path"]) / "tasks" /
+            f"{task_id.lower()}-{task_slug}"
+        ).resolve()
+    else:
+        user = _require_user(connection, user_id)
+        workspace = (workspace_root / user["username"] / project["slug"] / task_slug).resolve()
     _write_task_workspace(workspace, {"task_id": task_id, "name": name.strip(),
                                      "project_id": project_id, "owner_id": user_id,
                                      "objective": objective.strip()})
@@ -130,7 +137,10 @@ def list_tasks(connection: sqlite3.Connection, user_id: str) -> list[dict[str, A
 
 
 def activate_task(connection: sqlite3.Connection, user_id: str, task_id: str) -> dict[str, Any]:
+    from .project_context import require_active_project
+
     task = require_task_access(connection, user_id, task_id)
+    require_active_project(connection, user_id, task["project_id"])
     connection.execute(
         """INSERT INTO active_task_context(user_id, task_id, activated_at) VALUES (?, ?, ?)
            ON CONFLICT(user_id) DO UPDATE SET task_id=excluded.task_id,

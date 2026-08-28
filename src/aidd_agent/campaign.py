@@ -6,6 +6,7 @@ from typing import Any, Iterable
 
 from .registry import stable_id, utc_now
 from .project_context import require_active_project, require_project_owner
+from .context import require_active_task, require_task_access
 
 
 class CampaignStateError(ValueError):
@@ -24,8 +25,12 @@ def _campaign_for_user(connection: sqlite3.Connection, campaign_id: str,
     row = _campaign(connection, campaign_id)
     if not row["project_id"]:
         raise CampaignStateError("Legacy Campaign has no Project context and must be migrated")
+    if not row["task_id"]:
+        raise CampaignStateError("Legacy Campaign has no Task context and must be migrated")
     require_project_owner(connection, user_id, row["project_id"])
     require_active_project(connection, user_id, row["project_id"])
+    require_task_access(connection, user_id, row["task_id"], write=write)
+    require_active_task(connection, user_id, row["task_id"])
     return row
 
 
@@ -41,18 +46,22 @@ def _event(connection: sqlite3.Connection, campaign_id: str, event_type: str,
 
 
 def create_campaign(connection: sqlite3.Connection, user_id: str, project_id: str,
-                    name: str, objective: str) -> str:
+                    task_id: str, name: str, objective: str) -> str:
     require_project_owner(connection, user_id, project_id)
     require_active_project(connection, user_id, project_id)
+    task = require_task_access(connection, user_id, task_id, write=True)
+    require_active_task(connection, user_id, task_id)
+    if task["project_id"] != project_id:
+        raise ValueError(f"Task {task_id} does not belong to Project {project_id}")
     if not name.strip() or not objective.strip():
         raise ValueError("Campaign name and objective are required")
     campaign_id = stable_id("CAM")
     now = utc_now()
     connection.execute(
-        """INSERT INTO campaign(id, project_id, name, objective, state,
+        """INSERT INTO campaign(id, task_id, project_id, name, objective, state,
            selected_structure_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'draft', NULL, ?, ?)""",
-        (campaign_id, project_id, name.strip(), objective.strip(), now, now),
+           VALUES (?, ?, ?, ?, ?, 'draft', NULL, ?, ?)""",
+        (campaign_id, task_id, project_id, name.strip(), objective.strip(), now, now),
     )
     _event(connection, campaign_id, "campaign_created", None, "draft", objective.strip(), {})
     return campaign_id
@@ -156,7 +165,8 @@ def campaign_status(connection: sqlite3.Connection, user_id: str,
         ).fetchone()
         selected = row["pdb_id"] if row else None
     return {
-        "campaign_id": campaign_id, "project_id": campaign["project_id"], "name": campaign["name"],
+        "campaign_id": campaign_id, "project_id": campaign["project_id"],
+        "task_id": campaign["task_id"], "name": campaign["name"],
         "objective": campaign["objective"], "state": campaign["state"],
         "target": dict(target) if target else None, "selected_pdb_id": selected,
         "candidates": [dict(row) | {"ligand_ids": json.loads(row["ligand_ids_json"])}

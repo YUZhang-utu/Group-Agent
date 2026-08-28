@@ -42,7 +42,9 @@ python -m aidd_agent.cli summary --db data\aidd.sqlite3 --library macrocycles-v1
 python -m aidd_agent.cli create-user --db D:\AIDD\registry\aidd.sqlite3 --username alice --display-name "Alice"
 python -m aidd_agent.cli create-project --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --name "WEE1 Macrocycle Screening" --objective "Discover macrocycle binders" --storage-root D:\AIDD
 python -m aidd_agent.cli activate-project --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --project PRJ-...
-python -m aidd_agent.cli create-campaign --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --project PRJ-... --name campaign-001 --objective "Screen the ATP site"
+python -m aidd_agent.cli create-task --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --project PRJ-... --name "Structure Selection" --objective "Select target structures"
+python -m aidd_agent.cli activate-task --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --task TSK-...
+python -m aidd_agent.cli create-campaign --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --project PRJ-... --task TSK-... --name campaign-001 --objective "Screen the ATP site"
 python -m aidd_agent.cli set-target --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --campaign CAM-... --name "Target name" --organism "Homo sapiens" --uniprot P12345
 python -m aidd_agent.cli search-pdb --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --campaign CAM-... --uniprot P12345 --max-resolution 3.0
 python -m aidd_agent.cli select-pdb --db D:\AIDD\registry\aidd.sqlite3 --user USR-... --campaign CAM-... --pdb 1ABC --rationale "Relevant state and ligand; complete pocket"

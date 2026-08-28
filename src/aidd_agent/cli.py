@@ -16,7 +16,9 @@ from .rcsb import search_structures
 from .acquisition import acquire_rcsb_mmcif
 from .doctor import environment_report
 from .prediction import load_model_profile, prediction_command, write_alphafold3_input
-from .context import create_user
+from .context import (
+    activate_task, active_task, create_task, create_user, deactivate_task, list_tasks,
+)
 from .project_context import (
     activate_project, active_project, create_scientific_project,
     deactivate_project, initialize_storage_root, list_owned_projects, project_summary,
@@ -56,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--db", type=Path, required=True)
     create.add_argument("--user", required=True)
     create.add_argument("--project", required=True)
+    create.add_argument("--task", required=True)
     create.add_argument("--name", required=True)
     create.add_argument("--objective", required=True)
 
@@ -121,6 +124,30 @@ def build_parser() -> argparse.ArgumentParser:
     deactivate_project_parser = subparsers.add_parser("deactivate-project", help="Clear a user's active Project")
     deactivate_project_parser.add_argument("--db", type=Path, required=True)
     deactivate_project_parser.add_argument("--user", required=True)
+
+    create_task_parser = subparsers.add_parser("create-task", help="Create a Project-scoped task")
+    create_task_parser.add_argument("--db", type=Path, required=True)
+    create_task_parser.add_argument("--user", required=True)
+    create_task_parser.add_argument("--project", required=True)
+    create_task_parser.add_argument("--name", required=True)
+    create_task_parser.add_argument("--objective", required=True)
+
+    list_tasks_parser = subparsers.add_parser("list-tasks", help="List tasks accessible to a user")
+    list_tasks_parser.add_argument("--db", type=Path, required=True)
+    list_tasks_parser.add_argument("--user", required=True)
+
+    activate_task_parser = subparsers.add_parser("activate-task", help="Set a user's active task")
+    activate_task_parser.add_argument("--db", type=Path, required=True)
+    activate_task_parser.add_argument("--user", required=True)
+    activate_task_parser.add_argument("--task", required=True)
+
+    active_task_parser = subparsers.add_parser("active-task", help="Show a user's active task")
+    active_task_parser.add_argument("--db", type=Path, required=True)
+    active_task_parser.add_argument("--user", required=True)
+
+    deactivate_task_parser = subparsers.add_parser("deactivate-task", help="Clear a user's active task")
+    deactivate_task_parser.add_argument("--db", type=Path, required=True)
+    deactivate_task_parser.add_argument("--user", required=True)
 
     project_status = subparsers.add_parser("project-status", help="Show Project methods and Runs")
     project_status.add_argument("--db", type=Path, required=True)
@@ -247,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "create-campaign":
         initialize(args.db)
         with connect(args.db) as connection:
-            campaign_id = create_campaign(connection, args.user, args.project,
+            campaign_id = create_campaign(connection, args.user, args.project, args.task,
                                           args.name, args.objective)
         print(json.dumps({"campaign_id": campaign_id, "state": "draft"}, indent=2))
         return 0
@@ -316,6 +343,34 @@ def main(argv: list[str] | None = None) -> int:
         with connect(args.db) as connection:
             deactivate_project(connection, args.user)
         print(json.dumps({"user_id": args.user, "active_project": None}, indent=2))
+        return 0
+    if args.command == "create-task":
+        initialize(args.db)
+        with connect(args.db) as connection:
+            task_id = create_task(
+                connection, args.user, args.project, args.name, args.objective,
+            )
+        print(json.dumps({"task_id": task_id, "project_id": args.project}, indent=2))
+        return 0
+    if args.command == "list-tasks":
+        with connect(args.db) as connection:
+            result = list_tasks(connection, args.user)
+        print(json.dumps({"tasks": result}, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "activate-task":
+        with connect(args.db) as connection:
+            result = activate_task(connection, args.user, args.task)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "active-task":
+        with connect(args.db) as connection:
+            result = active_task(connection, args.user)
+        print(json.dumps({"active_task": result}, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "deactivate-task":
+        with connect(args.db) as connection:
+            deactivate_task(connection, args.user)
+        print(json.dumps({"user_id": args.user, "active_task": None}, indent=2))
         return 0
     if args.command == "project-status":
         with connect(args.db) as connection:

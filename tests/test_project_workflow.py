@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from aidd_agent.campaign import create_campaign
-from aidd_agent.context import AccessDeniedError, create_user
+from aidd_agent.context import AccessDeniedError, activate_task, create_task, create_user
 from aidd_agent.project_context import (
     activate_project, create_scientific_project, list_owned_projects,
     project_summary,
@@ -34,7 +34,11 @@ def test_project_is_the_active_isolation_boundary(tmp_path: Path) -> None:
         with pytest.raises(AccessDeniedError):
             activate_project(connection, alice, kras)
         activate_project(connection, alice, wee1)
-        campaign_id = create_campaign(connection, alice, wee1, "ATP Site", "Screen the ATP site")
+        task_id = create_task(connection, alice, wee1, "Structure Selection",
+                              "Select structures for the ATP site")
+        activate_task(connection, alice, task_id)
+        campaign_id = create_campaign(
+            connection, alice, wee1, task_id, "ATP Site", "Screen the ATP site")
         assert campaign_id.startswith("CAM-")
         with pytest.raises(AccessDeniedError):
             project_summary(connection, bob, wee1)

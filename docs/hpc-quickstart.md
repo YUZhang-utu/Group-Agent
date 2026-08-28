@@ -49,13 +49,23 @@ aidd-agent create-project --db "$AIDD_ROOT/registry/aidd.sqlite3" \
 
 aidd-agent activate-project --db "$AIDD_ROOT/registry/aidd.sqlite3" \
   --user USR-ID --project PRJ-ID
+
+aidd-agent create-task --db "$AIDD_ROOT/registry/aidd.sqlite3" \
+  --user USR-ID --project PRJ-ID --name "Target Structure Selection" \
+  --objective "Select and compare experimental structures for docking"
+
+aidd-agent activate-task --db "$AIDD_ROOT/registry/aidd.sqlite3" \
+  --user USR-ID --task TSK-ID
+
+aidd-agent active-task --db "$AIDD_ROOT/registry/aidd.sqlite3" \
+  --user USR-ID
 ```
 
 ## Exercise the target-structure workflow
 
 ```bash
 aidd-agent create-campaign --db "$AIDD_ROOT/registry/aidd.sqlite3" \
-  --user USR-ID --project PRJ-ID --name structure-pilot \
+  --user USR-ID --project PRJ-ID --task TSK-ID --name structure-pilot \
   --objective "Review experimental target structures"
 
 aidd-agent set-target --db "$AIDD_ROOT/registry/aidd.sqlite3" \
