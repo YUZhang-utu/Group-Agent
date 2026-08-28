@@ -8,5 +8,4 @@ dependencies:
   - pip
   - pytest>=8
   - pip:
-      - -e ..
-
+      - -e .

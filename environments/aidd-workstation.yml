@@ -14,5 +14,4 @@ dependencies:
   - pytest>=8
   - pip
   - pip:
-      - -e ..
-
+      - -e .
