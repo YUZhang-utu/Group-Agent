@@ -79,3 +79,30 @@
 - Audited source-control scope: local libraries, SQLite registries, structures,
   indices, model weights, prediction outputs, secrets, and workspaces are
   ignored. The uploadable code/documentation set is approximately 181 KB.
+
+## 2026-08-28
+
+- Recreated the `aidd-workstation` environment on university Linux storage and
+  installed the repository as an editable Python package. Fixed the deployment
+  instructions so package installation is explicit after Conda creation.
+- Made the optional-RDKit dependency test deterministic across core and
+  workstation environments. The workstation suite reached 27 passing tests.
+- Restored the approved mandatory Task boundary in the public CLI. Added
+  `create-task`, `list-tasks`, `activate-task`, `active-task`, and
+  `deactivate-task`; new Campaigns now require matching active Project and Task
+  contexts. An end-to-end CLI regression test raised the suite to 28 tests.
+- Created the first real university deployment context: user
+  `USR-667167B3141D`, Project `PRJ-600CDDACB90A`, Task
+  `TSK-A0C50CA9CF19`, and Campaign `CAM-C0B597CE7ADE`.
+- Bound the Campaign to human Wee1-like protein kinase (`WEE1`, UniProt
+  `P30291`) and executed the first real RCSB search for X-ray structures at no
+  worse than 3.0 angstrom resolution.
+- The first search exposed a real RCSB GraphQL nullability case for structures
+  without nonpolymer entities. Normalized null optional lists, added a
+  regression test, and confirmed 29 passing tests.
+- The repeated WEE1 search completed and registered 25 PDB candidates. No PDB
+  has yet been frozen as the selected receptor.
+- Current continuation point: implement or use a terminal-driven PyMOL review
+  command to download and visually inspect individual Campaign candidates. Then
+  define the ATP-pocket residues, compare multiple structures, and record a
+  human-reviewed selection rationale.

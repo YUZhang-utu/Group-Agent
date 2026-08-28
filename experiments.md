@@ -387,3 +387,36 @@ credentials to source control.
 ### Classification
 
 Confirmatory deployment and integration implementation.
+
+## E008 — WEE1 real deployment validation
+
+Status: in progress — confirmatory integration validation
+
+### Hypothesis
+
+The task-scoped agent deployed on university Linux storage can retrieve real
+WEE1 structures, preserve Campaign provenance, and support human visual review
+before a receptor is selected.
+
+### Protocol
+
+1. Create and activate one real User, Project, Task, and Campaign.
+2. Bind reviewed human WEE1 metadata using UniProt accession P30291.
+3. Search RCSB for X-ray candidates with resolution no worse than 3.0 angstrom.
+4. Download selected candidates into the Project and open them from the
+   terminal in PyMOL without changing Campaign selection state.
+5. Define ATP-pocket residues, compare candidate pocket geometry and bound
+   ligands, and record the final human selection rationale.
+
+### Current results
+
+- The real context was created and activated successfully.
+- The WEE1 target was bound successfully.
+- The RCSB search registered 25 candidates after one null-metadata parser fix.
+- The full automated suite passes 29 tests.
+- Visual PyMOL inspection and final structure selection remain pending.
+
+### Classification
+
+Confirmatory deployment validation. Structure choice remains a human-reviewed
+scientific decision.

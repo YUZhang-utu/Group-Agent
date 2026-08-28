@@ -1,7 +1,20 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
-stage: inner_loop
-current_experiment: E007-deployable-structure-and-search-toolchain
+stage: target_structure_review
+current_experiment: E008-wee1-real-deployment-validation
+active_deployment:
+  storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
+  user_id: USR-667167B3141D
+  project_id: PRJ-600CDDACB90A
+  task_id: TSK-A0C50CA9CF19
+  campaign_id: CAM-C0B597CE7ADE
+  target:
+    name: Wee1-like protein kinase
+    gene: WEE1
+    organism: Homo sapiens
+    uniprot_accession: P30291
+  campaign_state: structures_review
+  pdb_candidate_count: 25
 registered_libraries:
   - library_id: LIB-AFA68EE6888C
     name: macrocycles-v1
@@ -26,16 +39,16 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - choose the fixed storage root and create the first real user and Project
+  - add a Campaign-aware terminal command to download and open one candidate in PyMOL
+  - visually inspect selected WEE1 structures without freezing the Campaign selection
+  - define a WEE1 ATP-pocket residue set and compare multiple candidate structures
+  - record the final receptor-selection rationale before receptor preparation
   - register the real Cluster Profile and verified host key
   - deploy and verify the cluster-side library replica and runner
   - validate the workstation Conda environment on the desktop
   - add canonical SMILES to the molecular registry and build similarity indices
   - implement bound-ligand extraction from acquired mmCIF files
-  - activate that Project
-  - define its campaign name, biological target, organism, and UniProt accession
-  - define the desired binding site and functional/conformational state
-  - run the RCSB candidate search and compare structures at the human checkpoint
+  - define the desired binding-site and functional/conformational state in detail
 completed_experiments:
   - E001-batch-MOL2-registry-bootstrap
   - E002-campaign-target-state-machine
@@ -47,11 +60,12 @@ implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
   human_structure_selection_checkpoint: completed
-  tests: 27_passed
+  tests: 29_passed
   production_registry_migration: completed
   multi_user_task_context: completed
   task_workspace_isolation: completed
   active_task_enforcement: completed
+  task_scoped_campaign_cli: completed
   project_centric_public_workflow: completed
   optional_method_runs: completed
   artifact_lineage_and_manifest_import: completed
@@ -66,6 +80,8 @@ implementation_status:
   ligand_similarity_adapters: implemented_environment_pending
   reproducible_conda_environments: completed_desktop_validation_pending
   rcsb_mmcif_acquisition: completed
+  real_wee1_rcsb_search: completed_25_candidates
+  terminal_pymol_single_structure_review: next
   alphafold3_input_adapter: completed_runtime_validation_pending
   persistent_morgan_index: completed_rdkit_validation_pending
   persistent_usrcat_index: completed

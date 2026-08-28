@@ -33,8 +33,9 @@
   parameters, outputs, approvals, and reports require explicit task ownership.
 - An active Project is a hard precondition for Campaign and PDB operations;
   identifying only a Campaign ID is not sufficient user context.
-- The user-approved operational boundary is now the active Project. Task is a
-  legacy compatibility entity and is no longer part of the public workflow.
+- The operational context is `user -> active Project -> active Task ->
+  Campaign`. New Campaigns must store both Project and Task identifiers, and
+  Campaign/PDB operations reject mismatched active context.
 - Optional methods should be inferred from actual Runs, not represented by a
   rigid pipeline or empty placeholder rows. Scientifically meaningful skips are
   decisions, not Runs.
@@ -60,3 +61,10 @@
 - Source-control and scientific-storage boundaries are now enforceable: Git
   carries small reproducible code/configuration artifacts, while the desktop or
   cluster retains structures, libraries, indices, predictions, and credentials.
+- The first real university deployment uses WEE1 (`P30291`) and has registered
+  25 RCSB X-ray candidates at a maximum resolution of 3.0 angstrom. Visual
+  inspection must remain distinct from the irreversible Campaign selection
+  checkpoint.
+- Real RCSB GraphQL responses may encode optional lists such as
+  `nonpolymer_entities` as JSON null. The adapter now normalizes these values to
+  empty lists instead of aborting the complete candidate search.
