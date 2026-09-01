@@ -773,7 +773,7 @@ keeping final exclusion under deterministic validation and human control.
 
 ## E016 — Campaign ligand registry, comparison, and query lock
 
-Status: active — confirmatory integration
+Status: implemented — workstation chemistry validation pending
 
 ### Hypothesis
 
@@ -805,9 +805,21 @@ selection for downstream similarity search.
 - Query selection is user-authorized, rationale-required, and immutable.
 - Existing receptor and AI workflows remain green.
 
+### Results
+
+- Added provenance-rich Campaign ligand instances with PDB/CCD, chain, residue,
+  altloc, standardized SMILES, optional source checksum, and optional USRCAT.
+- Registration is constrained by each PDB candidate's retained ligand list, so
+  excluded crystallization components cannot re-enter through this interface.
+- Added pairwise Morgan and available-USRCAT comparison, an immutable query
+  ligand snapshot lock, and a provider-neutral LLM query recommendation request.
+- LLM assessments must cover every ligand and cannot create the lock.
+- Offline core suite: 49 tests passed; real RDKit comparison remains a
+  workstation chemistry-environment validation.
+
 ## E017 — Hierarchical 2D/3D macrocycle-library search
 
-Status: planned — confirmatory integration
+Status: implemented core — production index validation pending
 
 ### Hypothesis
 
@@ -834,3 +846,13 @@ without an all-against-all exact 3D alignment.
 - Search rejects cross-library indices and unlocked/unowned query ligands.
 - No experimental measurements enter LLM evidence.
 - Offline tests cover query locking, filtering, ranking, and provenance.
+
+### Results
+
+- Added deterministic Morgan-pool/USRCAT reranking with best-conformer retention
+  and explicit 2D-only fallback.
+- Added immutable Campaign search records containing query snapshot, library,
+  index paths and hashes, parameters, stages completed, and ranked results.
+- The production library still needs chemistry-side standardized SMILES and
+  conformer descriptors to build its real indices; existing MOL2 registration
+  alone does not fabricate those representations.

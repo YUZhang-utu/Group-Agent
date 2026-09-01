@@ -171,3 +171,9 @@
   response validation now require every candidate, supplied evidence citations,
   and human control. Recommendations do not mutate Campaign state. Full offline
   suite: 44 tests passed.
+- Implemented E016 and the E017 orchestration core. Campaign co-crystal ligands
+  are now filtered, provenance-rich instances; query selection is immutable and
+  human-controlled; LLM recommendations remain advisory. Hierarchical searches
+  retain Morgan, best-conformer USRCAT, 2D fallback, index hashes, and query
+  snapshots. Full offline suite: 49 tests passed. Production RDKit/index
+  validation remains on the university workstation.

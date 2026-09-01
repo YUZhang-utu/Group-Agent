@@ -30,6 +30,17 @@ class SimilarityHit:
     score: float
 
 
+@dataclass(frozen=True)
+class HierarchicalSimilarityHit:
+    molecule_id: str
+    conformer_id: str | None
+    rank: int
+    morgan_tanimoto: float
+    usrcat_similarity: float | None
+    combined_score: float
+    stages_completed: tuple[str, ...]
+
+
 def search_morgan_2d(query_smiles: str, records: Iterable[tuple[str, str]],
                      radius: int = 2, n_bits: int = 2048,
                      limit: int = 100) -> list[SimilarityHit]:
@@ -117,3 +128,51 @@ def query_usrcat_index(query_descriptor: Sequence[float], index_path: Path,
         distances = np.linalg.norm(descriptors - query, axis=1)
     order = np.argsort(distances, kind="stable")[:limit]
     return [SimilarityHit(str(ids[i]), float(1.0 / (1.0 + distances[i]))) for i in order]
+
+
+def hierarchical_similarity_search(
+    query_smiles: str,
+    query_descriptor: Sequence[float] | None,
+    morgan_index_path: Path,
+    usrcat_index_path: Path | None = None,
+    *,
+    conformer_to_molecule: dict[str, str] | None = None,
+    two_d_pool: int = 1000,
+    limit: int = 100,
+    two_d_weight: float = 0.4,
+    three_d_weight: float = 0.6,
+) -> list[HierarchicalSimilarityHit]:
+    if two_d_pool < 1 or limit < 1 or limit > two_d_pool:
+        raise ValueError("Similarity limits must satisfy 1 <= limit <= two_d_pool")
+    if two_d_weight < 0 or three_d_weight < 0 or two_d_weight + three_d_weight <= 0:
+        raise ValueError("Similarity weights must be non-negative with a positive sum")
+    two_d = query_morgan_index(query_smiles, morgan_index_path, limit=two_d_pool)
+    two_d_by_id = {hit.molecule_id: hit.score for hit in two_d}
+    best_shape: dict[str, tuple[str, float]] = {}
+    if query_descriptor is not None and usrcat_index_path is not None:
+        shape_hits = query_usrcat_index(
+            query_descriptor, usrcat_index_path, limit=2_147_483_647)
+        mapping = conformer_to_molecule or {}
+        for hit in shape_hits:
+            molecule_id = mapping.get(hit.molecule_id, hit.molecule_id)
+            if molecule_id not in two_d_by_id:
+                continue
+            previous = best_shape.get(molecule_id)
+            if previous is None or hit.score > previous[1] or (
+                    hit.score == previous[1] and hit.molecule_id < previous[0]):
+                best_shape[molecule_id] = (hit.molecule_id, hit.score)
+    weight_sum = two_d_weight + three_d_weight
+    rows = []
+    for molecule_id, score_2d in two_d_by_id.items():
+        shape = best_shape.get(molecule_id)
+        if shape:
+            combined = (two_d_weight * score_2d + three_d_weight * shape[1]) / weight_sum
+            rows.append((molecule_id, shape[0], score_2d, shape[1], combined,
+                         ("morgan2d", "usrcat3d")))
+        else:
+            rows.append((molecule_id, None, score_2d, None, score_2d, ("morgan2d",)))
+    rows.sort(key=lambda row: (-row[4], -row[2], row[0], row[1] or ""))
+    return [HierarchicalSimilarityHit(
+        molecule_id=row[0], conformer_id=row[1], rank=index,
+        morgan_tanimoto=row[2], usrcat_similarity=row[3], combined_score=row[4],
+        stages_completed=row[5]) for index, row in enumerate(rows[:limit], start=1)]

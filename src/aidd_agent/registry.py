@@ -374,6 +374,47 @@ CREATE TABLE IF NOT EXISTS ai_recommendation (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ai_review_project ON ai_review_request(project_id, created_at);
+CREATE TABLE IF NOT EXISTS campaign_ligand (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaign(id),
+    structure_candidate_id TEXT NOT NULL REFERENCES structure_candidate(id),
+    ccd_id TEXT NOT NULL,
+    chain_id TEXT NOT NULL,
+    residue_number TEXT NOT NULL,
+    altloc TEXT NOT NULL,
+    standardized_smiles TEXT NOT NULL,
+    source_path TEXT,
+    source_sha256 TEXT,
+    usrcat_json TEXT,
+    metadata_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(campaign_id, structure_candidate_id, ccd_id, chain_id, residue_number, altloc)
+);
+CREATE INDEX IF NOT EXISTS idx_campaign_ligand_campaign
+    ON campaign_ligand(campaign_id, structure_candidate_id);
+CREATE TABLE IF NOT EXISTS query_ligand_lock (
+    campaign_id TEXT PRIMARY KEY REFERENCES campaign(id),
+    ligand_id TEXT NOT NULL REFERENCES campaign_ligand(id),
+    snapshot_json TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    selected_by TEXT NOT NULL REFERENCES app_user(id),
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ligand_similarity_search (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaign(id),
+    library_id TEXT NOT NULL REFERENCES library(id),
+    query_ligand_id TEXT NOT NULL REFERENCES campaign_ligand(id),
+    morgan_index_path TEXT NOT NULL,
+    usrcat_index_path TEXT,
+    parameters_json TEXT NOT NULL,
+    query_snapshot_json TEXT NOT NULL,
+    results_json TEXT NOT NULL,
+    created_by TEXT NOT NULL REFERENCES app_user(id),
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ligand_search_campaign
+    ON ligand_similarity_search(campaign_id, created_at);
 """
 
 

@@ -21,12 +21,17 @@ from .structure_compare import (
 )
 from .ai_recommendation import (
     ai_review_status, create_ai_review_request,
-    create_receptor_eligibility_review_request, import_ai_recommendation,
+    create_ligand_query_review_request, create_receptor_eligibility_review_request,
+    import_ai_recommendation,
 )
 from .doctor import environment_report
 from .prediction import (
     inspect_alphafold3_output, load_model_profile, prediction_command, write_alphafold3_input,
     write_prediction_input,
+)
+from .ligand_workflow import (
+    campaign_ligand_status, compare_campaign_ligands, register_campaign_ligands,
+    run_hierarchical_library_search, select_query_ligand,
 )
 from .context import (
     activate_task, active_task, create_task, create_user, deactivate_task, list_tasks,
@@ -208,6 +213,16 @@ def build_parser() -> argparse.ArgumentParser:
     receptor_ai.add_argument("--computed-evidence-json", type=Path)
     receptor_ai.add_argument("--prompt-version", default="receptor-eligibility-v1")
 
+    ligand_ai = subparsers.add_parser(
+        "create-ligand-query-review",
+        help="Create a provider-neutral LLM review of registered query ligands")
+    ligand_ai.add_argument("--db", type=Path, required=True)
+    ligand_ai.add_argument("--user", required=True)
+    ligand_ai.add_argument("--campaign", required=True)
+    ligand_ai.add_argument("--requirements-json", type=Path, required=True)
+    ligand_ai.add_argument("--comparison-json", type=Path)
+    ligand_ai.add_argument("--prompt-version", default="ligand-query-selection-v1")
+
     ai_import = subparsers.add_parser(
         "import-ai-recommendation", help="Import a structured model recommendation")
     ai_import.add_argument("--db", type=Path, required=True)
@@ -223,6 +238,45 @@ def build_parser() -> argparse.ArgumentParser:
     ai_status_parser.add_argument("--db", type=Path, required=True)
     ai_status_parser.add_argument("--user", required=True)
     ai_status_parser.add_argument("--request", required=True)
+
+    ligand_import = subparsers.add_parser(
+        "register-campaign-ligands", help="Register filtered co-crystal ligand instances")
+    ligand_import.add_argument("--db", type=Path, required=True)
+    ligand_import.add_argument("--user", required=True)
+    ligand_import.add_argument("--campaign", required=True)
+    ligand_import.add_argument("--manifest", type=Path, required=True)
+
+    ligand_status = subparsers.add_parser(
+        "campaign-ligands", help="List Campaign ligands and the immutable query lock")
+    ligand_status.add_argument("--db", type=Path, required=True)
+    ligand_status.add_argument("--user", required=True)
+    ligand_status.add_argument("--campaign", required=True)
+
+    ligand_compare = subparsers.add_parser(
+        "compare-campaign-ligands", help="Compare Campaign ligands in 2D and available 3D")
+    ligand_compare.add_argument("--db", type=Path, required=True)
+    ligand_compare.add_argument("--user", required=True)
+    ligand_compare.add_argument("--campaign", required=True)
+
+    ligand_select = subparsers.add_parser(
+        "select-query-ligand", help="Irreversibly lock the Campaign similarity query ligand")
+    ligand_select.add_argument("--db", type=Path, required=True)
+    ligand_select.add_argument("--user", required=True)
+    ligand_select.add_argument("--campaign", required=True)
+    ligand_select.add_argument("--ligand", required=True)
+    ligand_select.add_argument("--rationale", required=True)
+
+    ligand_search = subparsers.add_parser(
+        "search-similar-ligands", help="Run hierarchical Morgan/USRCAT library search")
+    ligand_search.add_argument("--db", type=Path, required=True)
+    ligand_search.add_argument("--user", required=True)
+    ligand_search.add_argument("--campaign", required=True)
+    ligand_search.add_argument("--library", required=True)
+    ligand_search.add_argument("--morgan-index", type=Path, required=True)
+    ligand_search.add_argument("--usrcat-index", type=Path)
+    ligand_search.add_argument("--conformer-map-json", type=Path)
+    ligand_search.add_argument("--two-d-pool", type=int, default=1000)
+    ligand_search.add_argument("--limit", type=int, default=100)
 
     user = subparsers.add_parser("create-user", help="Create a platform user")
     user.add_argument("--db", type=Path, required=True)
@@ -574,6 +628,19 @@ def main(argv: list[str] | None = None) -> int:
             result = ai_review_status(connection, args.user, request_id)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
+    if args.command == "create-ligand-query-review":
+        requirements = json.loads(args.requirements_json.read_text(encoding="utf-8"))
+        comparison = None
+        if args.comparison_json:
+            comparison = json.loads(args.comparison_json.read_text(encoding="utf-8"))
+        with connect(args.db) as connection:
+            request_id = create_ligand_query_review_request(
+                connection, args.user, args.campaign,
+                selection_requirements=requirements,
+                comparison_summary=comparison, prompt_version=args.prompt_version)
+            result = ai_review_status(connection, args.user, request_id)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
     if args.command == "import-ai-recommendation":
         response = json.loads(args.response_json.read_text(encoding="utf-8"))
         with connect(args.db) as connection:
@@ -588,6 +655,44 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "ai-review-status":
         with connect(args.db) as connection:
             result = ai_review_status(connection, args.user, args.request)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "register-campaign-ligands":
+        records = json.loads(args.manifest.read_text(encoding="utf-8"))
+        if isinstance(records, dict):
+            records = records.get("ligands")
+        with connect(args.db) as connection:
+            ligand_ids = register_campaign_ligands(
+                connection, args.user, args.campaign, records)
+        print(json.dumps({"inserted": len(ligand_ids), "ligand_ids": ligand_ids}, indent=2))
+        return 0
+    if args.command == "campaign-ligands":
+        with connect(args.db) as connection:
+            result = campaign_ligand_status(connection, args.user, args.campaign)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "compare-campaign-ligands":
+        with connect(args.db) as connection:
+            result = compare_campaign_ligands(connection, args.user, args.campaign)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "select-query-ligand":
+        with connect(args.db) as connection:
+            select_query_ligand(
+                connection, args.user, args.campaign, args.ligand, args.rationale)
+            result = campaign_ligand_status(connection, args.user, args.campaign)
+        print(json.dumps(result["query_lock"], indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "search-similar-ligands":
+        conformer_map = None
+        if args.conformer_map_json:
+            conformer_map = json.loads(args.conformer_map_json.read_text(encoding="utf-8"))
+        with connect(args.db) as connection:
+            result = run_hierarchical_library_search(
+                connection, args.user, args.campaign, args.library,
+                args.morgan_index, usrcat_index_path=args.usrcat_index,
+                conformer_to_molecule=conformer_map, two_d_pool=args.two_d_pool,
+                limit=args.limit)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "create-user":

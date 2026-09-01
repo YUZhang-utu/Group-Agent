@@ -111,3 +111,11 @@
   requires exactly one cited decision per Campaign candidate and mandatory
   human review, so fragments, off-domain complexes, and wrong-chain structures
   can be flagged without silently modifying the Campaign.
+- A PDB CCD identifier is not a unique query ligand. Campaign ligand identity
+  now includes the parent structure, chain, residue, altloc, standardized
+  chemistry, and optional crystal conformer. Query choice is a separate,
+  immutable human lock; an LLM may recommend but cannot create it.
+- The registered MOL2 library proves molecule/conformer provenance but does not
+  by itself provide standardized SMILES. Real Morgan/USRCAT production indices
+  therefore require an explicit chemistry preprocessing artifact rather than
+  inferred or fabricated representations.

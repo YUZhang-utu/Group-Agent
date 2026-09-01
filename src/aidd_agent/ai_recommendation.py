@@ -171,6 +171,100 @@ def _validate_receptor_eligibility_response(
         raise ValueError("Receptor eligibility recommendations require human review")
 
 
+def create_ligand_query_review_request(
+    connection: sqlite3.Connection, user_id: str, campaign_id: str, *,
+    selection_requirements: dict[str, Any],
+    comparison_summary: dict[str, Any] | None = None,
+    prompt_version: str = "ligand-query-selection-v1",
+) -> str:
+    campaign = _campaign_for_user(connection, campaign_id, user_id, write=False)
+    if connection.execute(
+            "SELECT 1 FROM query_ligand_lock WHERE campaign_id=?", (campaign_id,)).fetchone():
+        raise ValueError("Campaign query ligand is already locked")
+    rows = connection.execute(
+        """SELECT cl.*, sc.pdb_id FROM campaign_ligand cl
+           JOIN structure_candidate sc ON sc.id=cl.structure_candidate_id
+           WHERE cl.campaign_id=? ORDER BY sc.pdb_id, cl.ccd_id, cl.id""",
+        (campaign_id,),
+    ).fetchall()
+    if not rows:
+        raise ValueError("At least one registered Campaign ligand is required")
+    evidence: dict[str, Any] = {
+        "selection_requirements": selection_requirements,
+        "comparison_summary": comparison_summary or {},
+    }
+    for row in rows:
+        evidence[f"ligand:{row['id']}"] = {
+            "ligand_id": row["id"], "pdb_id": row["pdb_id"],
+            "ccd_id": row["ccd_id"], "chain_id": row["chain_id"],
+            "residue_number": row["residue_number"], "altloc": row["altloc"],
+            "standardized_smiles": row["standardized_smiles"],
+            "has_3d_descriptor": row["usrcat_json"] is not None,
+            "metadata": json.loads(row["metadata_json"]),
+        }
+    prompt = (
+        "Assess every registered co-crystal ligand as a possible similarity-search "
+        "query using only supplied evidence. Return JSON with action, rationale, "
+        "confidence, evidence_refs, uncertainties, requires_human_review=true, "
+        "recommended_ligand_id (a supplied ID or null), and assessments containing "
+        "exactly one object per ligand with ligand_id, verdict "
+        "(recommend|alternative|exclude|manual_review), rationale, evidence_refs, "
+        "and uncertainties. Do not lock a query or start a search."
+    )
+    return create_ai_review_request(
+        connection, user_id, campaign["project_id"], campaign_id=campaign_id,
+        task_type="ligand_query_selection", subject_type="campaign",
+        subject_id=campaign_id, prompt_version=prompt_version, prompt_text=prompt,
+        evidence=evidence,
+        data_classes=["public_structure_metadata", "computed_summary",
+                      "project_configuration"],
+    )
+
+
+def _validate_ligand_query_response(request: sqlite3.Row,
+                                    response: dict[str, Any]) -> None:
+    evidence = json.loads(request["evidence_json"])
+    expected = {key.removeprefix("ligand:") for key in evidence
+                if key.startswith("ligand:")}
+    recommended = response.get("recommended_ligand_id")
+    if recommended is not None and recommended not in expected:
+        raise ValueError("Recommended query ligand is not in the Campaign evidence")
+    assessments = response.get("assessments")
+    if not isinstance(assessments, list):
+        raise ValueError("Ligand query response requires an assessments list")
+    received: set[str] = set()
+    recommend_verdicts: set[str] = set()
+    for assessment in assessments:
+        if not isinstance(assessment, dict):
+            raise ValueError("Each ligand assessment must be an object")
+        ligand_id = str(assessment.get("ligand_id", ""))
+        if ligand_id in received:
+            raise ValueError(f"Duplicate ligand assessment: {ligand_id}")
+        received.add(ligand_id)
+        verdict = assessment.get("verdict")
+        if verdict not in {"recommend", "alternative", "exclude", "manual_review"}:
+            raise ValueError(f"Invalid ligand assessment verdict for {ligand_id}")
+        if verdict == "recommend":
+            recommend_verdicts.add(ligand_id)
+        if not str(assessment.get("rationale", "")).strip():
+            raise ValueError(f"Missing ligand assessment rationale for {ligand_id}")
+        refs = assessment.get("evidence_refs")
+        if not isinstance(refs, list) or not refs or set(refs) - set(evidence):
+            raise ValueError(f"Invalid ligand assessment evidence for {ligand_id}")
+        uncertainties = assessment.get("uncertainties", [])
+        if not isinstance(uncertainties, list) or not all(
+                isinstance(value, str) for value in uncertainties):
+            raise ValueError("Ligand assessment uncertainties must be strings")
+    if received != expected:
+        raise ValueError("Ligand assessments must cover exactly all Campaign ligands")
+    if recommended is not None and recommend_verdicts != {recommended}:
+        raise ValueError("Recommended ligand must be the single recommend verdict")
+    if recommended is None and recommend_verdicts:
+        raise ValueError("A recommend verdict requires recommended_ligand_id")
+    if response.get("requires_human_review") is not True:
+        raise ValueError("Ligand query recommendations require human review")
+
+
 def import_ai_recommendation(
     connection: sqlite3.Connection, user_id: str, request_id: str, *,
     provider: str, model_name: str, model_version: str | None,
@@ -186,6 +280,8 @@ def import_ai_recommendation(
         raise ValueError("AI review request already has a recommendation")
     if request["task_type"] == "receptor_eligibility":
         _validate_receptor_eligibility_response(request, response)
+    if request["task_type"] == "ligand_query_selection":
+        _validate_ligand_query_response(request, response)
     action = str(response.get("action", "")).strip()
     rationale = str(response.get("rationale", "")).strip()
     if not action or not rationale:

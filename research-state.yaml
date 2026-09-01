@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
-stage: target_structure_review
-current_experiment: E016-campaign-ligand-registry-comparison-query-lock
+stage: ligand_comparison_and_similarity_search
+current_experiment: E017-hierarchical-2d-3d-library-search
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -65,7 +65,7 @@ implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
   human_structure_selection_checkpoint: completed
-  tests: 44_passed
+  tests: 49_passed
   production_registry_migration: completed
   multi_user_task_context: completed
   task_workspace_isolation: completed
@@ -106,3 +106,7 @@ implementation_status:
   predicted_structure_campaign_registry_production: completed_user_confirmed
   unified_receptor_ensemble: completed_offline_workstation_validation_pending
   receptor_eligibility_llm_interface: completed_offline_workstation_validation_pending
+  campaign_ligand_registry: completed_offline_workstation_validation_pending
+  query_ligand_lock: completed
+  ligand_query_llm_interface: completed
+  hierarchical_2d_3d_search: completed_core_production_index_validation_pending
