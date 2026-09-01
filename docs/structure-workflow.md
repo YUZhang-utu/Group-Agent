@@ -30,6 +30,13 @@ reports global pocket RMSD, per-residue displacement, coverage, and missing
 residues. Ligands are displayed and compared separately because ligand identity
 and pose can differ even when protein pockets are similar.
 
+RCSB nonpolymer entities are stored in two views. `nonpolymer_ids` preserves
+every reported component, while `ligand_ids` is a conservative candidate-ligand
+view that excludes recognized water, solvents, ions, buffers, and
+crystallization additives. Every exclusion and its reason remains in
+`excluded_nonpolymer_components`; unknown IDs stay in the ligand view for human
+review.
+
 ## PyMOL checkpoint
 
 The Agent writes a `.pml` file into the active Project. The client launches
@@ -66,3 +73,27 @@ parameter set creates a new immutable index.
 RDKit supplies chemistry operations; Gemmi/BioPython supply structure parsing;
 PyMOL supplies interactive visualization. They are optional deployment
 environments rather than mandatory control-plane imports.
+## Predicted structures in a Campaign
+
+AlphaFold 3 outputs are discovery candidates, not automatic replacements for
+experimental receptors. Import a completed output directory with its construct
+and model version:
+
+```bash
+aidd-agent import-alphafold3-result --db /path/to/aidd.sqlite3 \
+  --user USR-... --campaign CAM-... --output-dir /path/to/af3/output \
+  --input /path/to/input.json --construct target_kinase_299_569 \
+  --model-version source-commit-or-release --chain A \
+  --manifest-output /path/to/prediction-manifest.json
+```
+
+`campaign-status` then reports `predicted_candidates` beside the RCSB
+`candidates`. Import does not change the scientific selection. After comparison
+and human review, either candidate type can be frozen by internal candidate ID:
+
+```bash
+aidd-agent select-receptor --db /path/to/aidd.sqlite3 --user USR-... \
+  --campaign CAM-... --candidate PRD-... --rationale "Reviewed rationale"
+```
+
+The lock snapshots the exact candidate metadata and structure SHA-256.

@@ -55,6 +55,23 @@ The returned command is an argument array suitable for a local executor or a
 validated Slurm Bundle. It does not contain credentials. AlphaFold 2 is retained
 as a fallback profile for sites that already maintain that installation.
 
+The same reviewed sequence can be prepared for any supported prediction
+backend through `prepare-structure-prediction`. Supported backends are
+AlphaFold 2, AlphaFold 3, Boltz-2, and Chai-1; each stays in a separate
+environment configured by a private profile copied from `configs/models/`.
+The Agent emits a command array but does not accept license terms, store model
+weights in Git, or run GPU work on a login node.
+
+```powershell
+aidd-agent fetch-alphafold-db --uniprot P30291 `
+  --project-root D:\AIDD\users\alice\projects\PRJ-ID
+
+aidd-agent prepare-structure-prediction --backend boltz2 --name wee1 `
+  --sequence MSEQUENCE... --project-root D:\AIDD\users\alice\projects\PRJ-ID `
+  --output D:\AIDD\users\alice\projects\PRJ-ID\runs\boltz2\input.yaml `
+  --profile D:\AIDD\private\boltz2.json
+```
+
 ## 4. Data and source-control boundary
 
 Never commit molecular libraries, PDB/mmCIF files, SQLite registries, prediction

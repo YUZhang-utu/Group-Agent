@@ -1,0 +1,7 @@
+{
+  "backend": "boltz2",
+  "executable": "/opt/conda/envs/boltz2/bin/boltz",
+  "cache": "/shared/models/boltz2",
+  "use_msa_server": false,
+  "use_potentials": true
+}

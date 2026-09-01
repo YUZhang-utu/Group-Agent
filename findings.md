@@ -74,3 +74,29 @@
 - The current validated interface is still deterministic CLI orchestration.
   Codex has not yet been connected as the natural-language controller that
   resolves active context and invokes these tools from prompts.
+- Campaign structure review is now executable end to end from public PDB IDs:
+  a user can freeze a multi-PDB comparison definition, inspect it, and generate
+  a Project-scoped PyMOL script without exposing registry candidate IDs or
+  changing the Campaign's final receptor-selection state.
+- RCSB `nonpolymer_entities` is not synonymous with bound inhibitors. Candidate
+  metadata now distinguishes all nonpolymers from likely binding ligands and
+  preserves excluded solvents, ions, buffers, and crystallization additives
+  with reasons. Unknown components remain candidates for conservative human
+  review.
+- The durable AI boundary is recommendation-first rather than direct mutation:
+  prompts and evidence produce provider-identified structured recommendations,
+  while deterministic tools execute accepted actions. Experimental raw data
+  and measurements remain outside model context; explicitly classified public
+  metadata and computed summaries can support AI reasoning.
+- Target prediction should not encode a permanent single "best model." The
+  adapter treats AlphaFold DB as a public monomer baseline and AlphaFold 3,
+  Boltz-2, and Chai-1 as versioned prediction backends. Selection must depend
+  on the preparation purpose, licensing, hardware, and prospective QC.
+- AlphaFold 3 is now validated as a real external discovery backend on the
+  university RTX 5090 workstation. Ubiquitin and the WEE1 kinase-domain example
+  completed end to end; WEE1 inference itself took about 25 seconds, while the
+  roughly 47-minute MSA stage exposed NFS database I/O as the dominant cost.
+- A prediction is not a selected receptor. Prediction outputs now enter a
+  Campaign as immutable, hashed candidates with model, construct, confidence,
+  input, and runtime provenance. The same human selection checkpoint can lock
+  either an experimental PDB candidate or a predicted candidate.

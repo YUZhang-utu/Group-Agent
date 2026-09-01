@@ -423,3 +423,254 @@ before a receptor is selected.
 
 Confirmatory deployment validation. Structure choice remains a human-reviewed
 scientific decision.
+
+## E009 — Campaign-aware multi-structure review CLI
+
+Status: completed — confirmatory implementation validation
+
+### Hypothesis
+
+Exposing the existing comparison-set and PyMOL-review primitives through a
+Campaign-aware CLI will make the real WEE1 structure-selection workflow
+executable without copying internal database IDs or prematurely freezing one
+receptor.
+
+### Protocol
+
+1. Let users name comparison members by PDB ID while resolving and validating
+   their Campaign-scoped candidate IDs internally.
+2. Require at least two PDB candidates, one member as the alignment reference,
+   an explicit chain per member (default `A`), ATP-pocket residue numbers, and
+   a scientific comparison rationale.
+3. Add a read-only comparison-set status command with candidate/PDB metadata.
+4. Generate a Project-scoped PyMOL script from downloaded
+   `inputs/structures/<PDB>.cif` files and fail clearly when any file is absent.
+5. Do not change Campaign state or call the irreversible final `select-pdb`
+   checkpoint.
+
+### Acceptance criteria
+
+- PDB IDs outside the Campaign are rejected.
+- The reference must be one of the selected members.
+- Invalid chain specifications and missing structure files are rejected.
+- The generated script loads every member, uses member-specific chains, shows
+  the pocket and organic ligands, and aligns all mobile structures.
+- Campaign remains in `structures_review` after comparison creation and review
+  generation.
+- The complete automated test suite passes.
+
+### Classification
+
+Confirmatory workflow-integration validation. The biological choice of WEE1
+receptor remains human-reviewed.
+
+### Results
+
+- Added public PDB-ID resolution for Campaign-scoped comparison sets.
+- Added `create-structure-comparison`, `structure-comparison-status`, and
+  `prepare-pymol-review` CLI commands.
+- Review generation validates downloaded mmCIF presence and writes only inside
+  the supplied Project root.
+- Comparison creation and review generation leave the Campaign in
+  `structures_review`; only the separate `select-pdb` command can freeze it.
+- The complete suite passes 31 tests, including foreign-PDB rejection,
+  member-specific chains, missing-file failure, and Campaign-state preservation.
+
+## E010 — Nonpolymer component classification
+
+Status: completed — confirmatory implementation validation
+
+### Hypothesis
+
+Separating all PDB nonpolymer components from candidate binding ligands will
+prevent common solvents, ions, buffers, and crystallization additives from
+polluting Campaign ligand review while preserving the complete RCSB record.
+
+### Protocol
+
+1. Preserve every returned component ID in `nonpolymer_ids`.
+2. Filter a versioned, conservative set of well-known solvent/additive/ion IDs
+   from `ligand_ids`.
+3. Record each exclusion and its reason in
+   `excluded_nonpolymer_components` inside candidate metadata.
+4. Keep unknown components as candidate ligands so an automated heuristic does
+   not silently discard a genuine inhibitor or cofactor.
+5. Add regression coverage for GOL, CL, NA, EDO, PO4, and MG, plus retention of
+   a genuine ligand ID.
+
+### Acceptance criteria
+
+- Known non-ligand components remain visible in full metadata but not in
+  `ligand_ids`.
+- Unknown and drug-like component IDs remain in `ligand_ids`.
+- Null RCSB nonpolymer lists remain supported.
+- Existing Campaign storage requires no destructive schema migration.
+
+### Results
+
+- RCSB parsing now emits `nonpolymer_ids`, filtered `ligand_ids`, and
+  `excluded_nonpolymer_components` with explicit reasons.
+- GOL, CL, NA, EDO, PO4, and MG are retained as nonpolymers but excluded from
+  candidate binding ligands; ATP and unknown component IDs remain candidates.
+- Repeating `search-pdb` now refreshes metadata for existing Campaign
+  candidates while its `inserted` count continues to report only new rows.
+- `campaign-status` exposes both the filtered and complete component views.
+- Full suite: 32 tests passed.
+
+## E011 — AI recommendation and prompt orchestration boundary
+
+Status: completed — confirmatory architecture validation
+
+### Hypothesis
+
+A provider-neutral, schema-validated recommendation layer can make prompts the
+primary Project interface while preserving deterministic execution, scientific
+provenance, user approval checkpoints, and the exclusion of experimental raw
+data from model context.
+
+### Protocol
+
+1. Register immutable AI review requests owned by one active Project and
+   optional Campaign.
+2. Store task type, subject, prompt version, rendered prompt, evidence packet,
+   declared data classes, and model-facing privacy policy.
+3. Reject requests declaring experimental raw data or experimental
+   measurements as model inputs.
+4. Import a structured recommendation containing action, rationale, confidence,
+   evidence references, uncertainties, and whether human review is required.
+5. Record provider/model identity and preserve the model response without
+   directly mutating Campaign or Run state.
+6. Expose create/show/import operations through CLI commands so Codex or any
+   later provider adapter can use the same audited boundary.
+
+### Acceptance criteria
+
+- Cross-Project access is rejected.
+- Forbidden experimental data classes are rejected before request creation.
+- Invalid confidence, missing rationale, and unreferenced evidence are rejected.
+- Importing a recommendation does not select a PDB or execute a Run.
+- Requests and recommendations round-trip through JSON and the complete suite
+  remains green.
+
+### Classification
+
+Confirmatory architecture and privacy-boundary validation.
+
+### Results
+
+- Added immutable `ai_review_request` and `ai_recommendation` registry entities.
+- Added provider-neutral create/import/status APIs and CLI commands.
+- Requests preserve rendered prompts, versioned evidence, declared data
+  classes, and a machine-readable privacy policy.
+- Raw experimental data and experimental measurements are rejected as model
+  context; unknown data classes are also rejected.
+- Recommendations require valid confidence, rationale, evidence references,
+  uncertainty, provider/model identity, and a human-review flag.
+- Importing a recommendation leaves Campaign and Run state unchanged.
+- Full suite: 35 tests passed.
+
+## E012 — Predicted target-structure acquisition and backend deployment
+
+Status: completed — confirmatory deployment-adapter validation
+
+### Hypothesis
+
+A provider-neutral structure-prediction adapter covering AlphaFold DB,
+AlphaFold 3, Boltz-2, and Chai-1 can produce versioned WEE1 structure candidates
+without coupling the target-preparation workflow to one transient
+state-of-the-art model.
+
+### Protocol
+
+1. Add validated AlphaFold DB mmCIF acquisition by UniProt accession with hash
+   and source metadata.
+2. Generalize local model profiles to AlphaFold 2/3, Boltz-2, and Chai-1 while
+   retaining explicit license acknowledgement where required.
+3. Generate backend-native, Project-scoped inputs from the same reviewed amino
+   acid sequence.
+4. Construct commands as argument arrays, keeping model caches, weights,
+   databases, and credentials outside Git and the LLM context.
+5. Record backend/model identity so outputs can later enter the common target
+   structure registry as immutable candidates.
+
+### Acceptance criteria
+
+- Invalid UniProt IDs and invalid model profiles fail before execution.
+- AFDB responses are verified as the requested mmCIF before writing.
+- AF3 JSON, Boltz YAML, and Chai FASTA inputs are deterministic and
+  Project-scoped.
+- Commands match each backend's official CLI boundary and never embed secrets.
+- Existing AlphaFold 2/3 profiles remain compatible.
+- Full tests pass without requiring GPU models or network access.
+
+### Classification
+
+Confirmatory deployment-adapter validation; real WEE1 model generation remains
+a workstation/cluster integration run.
+
+### Results
+
+- Added verified AlphaFold DB mmCIF acquisition by UniProt accession.
+- Added a unified Project-scoped input layer for AlphaFold 2/3, Boltz-2, and
+  Chai-1.
+- Added profile validation and argument-array command generation for Boltz-2
+  and Chai-1 while preserving existing AlphaFold profiles.
+- Added example Boltz-2 and Chai-1 deployment profiles with external model/cache
+  paths and no embedded credentials.
+- Full offline suite: 38 tests passed.
+- Real WEE1 inference remains pending on the university GPU environment and is
+  not claimed by this implementation result.
+
+## E013 — Predicted-structure Campaign registration and receptor lock
+
+Status: implemented — workstation import pending
+
+### Hypothesis
+
+An immutable, model-agnostic prediction-result manifest can register a real
+AlphaFold 3 output beside experimental PDB candidates without treating either
+source as automatically authoritative, while a single receptor-selection lock
+preserves the exact file hash, construct, model provenance, and human rationale.
+
+### Protocol
+
+1. Inspect a completed prediction output directory and identify its final mmCIF,
+   ranking table, confidence summary, input, and content hashes.
+2. Register predicted structures in a Campaign-owned table separate from RCSB
+   candidates so PDB semantics are not overloaded with synthetic identifiers.
+3. Expose experimental and predicted candidates together in Campaign status.
+4. Add a generic receptor-selection operation accepting either candidate type
+   and write an immutable version-lock snapshot before changing Campaign state.
+5. Preserve the existing `select-pdb` interface as a compatibility wrapper.
+6. Keep WEE1 as an integration example only; no target name, PDB, path, or model
+   backend may be hard-coded into the registry API.
+
+### Acceptance criteria
+
+- Modified or missing structure files are rejected during registration.
+- Duplicate prediction imports are idempotent by Campaign and structure hash.
+- A selected predicted structure records backend/version, construct, score,
+  source paths, and checksums in the immutable lock.
+- Campaign selection still requires an explicit scientific rationale and human
+  action; importing an AF3 result cannot select it automatically.
+- Existing PDB Campaign behavior and the complete offline suite remain green.
+
+### Classification
+
+Confirmatory integration. The real WEE1 AF3 run and PyMOL RMSD observations are
+deployment evidence supplied after E012, not retrospective E012 test results.
+
+### Results
+
+- Added hashed AlphaFold 3 output inspection for the final mmCIF, ranking CSV,
+  confidence summary, input JSON, and runtime metadata.
+- Added Campaign-owned predicted candidates without overloading PDB identifiers.
+- Added generic experimental/predicted receptor selection with an immutable
+  snapshot lock and preserved `select-pdb` compatibility.
+- Added `import-alphafold3-result` and `select-receptor` CLI operations.
+- Offline suite: 41 tests passed.
+- Real WEE1 deployment evidence: end-to-end AF3 inference succeeded on an RTX
+  5090; the best experimental/PDB comparison gave approximately 1.10 Å C-alpha
+  RMSD without outlier rejection and 0.37 Å after rejection. Import into the
+  production Campaign remains pending because the production registry and AF3
+  files reside on the university Linux workstation.

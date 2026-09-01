@@ -113,3 +113,46 @@
   execution and provenance layer, while Codex natural-language orchestration is
   not yet integrated. The next implementation should map prompts to active
   User/Project/Task/Campaign context and audited tool calls.
+
+## 2026-08-31
+
+- Kept AIDD macrocycle-agent work isolated from the unrelated KRAS
+  necessity/enhancement research in the workspace root.
+- Completed E009 Campaign-aware multi-structure review integration. Users can
+  create a comparison set by PDB ID, inspect resolved members and ligands, and
+  generate a Project-scoped multi-structure PyMOL script.
+- Added explicit rejection of foreign Campaign candidates, invalid references,
+  malformed chains, and absent downloaded mmCIF files. Comparison operations
+  preserve `structures_review`; final receptor freezing remains a distinct
+  human-reviewed `select-pdb` action.
+- Full suite: 31 tests passed.
+- Completed E010 after observing that RCSB nonpolymer entities caused GOL, CL,
+  NA, EDO, PO4, and MG to appear as ligands. Added conservative component
+  classification without discarding provenance, exposed exclusions through
+  Campaign status, and made repeated PDB searches refresh existing candidate
+  metadata. Full suite: 32 tests passed.
+- Completed E011, establishing AI as the prompt-driven recommendation layer
+  over the deterministic Project/Campaign execution system. Added immutable,
+  provider-neutral AI requests and structured recommendations with evidence
+  citation, confidence, uncertainty, model provenance, privacy classification,
+  and human-review requirements. Experimental raw data and measurements are
+  rejected from model context. Full suite: 35 tests passed.
+- Completed E012 predicted target-structure deployment adapters. Added verified
+  AlphaFold DB acquisition and unified AlphaFold 2/3, Boltz-2, and Chai-1 input
+  and command generation. No GPU inference was claimed locally; real WEE1 runs
+  remain a university integration step. Full suite: 38 tests passed.
+
+## 2026-09-01
+
+- Validated the independently deployed AlphaFold 3 Apptainer image on the
+  university RTX 5090 workstation with official parameters and the complete
+  genetic/template databases.
+- Completed ubiquitin and WEE1 kinase-domain predictions. WEE1/PDB PyMOL review
+  reported approximately 1.10 Å C-alpha RMSD with all aligned residues and
+  0.37 Å after outlier rejection. This supports structural consistency but is
+  not an automatic receptor-selection decision.
+- Implemented E013 prediction-result registration. Completed AF3 directories
+  can now be inspected into hashed manifests, registered beside experimental
+  PDB candidates, and selected through a common immutable receptor lock.
+- Full offline suite: 41 tests passed. Production WEE1 import remains the next
+  workstation action.

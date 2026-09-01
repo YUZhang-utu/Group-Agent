@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: target_structure_review
-current_experiment: E008-wee1-real-deployment-validation
+current_experiment: E013-predicted-structure-campaign-registration
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -39,17 +39,16 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - connect Codex as the natural-language orchestration layer over the validated CLI
-  - add Campaign-aware context resolution so prompts do not require repeated IDs
-  - generate a multi-structure PyMOL review with aligned WEE1 candidates
-  - define a WEE1 ATP-pocket residue set and compare multiple candidate structures
-  - record the final receptor-selection rationale before receptor preparation
+  - deploy the updated package on the university workstation and import the completed WEE1 AlphaFold 3 output into the active Campaign
+  - record the AlphaFold 3 source commit, SIF hash, input hash, model version, construct, and ranking/confidence metadata
+  - compare the registered predicted candidate with the experimental PDB ensemble without automatically selecting either source
+  - implement deterministic receptor preparation and QC for experimental and predicted structures
+  - define the WEE1 construct, chain, protonation assumptions, cofactors, metals, waters, and ATP pocket
+  - generate an AI target-preparation recommendation from public metadata and computed QC summaries
+  - record the final receptor-selection and preparation rationale
   - register the real Cluster Profile and verified host key
   - deploy and verify the cluster-side library replica and runner
   - validate the workstation Conda environment on the desktop
-  - add canonical SMILES to the molecular registry and build similarity indices
-  - implement bound-ligand extraction from acquired mmCIF files
-  - define the desired binding-site and functional/conformational state in detail
 completed_experiments:
   - E001-batch-MOL2-registry-bootstrap
   - E002-campaign-target-state-machine
@@ -61,7 +60,7 @@ implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
   human_structure_selection_checkpoint: completed
-  tests: 29_passed
+  tests: 38_passed
   production_registry_migration: completed
   multi_user_task_context: completed
   task_workspace_isolation: completed
@@ -84,6 +83,18 @@ implementation_status:
   real_wee1_rcsb_search: completed_25_candidates
   terminal_pymol_single_structure_review: validated
   codex_natural_language_orchestration: pending
-  alphafold3_input_adapter: completed_runtime_validation_pending
+  alphafold3_input_adapter: completed_runtime_validated
   persistent_morgan_index: completed_rdkit_validation_pending
   persistent_usrcat_index: completed
+  campaign_structure_review_cli: completed
+  campaign_structure_review_tests: 31_passed
+  nonpolymer_ligand_classification: completed
+  ai_recommendation_registry: completed
+  prompt_orchestration_cli: completed
+  experimental_data_model_exclusion: completed
+  alphafold_db_acquisition: completed
+  prediction_backends_af2_af3_boltz2_chai1: completed_adapters_af3_runtime_validated
+  alphafold3_real_workstation_deployment: completed
+  wee1_alphafold3_prediction: completed
+  predicted_structure_campaign_registry: completed_offline_workstation_import_pending
+  receptor_version_lock: completed

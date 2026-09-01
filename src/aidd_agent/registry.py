@@ -138,6 +138,33 @@ CREATE TABLE IF NOT EXISTS decision_event (
 );
 CREATE INDEX IF NOT EXISTS idx_structure_candidate_campaign ON structure_candidate(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_decision_event_campaign ON decision_event(campaign_id, id);
+CREATE TABLE IF NOT EXISTS predicted_structure_candidate (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaign(id),
+    backend TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    construct_name TEXT NOT NULL,
+    chain_ids_json TEXT NOT NULL,
+    structure_path TEXT NOT NULL,
+    structure_sha256 TEXT NOT NULL,
+    ranking_score REAL,
+    confidence_json TEXT NOT NULL,
+    provenance_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(campaign_id, structure_sha256)
+);
+CREATE INDEX IF NOT EXISTS idx_predicted_structure_campaign
+    ON predicted_structure_candidate(campaign_id, created_at);
+CREATE TABLE IF NOT EXISTS receptor_selection_lock (
+    campaign_id TEXT PRIMARY KEY REFERENCES campaign(id),
+    candidate_kind TEXT NOT NULL CHECK(candidate_kind IN ('experimental', 'predicted')),
+    candidate_id TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    selected_by TEXT NOT NULL REFERENCES app_user(id),
+    created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_task_project ON task(project_id);
 CREATE INDEX IF NOT EXISTS idx_task_access_user ON task_access(user_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_project_owner ON project(owner_user_id, id);
@@ -290,6 +317,38 @@ CREATE TABLE IF NOT EXISTS similarity_index (
     created_at TEXT NOT NULL,
     UNIQUE(library_id, index_type, parameters_json)
 );
+CREATE TABLE IF NOT EXISTS ai_review_request (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES project(id),
+    campaign_id TEXT REFERENCES campaign(id),
+    user_id TEXT NOT NULL REFERENCES app_user(id),
+    task_type TEXT NOT NULL,
+    subject_type TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    prompt_text TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    data_classes_json TEXT NOT NULL,
+    privacy_policy_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'completed')),
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ai_recommendation (
+    id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL UNIQUE REFERENCES ai_review_request(id),
+    provider TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    model_version TEXT,
+    action TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+    evidence_refs_json TEXT NOT NULL,
+    uncertainties_json TEXT NOT NULL,
+    requires_human_review INTEGER NOT NULL CHECK(requires_human_review IN (0, 1)),
+    response_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_review_project ON ai_review_request(project_id, created_at);
 """
 
 

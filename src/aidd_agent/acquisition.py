@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from .project_context import ensure_within
 
 PDB_ID = re.compile(r"^[0-9][A-Za-z0-9]{3}$")
+UNIPROT_ID = re.compile(r"^[A-Z0-9]{6,10}(?:-[0-9]+)?$")
 
 
 def _download(url: str) -> tuple[bytes, str]:
@@ -42,3 +43,32 @@ def acquire_rcsb_mmcif(pdb_id: str, project_root: Path, *,
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return metadata
 
+
+def acquire_alphafold_db_mmcif(
+    uniprot_id: str, project_root: Path, *,
+    fetch: Callable[[str], tuple[bytes, str]] = _download,
+) -> dict:
+    accession = uniprot_id.upper()
+    if not UNIPROT_ID.fullmatch(accession):
+        raise ValueError("Invalid UniProt accession")
+    root = project_root.resolve()
+    model_id = f"AF-{accession}-F1-model_v4"
+    destination = ensure_within(
+        root / "inputs" / "structures" / f"{model_id}.cif", root)
+    url = f"https://alphafold.ebi.ac.uk/files/{model_id}.cif"
+    payload, content_type = fetch(url)
+    prefix = payload[:4096].decode("utf-8", errors="ignore")
+    if len(payload) < 40 or "data_" not in prefix.lower() or accession.lower() not in prefix.lower():
+        raise ValueError("AlphaFold DB response is not the requested mmCIF model")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+    metadata = {
+        "schema_version": 1, "source": "AlphaFold Protein Structure Database",
+        "source_type": "predicted", "backend": "alphafold2",
+        "uniprot_id": accession, "model_id": model_id, "url": url,
+        "content_type": content_type, "sha256": hashlib.sha256(payload).hexdigest(),
+        "size_bytes": len(payload), "path": str(destination),
+    }
+    destination.with_suffix(".metadata.json").write_text(
+        json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    return metadata

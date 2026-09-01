@@ -59,11 +59,27 @@ paths, SHA-256 hashes, sizes, formats, lineage, metrics, and execution status.
 Completed local and Slurm jobs produce a versioned `result_manifest.json`,
 which is verified before metadata registration.
 
-## Control and data boundaries
+## AI control and data boundaries
 
-The future LangGraph controller stores only campaign IDs, artifact references,
-QC summaries, decisions, and pending approvals. MOL2 structures, docking poses,
-trajectories, and experimental measurements remain in local stores.
+AI is the natural-language decision and orchestration layer for Project setup,
+Campaign planning, structure and ligand review, method selection, analysis, and
+reporting. Users should be able to advance a Project primarily through prompts;
+the deterministic CLI, registry, and scientific adapters remain the audited
+execution layer.
+
+Every model interaction is represented as an immutable AI review request plus
+an optional structured recommendation. Requests record the rendered prompt,
+prompt version, evidence packet, declared data classes, and privacy policy.
+Recommendations record provider/model identity, action, rationale, confidence,
+evidence references, uncertainty, and the required human-review flag. A model
+recommendation does not directly mutate a Campaign or execute a Run.
+
+Experimental raw data and experimental measurements are excluded from model
+context. They remain in local stores and can enter deterministic analysis
+pipelines; only separately authorized, non-sensitive computed summaries may be
+provided to AI. Molecular files, docking poses, and trajectories also remain
+local artifacts, while selected metadata and computed summaries may be passed
+as explicitly classified evidence.
 
 ## Screening graph
 

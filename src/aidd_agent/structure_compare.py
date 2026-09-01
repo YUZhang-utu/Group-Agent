@@ -52,6 +52,99 @@ def create_comparison_set(connection: sqlite3.Connection, user_id: str,
     return set_id
 
 
+def create_campaign_comparison_set(
+    connection: sqlite3.Connection, user_id: str, campaign_id: str, name: str,
+    pdb_ids: Sequence[str], reference_pdb_id: str, pocket_residues: Sequence[int],
+    chains: Mapping[str, str], rationale: str,
+) -> str:
+    """Create a comparison set using public PDB IDs instead of registry IDs."""
+    normalized = list(dict.fromkeys(str(pdb_id).upper() for pdb_id in pdb_ids))
+    reference = reference_pdb_id.upper()
+    if len(normalized) < 2:
+        raise ValueError("A comparison set requires at least two PDB structures")
+    placeholders = ",".join("?" for _ in normalized)
+    rows = connection.execute(
+        f"SELECT id, pdb_id FROM structure_candidate WHERE campaign_id=? "
+        f"AND pdb_id IN ({placeholders})",
+        (campaign_id, *normalized),
+    ).fetchall()
+    by_pdb = {row["pdb_id"]: row["id"] for row in rows}
+    missing = [pdb_id for pdb_id in normalized if pdb_id not in by_pdb]
+    if missing:
+        raise ValueError(
+            "PDB candidates do not belong to the Campaign: " + ", ".join(missing)
+        )
+    if reference not in by_pdb:
+        raise ValueError("Reference PDB must be a comparison member")
+    normalized_chains = {by_pdb[pdb_id]: chains.get(pdb_id, "A") for pdb_id in normalized}
+    return create_comparison_set(
+        connection, user_id, campaign_id, name,
+        [by_pdb[pdb_id] for pdb_id in normalized], by_pdb[reference],
+        pocket_residues, normalized_chains, rationale,
+    )
+
+
+def comparison_set_status(connection: sqlite3.Connection, user_id: str,
+                          comparison_set_id: str) -> dict[str, Any]:
+    row = connection.execute(
+        "SELECT * FROM structure_comparison_set WHERE id=?", (comparison_set_id,),
+    ).fetchone()
+    if not row:
+        raise KeyError(f"Unknown comparison set: {comparison_set_id}")
+    _campaign_for_user(connection, row["campaign_id"], user_id, write=False)
+    members = connection.execute(
+        """SELECT sc.id AS candidate_id, sc.pdb_id, scm.chain_id,
+                  scm.ligand_ids_json,
+                  CASE WHEN sc.id = cs.reference_candidate_id THEN 1 ELSE 0 END AS is_reference
+           FROM structure_comparison_member scm
+           JOIN structure_candidate sc ON sc.id = scm.candidate_id
+           JOIN structure_comparison_set cs ON cs.id = scm.comparison_set_id
+           WHERE scm.comparison_set_id=? ORDER BY is_reference DESC, sc.pdb_id""",
+        (comparison_set_id,),
+    ).fetchall()
+    return {
+        "comparison_set_id": row["id"], "campaign_id": row["campaign_id"],
+        "name": row["name"], "rationale": row["rationale"],
+        "pocket_residues": json.loads(row["pocket_residues_json"]),
+        "members": [
+            {"candidate_id": member["candidate_id"], "pdb_id": member["pdb_id"],
+             "chain_id": member["chain_id"], "is_reference": bool(member["is_reference"]),
+             "ligand_ids": json.loads(member["ligand_ids_json"])}
+            for member in members
+        ],
+    }
+
+
+def generate_comparison_pymol_review(
+    connection: sqlite3.Connection, user_id: str, comparison_set_id: str,
+    project_root: Path, output_path: Path | None = None,
+) -> dict[str, Any]:
+    status = comparison_set_status(connection, user_id, comparison_set_id)
+    root = project_root.resolve()
+    structures = []
+    missing = []
+    reference_id = ""
+    for member in status["members"]:
+        pdb_id = member["pdb_id"]
+        path = root / "inputs" / "structures" / f"{pdb_id}.cif"
+        if not path.is_file():
+            missing.append(str(path))
+        structure_id = f"PDB_{pdb_id}"
+        if member["is_reference"]:
+            reference_id = structure_id
+        structures.append({"structure_id": structure_id, "path": str(path),
+                           "chain_id": member["chain_id"]})
+    if missing:
+        raise FileNotFoundError("Missing downloaded structure files: " + ", ".join(missing))
+    destination = output_path or (
+        root / "target" / "reviews" / comparison_set_id / "review.pml"
+    )
+    script = generate_pymol_review(
+        structures, reference_id, status["pocket_residues"], destination, root,
+    )
+    return status | {"pymol_script": str(script)}
+
+
 def kabsch_align(mobile: np.ndarray, reference: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
     mobile = np.asarray(mobile, dtype=float)
     reference = np.asarray(reference, dtype=float)

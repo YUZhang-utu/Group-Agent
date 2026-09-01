@@ -9,13 +9,23 @@ import time
 from .importer import import_library
 from .registry import connect, initialize, library_summary
 from .campaign import (
-    campaign_status, create_campaign, register_structure_candidates,
-    select_structure, set_target,
+    campaign_status, create_campaign, register_predicted_structure,
+    register_structure_candidates, select_receptor_candidate, select_structure, set_target,
 )
 from .rcsb import search_structures
-from .acquisition import acquire_rcsb_mmcif
+from .acquisition import acquire_alphafold_db_mmcif, acquire_rcsb_mmcif
+from .structure_compare import (
+    comparison_set_status, create_campaign_comparison_set,
+    generate_comparison_pymol_review,
+)
+from .ai_recommendation import (
+    ai_review_status, create_ai_review_request, import_ai_recommendation,
+)
 from .doctor import environment_report
-from .prediction import load_model_profile, prediction_command, write_alphafold3_input
+from .prediction import (
+    inspect_alphafold3_output, load_model_profile, prediction_command, write_alphafold3_input,
+    write_prediction_input,
+)
 from .context import (
     activate_task, active_task, create_task, create_user, deactivate_task, list_tasks,
 )
@@ -87,10 +97,90 @@ def build_parser() -> argparse.ArgumentParser:
     choose.add_argument("--pdb", required=True)
     choose.add_argument("--rationale", required=True)
 
+    import_prediction = subparsers.add_parser(
+        "import-alphafold3-result",
+        help="Inspect and register a completed AlphaFold 3 structure candidate")
+    import_prediction.add_argument("--db", type=Path, required=True)
+    import_prediction.add_argument("--user", required=True)
+    import_prediction.add_argument("--campaign", required=True)
+    import_prediction.add_argument("--output-dir", type=Path, required=True)
+    import_prediction.add_argument("--input", type=Path)
+    import_prediction.add_argument("--construct", required=True)
+    import_prediction.add_argument("--model-version", required=True)
+    import_prediction.add_argument("--chain", action="append", default=[])
+    import_prediction.add_argument("--runtime-json", type=Path)
+    import_prediction.add_argument("--manifest-output", type=Path)
+
+    select_receptor = subparsers.add_parser(
+        "select-receptor", help="Freeze an experimental or predicted receptor candidate")
+    select_receptor.add_argument("--db", type=Path, required=True)
+    select_receptor.add_argument("--user", required=True)
+    select_receptor.add_argument("--campaign", required=True)
+    select_receptor.add_argument("--candidate", required=True)
+    select_receptor.add_argument("--rationale", required=True)
+
     status = subparsers.add_parser("campaign-status", help="Show campaign state")
     status.add_argument("--db", type=Path, required=True)
     status.add_argument("--user", required=True)
     status.add_argument("--campaign", required=True)
+
+    comparison = subparsers.add_parser(
+        "create-structure-comparison", help="Create a Campaign PDB comparison set")
+    comparison.add_argument("--db", type=Path, required=True)
+    comparison.add_argument("--user", required=True)
+    comparison.add_argument("--campaign", required=True)
+    comparison.add_argument("--name", required=True)
+    comparison.add_argument("--pdb", action="append", required=True)
+    comparison.add_argument("--reference-pdb", required=True)
+    comparison.add_argument("--pocket-residues", required=True,
+                            help="Comma-separated residue numbers")
+    comparison.add_argument("--chain", action="append", default=[],
+                            help="PDB=chain; repeat for structure-specific chains")
+    comparison.add_argument("--rationale", required=True)
+
+    comparison_status_parser = subparsers.add_parser(
+        "structure-comparison-status", help="Show a structure comparison set")
+    comparison_status_parser.add_argument("--db", type=Path, required=True)
+    comparison_status_parser.add_argument("--user", required=True)
+    comparison_status_parser.add_argument("--comparison", required=True)
+
+    review = subparsers.add_parser(
+        "prepare-pymol-review", help="Generate a PyMOL script for a comparison set")
+    review.add_argument("--db", type=Path, required=True)
+    review.add_argument("--user", required=True)
+    review.add_argument("--comparison", required=True)
+    review.add_argument("--project-root", type=Path, required=True)
+    review.add_argument("--output", type=Path)
+
+    ai_request = subparsers.add_parser(
+        "create-ai-review", help="Create an audited model-facing recommendation request")
+    ai_request.add_argument("--db", type=Path, required=True)
+    ai_request.add_argument("--user", required=True)
+    ai_request.add_argument("--project", required=True)
+    ai_request.add_argument("--campaign")
+    ai_request.add_argument("--task-type", required=True)
+    ai_request.add_argument("--subject-type", required=True)
+    ai_request.add_argument("--subject-id", required=True)
+    ai_request.add_argument("--prompt-version", required=True)
+    ai_request.add_argument("--prompt-file", type=Path, required=True)
+    ai_request.add_argument("--evidence-json", type=Path, required=True)
+    ai_request.add_argument("--data-class", action="append", required=True)
+
+    ai_import = subparsers.add_parser(
+        "import-ai-recommendation", help="Import a structured model recommendation")
+    ai_import.add_argument("--db", type=Path, required=True)
+    ai_import.add_argument("--user", required=True)
+    ai_import.add_argument("--request", required=True)
+    ai_import.add_argument("--provider", required=True)
+    ai_import.add_argument("--model", required=True)
+    ai_import.add_argument("--model-version")
+    ai_import.add_argument("--response-json", type=Path, required=True)
+
+    ai_status_parser = subparsers.add_parser(
+        "ai-review-status", help="Show an AI review request and recommendation")
+    ai_status_parser.add_argument("--db", type=Path, required=True)
+    ai_status_parser.add_argument("--user", required=True)
+    ai_status_parser.add_argument("--request", required=True)
 
     user = subparsers.add_parser("create-user", help="Create a platform user")
     user.add_argument("--db", type=Path, required=True)
@@ -217,6 +307,11 @@ def build_parser() -> argparse.ArgumentParser:
     fetch_parser.add_argument("--pdb", required=True)
     fetch_parser.add_argument("--project-root", type=Path, required=True)
 
+    afdb_parser = subparsers.add_parser(
+        "fetch-alphafold-db", help="Download an AlphaFold DB model into a Project")
+    afdb_parser.add_argument("--uniprot", required=True)
+    afdb_parser.add_argument("--project-root", type=Path, required=True)
+
     af_parser = subparsers.add_parser("prepare-alphafold3", help="Create a validated AlphaFold 3 job input")
     af_parser.add_argument("--name", required=True)
     af_parser.add_argument("--sequence", action="append", required=True)
@@ -224,6 +319,17 @@ def build_parser() -> argparse.ArgumentParser:
     af_parser.add_argument("--project-root", type=Path, required=True)
     af_parser.add_argument("--output", type=Path, required=True)
     af_parser.add_argument("--profile", type=Path)
+
+    prediction_parser = subparsers.add_parser(
+        "prepare-structure-prediction", help="Create a backend-native protein prediction input")
+    prediction_parser.add_argument(
+        "--backend", choices=("alphafold2", "alphafold3", "boltz2", "chai1"), required=True)
+    prediction_parser.add_argument("--name", required=True)
+    prediction_parser.add_argument("--sequence", action="append", required=True)
+    prediction_parser.add_argument("--seed", action="append", type=int, default=[])
+    prediction_parser.add_argument("--project-root", type=Path, required=True)
+    prediction_parser.add_argument("--output", type=Path, required=True)
+    prediction_parser.add_argument("--profile", type=Path, required=True)
 
     subparsers.add_parser("doctor", help="Report workstation dependencies")
     return parser
@@ -301,9 +407,95 @@ def main(argv: list[str] | None = None) -> int:
             select_structure(connection, args.user, args.campaign, args.pdb, args.rationale)
         print(json.dumps({"pdb_id": args.pdb.upper(), "state": "structure_selected"}, indent=2))
         return 0
+    if args.command == "import-alphafold3-result":
+        initialize(args.db)
+        runtime = (json.loads(args.runtime_json.read_text(encoding="utf-8"))
+                   if args.runtime_json else {})
+        manifest = inspect_alphafold3_output(
+            args.output_dir, construct_name=args.construct,
+            model_version=args.model_version, chain_ids=args.chain or ["A"],
+            input_path=args.input, runtime=runtime,
+        )
+        if args.manifest_output:
+            args.manifest_output.parent.mkdir(parents=True, exist_ok=True)
+            args.manifest_output.write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        with connect(args.db) as connection:
+            candidate_id = register_predicted_structure(
+                connection, args.user, args.campaign, manifest)
+        print(json.dumps({"candidate_id": candidate_id, "manifest": manifest},
+                         indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "select-receptor":
+        initialize(args.db)
+        with connect(args.db) as connection:
+            select_receptor_candidate(
+                connection, args.user, args.campaign, args.candidate, args.rationale)
+        print(json.dumps({"candidate_id": args.candidate,
+                          "state": "structure_selected"}, indent=2))
+        return 0
     if args.command == "campaign-status":
         with connect(args.db) as connection:
             result = campaign_status(connection, args.user, args.campaign)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "create-structure-comparison":
+        try:
+            pocket_residues = [int(value.strip()) for value in args.pocket_residues.split(",")
+                               if value.strip()]
+        except ValueError as exc:
+            raise ValueError("Pocket residues must be comma-separated integers") from exc
+        chains = {}
+        for specification in args.chain:
+            if specification.count("=") != 1:
+                raise ValueError("Each chain must use PDB=chain syntax")
+            pdb_id, chain_id = specification.split("=", 1)
+            chains[pdb_id.upper()] = chain_id
+        with connect(args.db) as connection:
+            comparison_id = create_campaign_comparison_set(
+                connection, args.user, args.campaign, args.name, args.pdb,
+                args.reference_pdb, pocket_residues, chains, args.rationale,
+            )
+        print(json.dumps({"comparison_set_id": comparison_id,
+                          "campaign_state": "structures_review"}, indent=2))
+        return 0
+    if args.command == "structure-comparison-status":
+        with connect(args.db) as connection:
+            result = comparison_set_status(connection, args.user, args.comparison)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "prepare-pymol-review":
+        with connect(args.db) as connection:
+            result = generate_comparison_pymol_review(
+                connection, args.user, args.comparison, args.project_root, args.output)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "create-ai-review":
+        evidence = json.loads(args.evidence_json.read_text(encoding="utf-8"))
+        prompt = args.prompt_file.read_text(encoding="utf-8")
+        with connect(args.db) as connection:
+            request_id = create_ai_review_request(
+                connection, args.user, args.project, campaign_id=args.campaign,
+                task_type=args.task_type, subject_type=args.subject_type,
+                subject_id=args.subject_id, prompt_version=args.prompt_version,
+                prompt_text=prompt, evidence=evidence, data_classes=args.data_class,
+            )
+        print(json.dumps({"request_id": request_id, "status": "pending"}, indent=2))
+        return 0
+    if args.command == "import-ai-recommendation":
+        response = json.loads(args.response_json.read_text(encoding="utf-8"))
+        with connect(args.db) as connection:
+            recommendation_id = import_ai_recommendation(
+                connection, args.user, args.request, provider=args.provider,
+                model_name=args.model, model_version=args.model_version,
+                response=response,
+            )
+        print(json.dumps({"recommendation_id": recommendation_id,
+                          "request_id": args.request}, indent=2))
+        return 0
+    if args.command == "ai-review-status":
+        with connect(args.db) as connection:
+            result = ai_review_status(connection, args.user, args.request)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "create-user":
@@ -442,6 +634,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "fetch-pdb":
         print(json.dumps(acquire_rcsb_mmcif(args.pdb, args.project_root), indent=2))
         return 0
+    if args.command == "fetch-alphafold-db":
+        print(json.dumps(acquire_alphafold_db_mmcif(
+            args.uniprot, args.project_root), indent=2))
+        return 0
     if args.command == "prepare-alphafold3":
         path = write_alphafold3_input(
             args.name, args.sequence, args.output, args.project_root,
@@ -452,6 +648,18 @@ def main(argv: list[str] | None = None) -> int:
             profile = load_model_profile(args.profile)
             result["command"] = prediction_command(profile, path, path.parent / "output")
         print(json.dumps(result, indent=2))
+        return 0
+    if args.command == "prepare-structure-prediction":
+        profile = load_model_profile(args.profile)
+        if profile["backend"] != args.backend:
+            raise ValueError("Profile backend does not match --backend")
+        path = write_prediction_input(
+            args.backend, args.name, args.sequence, args.output,
+            args.project_root, seeds=args.seed or (1,),
+        )
+        print(json.dumps({"backend": args.backend, "input": str(path),
+                          "command": prediction_command(profile, path, path.parent / "output")},
+                         indent=2))
         return 0
     if args.command == "doctor":
         report = environment_report()

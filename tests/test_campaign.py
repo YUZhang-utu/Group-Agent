@@ -1,10 +1,12 @@
 from pathlib import Path
+import hashlib
 
 import pytest
 
 from aidd_agent.campaign import (
     CampaignStateError, campaign_status, create_campaign,
-    register_structure_candidates, select_structure, set_target,
+    register_predicted_structure, register_structure_candidates,
+    select_receptor_candidate, select_structure, set_target,
 )
 from aidd_agent.rcsb import search_structures
 from aidd_agent.registry import connect, initialize
@@ -86,7 +88,15 @@ def test_mocked_rcsb_search_preserves_selection_metadata() -> None:
             "exptl": [{"method": "X-RAY DIFFRACTION"}],
             "rcsb_entry_info": {"resolution_combined": [2.1]},
             "rcsb_accession_info": {"deposit_date": "2024-02-03"},
-            "nonpolymer_entities": [{"pdbx_entity_nonpoly": {"comp_id": "ATP"}}],
+            "nonpolymer_entities": [
+                {"pdbx_entity_nonpoly": {"comp_id": "ATP"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "GOL"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "CL"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "NA"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "EDO"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "PO4"}},
+                {"pdbx_entity_nonpoly": {"comp_id": "MG"}},
+            ],
         }]}}
 
     query, candidates = search_structures("P00001", max_resolution=2.5, post_json=post)
@@ -94,7 +104,16 @@ def test_mocked_rcsb_search_preserves_selection_metadata() -> None:
     assert candidates == [{"pdb_id": "2XYZ", "title": "Protein-ligand complex",
                            "experimental_method": "X-RAY DIFFRACTION",
                            "resolution_angstrom": 2.1, "deposition_date": "2024-02-03",
-                           "ligand_ids": ["ATP"]}]
+                           "ligand_ids": ["ATP"],
+                           "nonpolymer_ids": ["ATP", "CL", "EDO", "GOL", "MG", "NA", "PO4"],
+                           "excluded_nonpolymer_components": [
+                               {"component_id": "CL", "reason": "inorganic_ion"},
+                               {"component_id": "EDO", "reason": "solvent_or_cryoprotectant"},
+                               {"component_id": "GOL", "reason": "solvent_or_cryoprotectant"},
+                               {"component_id": "MG", "reason": "inorganic_ion"},
+                               {"component_id": "NA", "reason": "inorganic_ion"},
+                               {"component_id": "PO4", "reason": "buffer_or_salt"},
+                           ]}]
 
 
 def test_rcsb_search_accepts_null_optional_lists() -> None:
@@ -111,4 +130,76 @@ def test_rcsb_search_accepts_null_optional_lists() -> None:
     assert candidates == [{
         "pdb_id": "3ABC", "title": "", "experimental_method": None,
         "resolution_angstrom": 2.4, "deposition_date": None, "ligand_ids": [],
+        "nonpolymer_ids": [], "excluded_nonpolymer_components": [],
     }]
+
+
+def test_candidate_reregistration_refreshes_ligand_classification(tmp_path: Path) -> None:
+    database = tmp_path / "aidd.sqlite3"
+    user_id, campaign_id = setup_campaign(database, tmp_path / "workspaces")
+    old = candidate()
+    old["ligand_ids"] = ["GOL", "LIG"]
+    refreshed = candidate()
+    refreshed.update({
+        "ligand_ids": ["LIG"], "nonpolymer_ids": ["GOL", "LIG"],
+        "excluded_nonpolymer_components": [
+            {"component_id": "GOL", "reason": "solvent_or_cryoprotectant"}
+        ],
+    })
+    with connect(database) as connection:
+        assert register_structure_candidates(
+            connection, user_id, campaign_id, [old], {"version": 1}) == 1
+        assert register_structure_candidates(
+            connection, user_id, campaign_id, [refreshed], {"version": 2}) == 0
+        status = campaign_status(connection, user_id, campaign_id)
+    item = status["candidates"][0]
+    assert item["ligand_ids"] == ["LIG"]
+    assert item["nonpolymer_ids"] == ["GOL", "LIG"]
+    assert item["excluded_nonpolymer_components"][0]["component_id"] == "GOL"
+
+
+def test_predicted_structure_registration_and_version_lock(tmp_path: Path) -> None:
+    database = tmp_path / "aidd.sqlite3"
+    user_id, campaign_id = setup_campaign(database, tmp_path / "workspaces")
+    structure = tmp_path / "wee1_af3.cif"
+    structure.write_text("data_wee1\n#\n", encoding="utf-8")
+    digest = hashlib.sha256(structure.read_bytes()).hexdigest()
+    manifest = {
+        "backend": "alphafold3", "model_name": "AlphaFold 3",
+        "model_version": "source-abc123", "construct_name": "WEE1_299_569",
+        "chain_ids": ["A"], "structure_path": str(structure),
+        "structure_sha256": digest, "ranking_score": 0.85,
+        "confidence": {"ranking_score": 0.85},
+        "provenance": {"input_sha256": "input-hash", "sif_sha256": "sif-hash"},
+    }
+    with connect(database) as connection:
+        candidate_id = register_predicted_structure(
+            connection, user_id, campaign_id, manifest)
+        assert register_predicted_structure(
+            connection, user_id, campaign_id, manifest) == candidate_id
+        status = campaign_status(connection, user_id, campaign_id)
+        assert status["state"] == "structures_review"
+        assert status["predicted_candidates"][0]["structure_sha256"] == digest
+        select_receptor_candidate(
+            connection, user_id, campaign_id, candidate_id,
+            "AF3 kinase core agrees with the reviewed experimental ensemble")
+        selected = campaign_status(connection, user_id, campaign_id)
+    assert selected["selected_pdb_id"] is None
+    assert selected["selected_receptor"]["candidate_kind"] == "predicted"
+    assert selected["selected_receptor"]["snapshot"]["structure_sha256"] == digest
+
+
+def test_predicted_structure_rejects_changed_file(tmp_path: Path) -> None:
+    database = tmp_path / "aidd.sqlite3"
+    user_id, campaign_id = setup_campaign(database, tmp_path / "workspaces")
+    structure = tmp_path / "changed.cif"
+    structure.write_text("data_changed\n", encoding="utf-8")
+    manifest = {
+        "backend": "alphafold3", "model_name": "AlphaFold 3",
+        "model_version": "v1", "construct_name": "target_domain",
+        "chain_ids": ["A"], "structure_path": str(structure),
+        "structure_sha256": "0" * 64, "provenance": {},
+    }
+    with connect(database) as connection:
+        with pytest.raises(ValueError, match="SHA-256"):
+            register_predicted_structure(connection, user_id, campaign_id, manifest)

@@ -1,0 +1,6 @@
+{
+  "backend": "chai1",
+  "executable": "/opt/conda/envs/chai1/bin/chai-lab",
+  "use_msa_server": false,
+  "use_templates_server": false
+}
