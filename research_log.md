@@ -163,3 +163,7 @@
   candidates can be reviewed together with an explicit reference, filtered
   ligand selections, 6 Å ligand pockets, and predicted-construct residue-number
   offsets. Offline suite: 42 tests passed; 8BJU/all-WEE1 PyMOL validation is next.
+- Workstation visualization exposed 9TG7 as an incompatible ensemble member.
+  RCSB identifies chain A as beta-TrCP and chain B as only a 12-residue WEE1
+  degron. Added audited `PDB=reason` ensemble exclusions rather than deleting
+  the candidate or silently forcing an alignment.

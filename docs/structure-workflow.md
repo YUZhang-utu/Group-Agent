@@ -107,6 +107,7 @@ candidates remain peer members:
 aidd-agent create-receptor-ensemble --db /path/to/aidd.sqlite3 \
   --user USR-... --campaign CAM-... --name all-target-structures \
   --reference-pdb 8BJU --pocket-residues 320,337,463 \
+  --exclude-pdb "9TG7=WEE1 is only a 12-residue degron peptide, not the kinase domain" \
   --rationale "Observe receptor and ligand-pocket diversity before selection"
 ```
 

@@ -104,3 +104,6 @@
   as 8BJU is an alignment reference, not an implicit winner; all experimental
   candidates and predictions remain visible, with filtered ligand identities
   and local ligand-pocket selections compared before recommendation.
+- UniProt membership is not receptor eligibility. RCSB 9TG7 contains WEE1 only
+  as a 12-residue degron peptide bound to beta-TrCP, so it must remain searchable
+  provenance while being excluded—with rationale—from a WEE1 kinase ensemble.

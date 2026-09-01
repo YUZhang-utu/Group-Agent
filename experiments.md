@@ -719,5 +719,9 @@ pose diversity before selection, without implying that the reference is best.
   residue numbering to model-local numbering; WEE1 299–569 therefore uses an
   offset of 298.
 - Ensemble creation leaves Campaign state at `structures_review`.
+- Added rationale-required ensemble exclusions so UniProt-matched fragments or
+  off-domain complexes remain in Campaign provenance without entering an
+  incompatible receptor alignment. The motivating case is 9TG7: WEE1 is a
+  12-residue degron peptide rather than the kinase domain.
 - Offline suite: 42 tests passed. Real 8BJU/all-WEE1 visualization remains the
   workstation validation step.

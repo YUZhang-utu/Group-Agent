@@ -149,6 +149,9 @@ def build_parser() -> argparse.ArgumentParser:
     ensemble.add_argument("--reference-pdb", required=True)
     ensemble.add_argument("--pocket-residues", default="")
     ensemble.add_argument("--chain", action="append", default=[])
+    ensemble.add_argument(
+        "--exclude-pdb", action="append", default=[],
+        help="PDB=reason; retain provenance but omit an ineligible receptor")
     ensemble.add_argument("--rationale", required=True)
 
     ensemble_status = subparsers.add_parser(
@@ -499,10 +502,17 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Each chain must use candidate=chain syntax")
             key, chain = specification.split("=", 1)
             chains[key.upper() if len(key) == 4 else key] = chain
+        exclusions = {}
+        for specification in args.exclude_pdb:
+            if specification.count("=") != 1:
+                raise ValueError("Each exclusion must use PDB=reason syntax")
+            pdb_id, reason = specification.split("=", 1)
+            exclusions[pdb_id.upper()] = reason
         with connect(args.db) as connection:
             ensemble_id = create_receptor_ensemble(
                 connection, args.user, args.campaign, args.name,
-                args.reference_pdb, pocket_residues, chains, args.rationale)
+                args.reference_pdb, pocket_residues, chains, args.rationale,
+                exclusions=exclusions)
         print(json.dumps({"ensemble_id": ensemble_id,
                           "campaign_state": "structures_review"}, indent=2))
         return 0

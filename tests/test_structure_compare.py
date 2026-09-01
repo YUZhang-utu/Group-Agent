@@ -129,7 +129,7 @@ def test_all_candidate_receptor_ensemble_includes_prediction_and_ligands(tmp_pat
     database = tmp_path / "aidd.sqlite3"
     project_root = tmp_path / "project"
     user_id, campaign_id = setup_campaign(database, tmp_path / "workspaces")
-    first, second = candidate("8BJU"), candidate("8ZZZ")
+    first, second, fragment = candidate("8BJU"), candidate("8ZZZ"), candidate("9TG7")
     first["ligand_ids"] = ["ATP"]
     second["ligand_ids"] = ["LIG"]
     predicted_path = tmp_path / "af3_wee1.cif"
@@ -143,17 +143,24 @@ def test_all_candidate_receptor_ensemble_includes_prediction_and_ligands(tmp_pat
     }
     with connect(database) as connection:
         register_structure_candidates(
-            connection, user_id, campaign_id, [first, second], {})
+            connection, user_id, campaign_id, [first, second, fragment], {})
         predicted_id = register_predicted_structure(
             connection, user_id, campaign_id, manifest)
         ensemble_id = create_receptor_ensemble(
             connection, user_id, campaign_id, "all-target-structures", "8BJU",
             [320, 337, 463], {"8BJU": "A", predicted_id: "A"},
-            "Observe the complete experimental and predicted ensemble")
+            "Observe the complete experimental and predicted ensemble",
+            exclusions={"9TG7": "WEE1 is only a 12-residue degron peptide"})
         status = receptor_ensemble_status(connection, user_id, ensemble_id)
     assert len(status["members"]) == 3
     assert status["members"][0]["display_id"] == "8BJU"
     assert any(item["candidate_kind"] == "predicted" for item in status["members"])
+    assert status["excluded_candidates"] == [{
+        "candidate_id": status["excluded_candidates"][0]["candidate_id"],
+        "candidate_kind": "experimental",
+        "reason": "WEE1 is only a 12-residue degron peptide",
+        "pdb_id": "9TG7",
+    }]
     structure_dir = project_root / "inputs" / "structures"
     structure_dir.mkdir(parents=True)
     (structure_dir / "8BJU.cif").write_text("data_8BJU\n", encoding="utf-8")

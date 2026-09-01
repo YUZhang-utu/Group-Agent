@@ -183,6 +183,13 @@ CREATE TABLE IF NOT EXISTS receptor_ensemble_member (
     residue_offset INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY(ensemble_id, candidate_id)
 );
+CREATE TABLE IF NOT EXISTS receptor_ensemble_exclusion (
+    ensemble_id TEXT NOT NULL REFERENCES receptor_ensemble(id),
+    candidate_id TEXT NOT NULL,
+    candidate_kind TEXT NOT NULL CHECK(candidate_kind IN ('experimental', 'predicted')),
+    reason TEXT NOT NULL,
+    PRIMARY KEY(ensemble_id, candidate_id)
+);
 CREATE INDEX IF NOT EXISTS idx_task_project ON task(project_id);
 CREATE INDEX IF NOT EXISTS idx_task_access_user ON task_access(user_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_project_owner ON project(owner_user_id, id);

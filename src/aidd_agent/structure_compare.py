@@ -231,6 +231,7 @@ def create_receptor_ensemble(
     connection: sqlite3.Connection, user_id: str, campaign_id: str, name: str,
     reference_pdb_id: str, pocket_residues: Sequence[int],
     chains: Mapping[str, str], rationale: str,
+    exclusions: Mapping[str, str] | None = None,
 ) -> str:
     campaign = _campaign_for_user(connection, campaign_id, user_id)
     if campaign["state"] != "structures_review":
@@ -249,7 +250,15 @@ def create_receptor_ensemble(
         (row for row in experimental if row["pdb_id"] == reference_pdb_id.upper()), None)
     if not reference:
         raise ValueError(f"Reference PDB is not a Campaign candidate: {reference_pdb_id.upper()}")
-    members = [("experimental", row["id"], row["pdb_id"]) for row in experimental]
+    exclusions = {key.upper(): value.strip() for key, value in (exclusions or {}).items()}
+    known_pdbs = {row["pdb_id"] for row in experimental}
+    unknown_exclusions = sorted(set(exclusions) - known_pdbs)
+    if unknown_exclusions:
+        raise ValueError("Excluded PDBs are not Campaign candidates: " + ", ".join(unknown_exclusions))
+    if any(not reason for reason in exclusions.values()):
+        raise ValueError("Every ensemble exclusion requires a rationale")
+    members = [("experimental", row["id"], row["pdb_id"])
+               for row in experimental if row["pdb_id"] not in exclusions]
     members += [("predicted", row["id"], row["id"], row["construct_name"])
                 for row in predicted]
     if len(members) < 2:
@@ -261,6 +270,12 @@ def create_receptor_ensemble(
          json.dumps(sorted(set(int(value) for value in pocket_residues))),
          rationale.strip(), utc_now()),
     )
+    for row in experimental:
+        if row["pdb_id"] in exclusions:
+            connection.execute(
+                "INSERT INTO receptor_ensemble_exclusion VALUES (?, ?, 'experimental', ?)",
+                (ensemble_id, row["id"], exclusions[row["pdb_id"]]),
+            )
     normalized_members = [(*item, "") if len(item) == 3 else item for item in members]
     for kind, candidate_id, public_id, construct_name in normalized_members:
         chain = chains.get(public_id, chains.get(candidate_id, "A"))
@@ -286,6 +301,13 @@ def receptor_ensemble_status(
     _campaign_for_user(connection, ensemble["campaign_id"], user_id, write=False)
     members = connection.execute(
         "SELECT * FROM receptor_ensemble_member WHERE ensemble_id=? ORDER BY candidate_kind, candidate_id",
+        (ensemble_id,),
+    ).fetchall()
+    excluded_rows = connection.execute(
+        """SELECT ree.candidate_id, ree.candidate_kind, ree.reason, sc.pdb_id
+           FROM receptor_ensemble_exclusion ree
+           LEFT JOIN structure_candidate sc ON sc.id=ree.candidate_id
+           WHERE ree.ensemble_id=? ORDER BY sc.pdb_id""",
         (ensemble_id,),
     ).fetchall()
     resolved = []
@@ -318,6 +340,7 @@ def receptor_ensemble_status(
     return {"ensemble_id": ensemble_id, "campaign_id": ensemble["campaign_id"],
             "name": ensemble["name"], "rationale": ensemble["rationale"],
             "pocket_residues": json.loads(ensemble["pocket_residues_json"]),
+            "excluded_candidates": [dict(item) for item in excluded_rows],
             "members": sorted(resolved, key=lambda item: (not item["is_reference"], item["display_id"]))}
 
 
