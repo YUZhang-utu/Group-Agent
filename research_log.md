@@ -167,3 +167,7 @@
   RCSB identifies chain A as beta-TrCP and chain B as only a 12-residue WEE1
   degron. Added audited `PDB=reason` ensemble exclusions rather than deleting
   the candidate or silently forcing an alignment.
+- Completed E015: provider-neutral LLM receptor-eligibility requests and strict
+  response validation now require every candidate, supplied evidence citations,
+  and human control. Recommendations do not mutate Campaign state. Full offline
+  suite: 44 tests passed.

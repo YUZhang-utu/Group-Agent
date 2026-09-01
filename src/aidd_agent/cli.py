@@ -20,7 +20,8 @@ from .structure_compare import (
     generate_receptor_ensemble_pymol_review, receptor_ensemble_status,
 )
 from .ai_recommendation import (
-    ai_review_status, create_ai_review_request, import_ai_recommendation,
+    ai_review_status, create_ai_review_request,
+    create_receptor_eligibility_review_request, import_ai_recommendation,
 )
 from .doctor import environment_report
 from .prediction import (
@@ -196,6 +197,16 @@ def build_parser() -> argparse.ArgumentParser:
     ai_request.add_argument("--prompt-file", type=Path, required=True)
     ai_request.add_argument("--evidence-json", type=Path, required=True)
     ai_request.add_argument("--data-class", action="append", required=True)
+
+    receptor_ai = subparsers.add_parser(
+        "create-receptor-eligibility-review",
+        help="Create a provider-neutral LLM review of all Campaign receptor candidates")
+    receptor_ai.add_argument("--db", type=Path, required=True)
+    receptor_ai.add_argument("--user", required=True)
+    receptor_ai.add_argument("--campaign", required=True)
+    receptor_ai.add_argument("--requirements-json", type=Path, required=True)
+    receptor_ai.add_argument("--computed-evidence-json", type=Path)
+    receptor_ai.add_argument("--prompt-version", default="receptor-eligibility-v1")
 
     ai_import = subparsers.add_parser(
         "import-ai-recommendation", help="Import a structured model recommendation")
@@ -549,6 +560,19 @@ def main(argv: list[str] | None = None) -> int:
                 prompt_text=prompt, evidence=evidence, data_classes=args.data_class,
             )
         print(json.dumps({"request_id": request_id, "status": "pending"}, indent=2))
+        return 0
+    if args.command == "create-receptor-eligibility-review":
+        requirements = json.loads(args.requirements_json.read_text(encoding="utf-8"))
+        computed = None
+        if args.computed_evidence_json:
+            computed = json.loads(
+                args.computed_evidence_json.read_text(encoding="utf-8"))
+        with connect(args.db) as connection:
+            request_id = create_receptor_eligibility_review_request(
+                connection, args.user, args.campaign, requirements=requirements,
+                computed_evidence=computed, prompt_version=args.prompt_version)
+            result = ai_review_status(connection, args.user, request_id)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "import-ai-recommendation":
         response = json.loads(args.response_json.read_text(encoding="utf-8"))

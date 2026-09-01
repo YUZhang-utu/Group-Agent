@@ -123,3 +123,22 @@ aidd-agent prepare-receptor-ensemble-pymol --db /path/to/aidd.sqlite3 \
 The script aligns proteins with `cealign`, displays only classified ligand IDs,
 and selects the 6 Å protein neighborhood of each ligand. Predicted apo models do
 not receive invented ligands.
+
+## Ask an LLM to review receptor eligibility
+
+Write JSON describing the intended receptor purpose and required domain. This
+creates an audited, provider-neutral prompt/evidence packet; it does not call a
+model and does not exclude a structure.
+
+```bash
+aidd-agent create-receptor-eligibility-review \
+  --db /path/to/aidd.sqlite3 --user USR-... --campaign CAM-... \
+  --requirements-json receptor-requirements.json \
+  --computed-evidence-json receptor-computed-evidence.json
+```
+
+A later provider adapter must return exactly one `include`, `exclude`, or
+`manual_review` decision for every candidate. Import it with
+`import-ai-recommendation`. Unknown evidence, missing candidates, duplicates,
+and `requires_human_review=false` are rejected. Accepted output is advisory; a
+human explicitly creates final ensemble exclusions and the receptor lock.

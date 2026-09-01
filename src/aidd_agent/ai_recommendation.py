@@ -62,6 +62,115 @@ def create_ai_review_request(
     return request_id
 
 
+def create_receptor_eligibility_review_request(
+    connection: sqlite3.Connection, user_id: str, campaign_id: str, *,
+    requirements: dict[str, Any], computed_evidence: dict[str, Any] | None = None,
+    prompt_version: str = "receptor-eligibility-v1",
+) -> str:
+    campaign = _campaign_for_user(connection, campaign_id, user_id, write=False)
+    target = connection.execute(
+        "SELECT * FROM target WHERE campaign_id=?", (campaign_id,)
+    ).fetchone()
+    if not target:
+        raise ValueError("Campaign target metadata is required")
+    evidence: dict[str, Any] = {
+        "target_requirement": requirements,
+        "target_metadata": dict(target),
+    }
+    experimental = connection.execute(
+        """SELECT id, pdb_id, title, experimental_method, resolution_angstrom,
+           deposition_date, ligand_ids_json, metadata_json
+           FROM structure_candidate WHERE campaign_id=? ORDER BY pdb_id""",
+        (campaign_id,),
+    ).fetchall()
+    for row in experimental:
+        evidence[f"candidate:{row['id']}"] = {
+            "candidate_id": row["id"], "candidate_kind": "experimental",
+            "pdb_id": row["pdb_id"], "title": row["title"],
+            "experimental_method": row["experimental_method"],
+            "resolution_angstrom": row["resolution_angstrom"],
+            "deposition_date": row["deposition_date"],
+            "ligand_ids": json.loads(row["ligand_ids_json"]),
+            "public_metadata": json.loads(row["metadata_json"]),
+            "computed": (computed_evidence or {}).get(row["id"], {}),
+        }
+    predicted = connection.execute(
+        """SELECT id, backend, model_name, model_version, construct_name,
+           chain_ids_json, ranking_score, confidence_json, provenance_json
+           FROM predicted_structure_candidate WHERE campaign_id=? ORDER BY created_at""",
+        (campaign_id,),
+    ).fetchall()
+    for row in predicted:
+        evidence[f"candidate:{row['id']}"] = {
+            "candidate_id": row["id"], "candidate_kind": "predicted",
+            "backend": row["backend"], "model_name": row["model_name"],
+            "model_version": row["model_version"],
+            "construct_name": row["construct_name"],
+            "chain_ids": json.loads(row["chain_ids_json"]),
+            "ranking_score": row["ranking_score"],
+            "confidence": json.loads(row["confidence_json"]),
+            "provenance": json.loads(row["provenance_json"]),
+            "computed": (computed_evidence or {}).get(row["id"], {}),
+        }
+    if not any(key.startswith("candidate:") for key in evidence):
+        raise ValueError("At least one receptor candidate is required")
+    prompt = (
+        "Review every supplied receptor candidate for the stated structural purpose. "
+        "Use only supplied evidence. A UniProt match alone does not prove that the "
+        "required domain or chain is present. Return JSON with top-level action, "
+        "rationale, confidence, evidence_refs, uncertainties, "
+        "requires_human_review=true, and decisions. decisions must contain exactly "
+        "one object per candidate with candidate_id, verdict "
+        "(include|exclude|manual_review), rationale, evidence_refs, and "
+        "uncertainties. Do not select a final receptor or infer missing data."
+    )
+    return create_ai_review_request(
+        connection, user_id, campaign["project_id"], campaign_id=campaign_id,
+        task_type="receptor_eligibility", subject_type="campaign",
+        subject_id=campaign_id, prompt_version=prompt_version, prompt_text=prompt,
+        evidence=evidence,
+        data_classes=["public_target_metadata", "public_structure_metadata",
+                      "computed_summary", "project_configuration"],
+    )
+
+
+def _validate_receptor_eligibility_response(
+    request: sqlite3.Row, response: dict[str, Any],
+) -> None:
+    evidence = json.loads(request["evidence_json"])
+    expected = {key.removeprefix("candidate:") for key in evidence
+                if key.startswith("candidate:")}
+    decisions = response.get("decisions")
+    if not isinstance(decisions, list):
+        raise ValueError("Receptor eligibility response requires a decisions list")
+    received: set[str] = set()
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            raise ValueError("Each receptor eligibility decision must be an object")
+        candidate_id = str(decision.get("candidate_id", ""))
+        if candidate_id in received:
+            raise ValueError(f"Duplicate receptor eligibility decision: {candidate_id}")
+        received.add(candidate_id)
+        if decision.get("verdict") not in {"include", "exclude", "manual_review"}:
+            raise ValueError(f"Invalid receptor eligibility verdict for {candidate_id}")
+        if not str(decision.get("rationale", "")).strip():
+            raise ValueError(f"Missing receptor eligibility rationale for {candidate_id}")
+        refs = decision.get("evidence_refs")
+        if not isinstance(refs, list) or not refs:
+            raise ValueError(f"Missing receptor eligibility evidence for {candidate_id}")
+        unknown = sorted(set(refs) - set(evidence))
+        if unknown:
+            raise ValueError("Eligibility decision cites unknown evidence: " + ", ".join(unknown))
+        uncertainties = decision.get("uncertainties", [])
+        if not isinstance(uncertainties, list) or not all(
+                isinstance(value, str) for value in uncertainties):
+            raise ValueError("Eligibility decision uncertainties must be strings")
+    if received != expected:
+        raise ValueError("Eligibility decisions must cover exactly all Campaign candidates")
+    if response.get("requires_human_review") is not True:
+        raise ValueError("Receptor eligibility recommendations require human review")
+
+
 def import_ai_recommendation(
     connection: sqlite3.Connection, user_id: str, request_id: str, *,
     provider: str, model_name: str, model_version: str | None,
@@ -75,6 +184,8 @@ def import_ai_recommendation(
     _authorize(connection, user_id, request["project_id"], request["campaign_id"])
     if request["status"] != "pending":
         raise ValueError("AI review request already has a recommendation")
+    if request["task_type"] == "receptor_eligibility":
+        _validate_receptor_eligibility_response(request, response)
     action = str(response.get("action", "")).strip()
     rationale = str(response.get("rationale", "")).strip()
     if not action or not rationale:

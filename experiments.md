@@ -725,3 +725,48 @@ pose diversity before selection, without implying that the reference is best.
   12-residue degron peptide rather than the kinase domain.
 - Offline suite: 42 tests passed. Real 8BJU/all-WEE1 visualization remains the
   workstation validation step.
+
+## E015 — LLM receptor-eligibility recommendation interface
+
+Status: implemented — workstation validation pending
+
+### Hypothesis
+
+A target-agnostic evidence packet and strict per-candidate response schema can
+let an LLM identify short fragments, off-domain complexes, or wrong chains while
+keeping final exclusion under deterministic validation and human control.
+
+### Protocol
+
+1. Build an AI request from Campaign target metadata, receptor-purpose/domain
+   requirements, public PDB metadata, prediction provenance, and optional
+   computed coverage summaries.
+2. Require one `include`, `exclude`, or `manual_review` decision per candidate,
+   each with rationale and evidence references.
+3. Reject unknown/missing candidates, invalid verdicts, missing evidence, and
+   any response that disables human review.
+4. Store provider/model/version and the complete response using the existing
+   immutable AI recommendation registry.
+5. Do not mutate an ensemble or Campaign; accepted exclusions remain a later
+   explicit human action.
+
+### Acceptance criteria
+
+- The interface contains no WEE1- or 9TG7-specific rule.
+- Experimental raw data and measurements remain forbidden from model context.
+- A 9TG7-like evidence record can be recommended for exclusion with cited
+  chain-length/domain evidence.
+- Partial or hallucinated candidate lists are rejected.
+- Existing generic AI review behavior remains compatible.
+
+### Results
+
+- Added a provider-neutral request builder for Campaign target requirements,
+  public PDB metadata, prediction provenance, and optional computed evidence.
+- Every candidate must occur exactly once in the response. Verdicts are limited
+  to `include`, `exclude`, or `manual_review`, evidence citations are checked,
+  and human review cannot be disabled.
+- The dedicated CLI emits the complete prompt/evidence packet for a later LLM
+  provider adapter. Recommendations never mutate Campaign state or ensembles.
+- Confirmatory 8BJU/9TG7-like tests use domain-purpose evidence without
+  hard-coding either identifier. Full offline suite: 44 tests passed.

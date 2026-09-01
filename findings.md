@@ -107,3 +107,7 @@
 - UniProt membership is not receptor eligibility. RCSB 9TG7 contains WEE1 only
   as a 12-residue degron peptide bound to beta-TrCP, so it must remain searchable
   provenance while being excluded—with rationale—from a WEE1 kinase ensemble.
+- LLM receptor screening must be evidence-bounded and advisory. The interface
+  requires exactly one cited decision per Campaign candidate and mandatory
+  human review, so fragments, off-domain complexes, and wrong-chain structures
+  can be flagged without silently modifying the Campaign.
