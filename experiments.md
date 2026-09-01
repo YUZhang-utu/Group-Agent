@@ -770,3 +770,67 @@ keeping final exclusion under deterministic validation and human control.
   provider adapter. Recommendations never mutate Campaign state or ensembles.
 - Confirmatory 8BJU/9TG7-like tests use domain-purpose evidence without
   hard-coding either identifier. Full offline suite: 44 tests passed.
+
+## E016 — Campaign ligand registry, comparison, and query lock
+
+Status: active — confirmatory integration
+
+### Hypothesis
+
+Representing each retained co-crystal ligand as a provenance-rich, standardized
+Campaign entity will prevent CCD identity, crystal instance, and normalized
+chemical identity from being conflated, while enabling an auditable human query
+selection for downstream similarity search.
+
+### Protocol
+
+1. Register ligand instances from an explicit manifest containing PDB/CCD,
+   chain/residue identity, source structure, standardized SMILES, and optional
+   crystal conformer artifact/checksum.
+2. Reject components not present in the parent candidate's filtered ligand list;
+   never revive excluded solvents, salts, buffers, or ions.
+3. Compare registered ligands using Morgan/Tanimoto and, where 3D conformers are
+   available, USRCAT; represent missing 3D data explicitly rather than inventing
+   conformers.
+4. Lock one query ligand with a required rationale and immutable chemical/
+   provenance snapshot. Registration and comparison must not select it.
+5. Expose provider-neutral AI evidence for later recommendation without allowing
+   an LLM to create the lock.
+
+### Acceptance criteria
+
+- Multiple instances of the same CCD ligand remain distinguishable.
+- Filtered-out PDB components cannot be registered as Campaign ligands.
+- 2D and 3D comparisons report their methods and parameters independently.
+- Query selection is user-authorized, rationale-required, and immutable.
+- Existing receptor and AI workflows remain green.
+
+## E017 — Hierarchical 2D/3D macrocycle-library search
+
+Status: planned — confirmatory integration
+
+### Hypothesis
+
+A persistent Morgan/Tanimoto first stage followed by conformer-aware USRCAT
+reranking can retrieve chemically and shape-relevant macrocycles reproducibly
+without an all-against-all exact 3D alignment.
+
+### Protocol
+
+1. Bind ready Morgan and USRCAT indices to an explicitly locked query ligand and
+   registered library.
+2. Retrieve a configurable 2D candidate pool, then rerank available conformers
+   by 3D similarity while retaining molecule/conformer identity.
+3. Record index versions, parameters, cutoffs, limits, query snapshot, and ranked
+   results in an immutable search record.
+4. Keep 2D-only hits when 3D data are unavailable, labeling the missing stage.
+5. Produce deterministic JSON suitable for later LLM explanation and human
+   review, never automatic docking submission.
+
+### Acceptance criteria
+
+- Repeated searches with identical query/index/parameters return identical order.
+- Molecule-level results retain the best conformer and both 2D/3D scores.
+- Search rejects cross-library indices and unlocked/unowned query ligands.
+- No experimental measurements enter LLM evidence.
+- Offline tests cover query locking, filtering, ranking, and provenance.
