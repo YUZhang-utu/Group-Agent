@@ -177,3 +177,7 @@
   retain Morgan, best-conformer USRCAT, 2D fallback, index hashes, and query
   snapshots. Full offline suite: 49 tests passed. Production RDKit/index
   validation remains on the university workstation.
+- Recorded continuity checkpoint `to_human/resume-checkpoint-2026-09-01.md` at
+  commit `2859048`. The next session begins with automatic mmCIF/CCD ligand
+  extraction and production Morgan/USRCAT index construction, not additional
+  receptor-selection work or the unrelated KRAS necessity/enhancement project.

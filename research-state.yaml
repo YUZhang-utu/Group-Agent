@@ -2,6 +2,11 @@ project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E017-hierarchical-2d-3d-library-search
+last_checkpoint:
+  date: 2026-09-01
+  git_commit: 2859048
+  test_result: 49_passed
+  handoff: to_human/resume-checkpoint-2026-09-01.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -39,21 +44,14 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - implement Campaign ligand instance registration and filtered-component enforcement
-  - implement auditable query-ligand selection lock
-  - connect persistent Morgan and USRCAT indices to hierarchical Campaign searches
-  - deploy the updated package on the university workstation and import the completed WEE1 AlphaFold 3 output into the active Campaign
-  - record the AlphaFold 3 source commit, SIF hash, input hash, model version, construct, and ranking/confidence metadata
-  - compare the registered predicted candidate with the experimental PDB ensemble without automatically selecting either source
-  - use 8BJU as the alignment reference for an all-candidate WEE1 receptor ensemble
-  - download any missing Campaign mmCIF files and generate the unified ligand-pocket PyMOL review
-  - implement deterministic receptor preparation and QC for experimental and predicted structures
-  - define the WEE1 construct, chain, protonation assumptions, cofactors, metals, waters, and ATP pocket
-  - generate an AI target-preparation recommendation from public metadata and computed QC summaries
-  - record the final receptor-selection and preparation rationale
-  - register the real Cluster Profile and verified host key
-  - deploy and verify the cluster-side library replica and runner
-  - validate the workstation Conda environment on the desktop
+  - update the university workstation to commit 2859048 and confirm 49 tests
+  - automatically extract retained ligand instances from Campaign mmCIF structures
+  - obtain authoritative RCSB CCD bond orders and generate standardized ligand SMILES/SDF artifacts
+  - compute real crystal-conformer USRCAT descriptors and register the WEE1 ligands
+  - compare WEE1 co-crystal ligands and create an advisory LLM query-selection request
+  - human-review and lock one WEE1 query ligand
+  - build production Morgan and conformer-level USRCAT indices for LIB-AFA68EE6888C
+  - run and validate the first hierarchical 2D/3D macrocycle-library search
 completed_experiments:
   - E001-batch-MOL2-registry-bootstrap
   - E002-campaign-target-state-machine
