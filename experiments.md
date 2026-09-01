@@ -674,3 +674,50 @@ deployment evidence supplied after E012, not retrospective E012 test results.
   RMSD without outlier rejection and 0.37 Å after rejection. Import into the
   production Campaign remains pending because the production registry and AF3
   files reside on the university Linux workstation.
+
+## E014 — Unified receptor ensemble and ligand-pocket review
+
+Status: implemented — workstation validation pending
+
+### Hypothesis
+
+Using one experimental structure only as an alignment reference while retaining
+all experimental and predicted candidates will expose receptor-state and ligand-
+pose diversity before selection, without implying that the reference is best.
+
+### Protocol
+
+1. Create a Campaign ensemble containing all PDB and predicted candidates, with
+   one explicit reference candidate and per-candidate chain assignments.
+2. Preserve filtered ligand IDs from RCSB; predicted apo candidates have no
+   invented ligand.
+3. Generate a PyMOL review that aligns every protein to the reference, displays
+   all retained ligands separately, and selects each ligand's local protein
+   neighborhood.
+4. Keep canonical pocket residues as an optional shared comparison selection.
+5. Leave the Campaign in `structures_review`; ensemble creation and visualization
+   must never select or lock a receptor.
+
+### Acceptance criteria
+
+- `8BJU` can be the reference while every Campaign PDB and AF3 candidate remains
+  visible as a peer.
+- Foreign candidate IDs, unsafe chains, and missing files are rejected.
+- Excluded solvent/ion component IDs do not reappear as ligands.
+- Generated scripts distinguish experimental ligands from predicted apo models.
+- Offline tests pass and no target-specific identifier is hard-coded.
+
+### Results
+
+- Added all-Campaign receptor ensembles containing every experimental PDB and
+  every registered prediction, with one explicit alignment reference.
+- Added reference-neutral status and Project-scoped PyMOL generation.
+- Generated scripts use `cealign`, display only classified ligand IDs, build
+  per-structure 6 Å ligand pockets, and retain optional canonical pocket
+  selections.
+- Predicted construct names ending in `_START_END` automatically map canonical
+  residue numbering to model-local numbering; WEE1 299–569 therefore uses an
+  offset of 298.
+- Ensemble creation leaves Campaign state at `structures_review`.
+- Offline suite: 42 tests passed. Real 8BJU/all-WEE1 visualization remains the
+  workstation validation step.

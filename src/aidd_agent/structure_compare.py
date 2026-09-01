@@ -225,3 +225,150 @@ def generate_pymol_review(structures: Sequence[dict[str, Any]], reference_id: st
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8", newline="\n")
     return output
+
+
+def create_receptor_ensemble(
+    connection: sqlite3.Connection, user_id: str, campaign_id: str, name: str,
+    reference_pdb_id: str, pocket_residues: Sequence[int],
+    chains: Mapping[str, str], rationale: str,
+) -> str:
+    campaign = _campaign_for_user(connection, campaign_id, user_id)
+    if campaign["state"] != "structures_review":
+        raise ValueError("Receptor ensembles require structures_review state")
+    if not rationale.strip():
+        raise ValueError("A scientific ensemble rationale is required")
+    experimental = connection.execute(
+        "SELECT id, pdb_id FROM structure_candidate WHERE campaign_id=? ORDER BY pdb_id",
+        (campaign_id,),
+    ).fetchall()
+    predicted = connection.execute(
+        "SELECT id, construct_name FROM predicted_structure_candidate WHERE campaign_id=? ORDER BY created_at",
+        (campaign_id,),
+    ).fetchall()
+    reference = next(
+        (row for row in experimental if row["pdb_id"] == reference_pdb_id.upper()), None)
+    if not reference:
+        raise ValueError(f"Reference PDB is not a Campaign candidate: {reference_pdb_id.upper()}")
+    members = [("experimental", row["id"], row["pdb_id"]) for row in experimental]
+    members += [("predicted", row["id"], row["id"], row["construct_name"])
+                for row in predicted]
+    if len(members) < 2:
+        raise ValueError("A receptor ensemble requires at least two candidates")
+    ensemble_id = stable_id("ENS")
+    connection.execute(
+        "INSERT INTO receptor_ensemble VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (ensemble_id, campaign_id, name.strip(), reference["id"],
+         json.dumps(sorted(set(int(value) for value in pocket_residues))),
+         rationale.strip(), utc_now()),
+    )
+    normalized_members = [(*item, "") if len(item) == 3 else item for item in members]
+    for kind, candidate_id, public_id, construct_name in normalized_members:
+        chain = chains.get(public_id, chains.get(candidate_id, "A"))
+        if not SAFE_TOKEN.fullmatch(chain):
+            raise ValueError(f"Invalid chain ID: {chain}")
+        match = re.search(r"_(\d+)_(\d+)$", construct_name) if kind == "predicted" else None
+        residue_offset = int(match.group(1)) - 1 if match else 0
+        connection.execute(
+            "INSERT INTO receptor_ensemble_member VALUES (?, ?, ?, ?, ?)",
+            (ensemble_id, kind, candidate_id, chain, residue_offset),
+        )
+    return ensemble_id
+
+
+def receptor_ensemble_status(
+    connection: sqlite3.Connection, user_id: str, ensemble_id: str,
+) -> dict[str, Any]:
+    ensemble = connection.execute(
+        "SELECT * FROM receptor_ensemble WHERE id=?", (ensemble_id,)
+    ).fetchone()
+    if not ensemble:
+        raise KeyError(f"Unknown receptor ensemble: {ensemble_id}")
+    _campaign_for_user(connection, ensemble["campaign_id"], user_id, write=False)
+    members = connection.execute(
+        "SELECT * FROM receptor_ensemble_member WHERE ensemble_id=? ORDER BY candidate_kind, candidate_id",
+        (ensemble_id,),
+    ).fetchall()
+    resolved = []
+    for member in members:
+        if member["candidate_kind"] == "experimental":
+            row = connection.execute(
+                "SELECT pdb_id, ligand_ids_json FROM structure_candidate WHERE id=?",
+                (member["candidate_id"],),
+            ).fetchone()
+            resolved.append({"candidate_kind": "experimental",
+                             "candidate_id": member["candidate_id"],
+                             "display_id": row["pdb_id"], "pdb_id": row["pdb_id"],
+                             "chain_id": member["chain_id"],
+                             "residue_offset": member["residue_offset"],
+                             "ligand_ids": json.loads(row["ligand_ids_json"]),
+                             "is_reference": member["candidate_id"] == ensemble["reference_candidate_id"]})
+        else:
+            row = connection.execute(
+                "SELECT backend, construct_name, structure_path FROM predicted_structure_candidate WHERE id=?",
+                (member["candidate_id"],),
+            ).fetchone()
+            resolved.append({"candidate_kind": "predicted",
+                             "candidate_id": member["candidate_id"],
+                             "display_id": member["candidate_id"],
+                             "backend": row["backend"], "construct_name": row["construct_name"],
+                             "structure_path": row["structure_path"],
+                             "chain_id": member["chain_id"], "ligand_ids": [],
+                             "residue_offset": member["residue_offset"],
+                             "is_reference": False})
+    return {"ensemble_id": ensemble_id, "campaign_id": ensemble["campaign_id"],
+            "name": ensemble["name"], "rationale": ensemble["rationale"],
+            "pocket_residues": json.loads(ensemble["pocket_residues_json"]),
+            "members": sorted(resolved, key=lambda item: (not item["is_reference"], item["display_id"]))}
+
+
+def generate_receptor_ensemble_pymol_review(
+    connection: sqlite3.Connection, user_id: str, ensemble_id: str,
+    project_root: Path, output_path: Path,
+) -> dict[str, Any]:
+    status = receptor_ensemble_status(connection, user_id, ensemble_id)
+    root = project_root.resolve()
+    output = ensure_within(output_path, root)
+    missing: list[str] = []
+    objects: list[dict[str, Any]] = []
+    reference_object = ""
+    for index, member in enumerate(status["members"], start=1):
+        if member["candidate_kind"] == "experimental":
+            path = root / "inputs" / "structures" / f"{member['pdb_id']}.cif"
+            object_name = f"PDB_{member['pdb_id']}"
+        else:
+            path = Path(member["structure_path"])
+            object_name = f"PRED_{index}_{member['candidate_id'].replace('-', '_')}"
+        if not path.is_file():
+            missing.append(str(path))
+        if member["is_reference"]:
+            reference_object = object_name
+        objects.append(member | {"path": path, "object_name": object_name})
+    if missing:
+        raise FileNotFoundError("Missing ensemble structure files: " + ", ".join(missing))
+    lines = ["reinitialize", "bg_color white", "set retain_order, 1"]
+    for item in objects:
+        name, chain = item["object_name"], item["chain_id"]
+        lines.extend([f'load "{item["path"].as_posix()}", {name}',
+                      f"hide everything, {name}",
+                      f"show cartoon, {name} and chain {chain}"])
+        if name != reference_object:
+            lines.append(f"cealign {reference_object} and chain {objects[0]['chain_id']} and polymer.protein, {name} and chain {chain} and polymer.protein")
+        member_residues = [value - item["residue_offset"]
+                           for value in status["pocket_residues"]
+                           if value - item["residue_offset"] > 0]
+        residues = "+".join(str(value) for value in member_residues)
+        if residues:
+            lines.extend([f"select {name}_canonical_pocket, {name} and chain {chain} and resi {residues}",
+                          f"show sticks, {name}_canonical_pocket"])
+        ligand_ids = item["ligand_ids"]
+        if ligand_ids:
+            ligand_selection = "+".join(ligand_ids)
+            lines.extend([f"select {name}_ligands, {name} and resn {ligand_selection} and not polymer",
+                          f"show sticks, {name}_ligands",
+                          f"select {name}_ligand_pocket, byres (({name} and chain {chain} and polymer.protein) within 6 of {name}_ligands)",
+                          f"show sticks, {name}_ligand_pocket"])
+    lines.extend(["group receptor_ensemble, " + " ".join(item["object_name"] for item in objects),
+                  "orient receptor_ensemble", "zoom receptor_ensemble", ""])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    return status | {"pymol_script": str(output)}

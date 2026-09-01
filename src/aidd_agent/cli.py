@@ -16,7 +16,8 @@ from .rcsb import search_structures
 from .acquisition import acquire_alphafold_db_mmcif, acquire_rcsb_mmcif
 from .structure_compare import (
     comparison_set_status, create_campaign_comparison_set,
-    generate_comparison_pymol_review,
+    create_receptor_ensemble, generate_comparison_pymol_review,
+    generate_receptor_ensemble_pymol_review, receptor_ensemble_status,
 )
 from .ai_recommendation import (
     ai_review_status, create_ai_review_request, import_ai_recommendation,
@@ -137,6 +138,33 @@ def build_parser() -> argparse.ArgumentParser:
     comparison.add_argument("--chain", action="append", default=[],
                             help="PDB=chain; repeat for structure-specific chains")
     comparison.add_argument("--rationale", required=True)
+
+    ensemble = subparsers.add_parser(
+        "create-receptor-ensemble",
+        help="Create an all-candidate experimental/predicted receptor ensemble")
+    ensemble.add_argument("--db", type=Path, required=True)
+    ensemble.add_argument("--user", required=True)
+    ensemble.add_argument("--campaign", required=True)
+    ensemble.add_argument("--name", required=True)
+    ensemble.add_argument("--reference-pdb", required=True)
+    ensemble.add_argument("--pocket-residues", default="")
+    ensemble.add_argument("--chain", action="append", default=[])
+    ensemble.add_argument("--rationale", required=True)
+
+    ensemble_status = subparsers.add_parser(
+        "receptor-ensemble-status", help="Show a unified receptor ensemble")
+    ensemble_status.add_argument("--db", type=Path, required=True)
+    ensemble_status.add_argument("--user", required=True)
+    ensemble_status.add_argument("--ensemble", required=True)
+
+    ensemble_pymol = subparsers.add_parser(
+        "prepare-receptor-ensemble-pymol",
+        help="Generate all-structure and ligand-pocket PyMOL review")
+    ensemble_pymol.add_argument("--db", type=Path, required=True)
+    ensemble_pymol.add_argument("--user", required=True)
+    ensemble_pymol.add_argument("--ensemble", required=True)
+    ensemble_pymol.add_argument("--project-root", type=Path, required=True)
+    ensemble_pymol.add_argument("--output", type=Path, required=True)
 
     comparison_status_parser = subparsers.add_parser(
         "structure-comparison-status", help="Show a structure comparison set")
@@ -458,6 +486,36 @@ def main(argv: list[str] | None = None) -> int:
             )
         print(json.dumps({"comparison_set_id": comparison_id,
                           "campaign_state": "structures_review"}, indent=2))
+        return 0
+    if args.command == "create-receptor-ensemble":
+        try:
+            pocket_residues = [int(value.strip()) for value in args.pocket_residues.split(",")
+                               if value.strip()]
+        except ValueError as exc:
+            raise ValueError("Pocket residues must be comma-separated integers") from exc
+        chains = {}
+        for specification in args.chain:
+            if specification.count("=") != 1:
+                raise ValueError("Each chain must use candidate=chain syntax")
+            key, chain = specification.split("=", 1)
+            chains[key.upper() if len(key) == 4 else key] = chain
+        with connect(args.db) as connection:
+            ensemble_id = create_receptor_ensemble(
+                connection, args.user, args.campaign, args.name,
+                args.reference_pdb, pocket_residues, chains, args.rationale)
+        print(json.dumps({"ensemble_id": ensemble_id,
+                          "campaign_state": "structures_review"}, indent=2))
+        return 0
+    if args.command == "receptor-ensemble-status":
+        with connect(args.db) as connection:
+            result = receptor_ensemble_status(connection, args.user, args.ensemble)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "prepare-receptor-ensemble-pymol":
+        with connect(args.db) as connection:
+            result = generate_receptor_ensemble_pymol_review(
+                connection, args.user, args.ensemble, args.project_root, args.output)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "structure-comparison-status":
         with connect(args.db) as connection:

@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: target_structure_review
-current_experiment: E013-predicted-structure-campaign-registration
+current_experiment: E014-unified-receptor-ensemble-ligand-pocket-review
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -42,6 +42,8 @@ next_actions:
   - deploy the updated package on the university workstation and import the completed WEE1 AlphaFold 3 output into the active Campaign
   - record the AlphaFold 3 source commit, SIF hash, input hash, model version, construct, and ranking/confidence metadata
   - compare the registered predicted candidate with the experimental PDB ensemble without automatically selecting either source
+  - use 8BJU as the alignment reference for an all-candidate WEE1 receptor ensemble
+  - download any missing Campaign mmCIF files and generate the unified ligand-pocket PyMOL review
   - implement deterministic receptor preparation and QC for experimental and predicted structures
   - define the WEE1 construct, chain, protonation assumptions, cofactors, metals, waters, and ATP pocket
   - generate an AI target-preparation recommendation from public metadata and computed QC summaries
@@ -98,3 +100,5 @@ implementation_status:
   wee1_alphafold3_prediction: completed
   predicted_structure_campaign_registry: completed_offline_workstation_import_pending
   receptor_version_lock: completed
+  predicted_structure_campaign_registry_production: completed_user_confirmed
+  unified_receptor_ensemble: completed_offline_workstation_validation_pending

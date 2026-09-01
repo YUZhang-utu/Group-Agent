@@ -97,3 +97,28 @@ aidd-agent select-receptor --db /path/to/aidd.sqlite3 --user USR-... \
 ```
 
 The lock snapshots the exact candidate metadata and structure SHA-256.
+
+## Review the complete receptor ensemble
+
+Use one PDB only as the alignment reference; all Campaign PDB and predicted
+candidates remain peer members:
+
+```bash
+aidd-agent create-receptor-ensemble --db /path/to/aidd.sqlite3 \
+  --user USR-... --campaign CAM-... --name all-target-structures \
+  --reference-pdb 8BJU --pocket-residues 320,337,463 \
+  --rationale "Observe receptor and ligand-pocket diversity before selection"
+```
+
+Generate a PyMOL script after all experimental mmCIF files are present under
+the Project `inputs/structures` directory:
+
+```bash
+aidd-agent prepare-receptor-ensemble-pymol --db /path/to/aidd.sqlite3 \
+  --user USR-... --ensemble ENS-... --project-root /path/to/project \
+  --output /path/to/project/target/reviews/ENS-.../review.pml
+```
+
+The script aligns proteins with `cealign`, displays only classified ligand IDs,
+and selects the 6 Å protein neighborhood of each ligand. Predicted apo models do
+not receive invented ligands.

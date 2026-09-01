@@ -100,3 +100,7 @@
   Campaign as immutable, hashed candidates with model, construct, confidence,
   input, and runtime provenance. The same human selection checkpoint can lock
   either an experimental PDB candidate or a predicted candidate.
+- Receptor review should be ensemble-first. A named experimental structure such
+  as 8BJU is an alignment reference, not an implicit winner; all experimental
+  candidates and predictions remain visible, with filtered ligand identities
+  and local ligand-pocket selections compared before recommendation.

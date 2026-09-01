@@ -156,3 +156,10 @@
   PDB candidates, and selected through a common immutable receptor lock.
 - Full offline suite: 41 tests passed. Production WEE1 import remains the next
   workstation action.
+- The production WEE1 AlphaFold 3 result was imported into the active Campaign
+  after the workstation updated to commit `05e6588`; the user confirmed the
+  updated workstation suite passes 41 tests.
+- Implemented E014 unified receptor ensembles. All Campaign PDB and predicted
+  candidates can be reviewed together with an explicit reference, filtered
+  ligand selections, 6 Å ligand pockets, and predicted-construct residue-number
+  offsets. Offline suite: 42 tests passed; 8BJU/all-WEE1 PyMOL validation is next.

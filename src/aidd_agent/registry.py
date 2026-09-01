@@ -165,6 +165,24 @@ CREATE TABLE IF NOT EXISTS receptor_selection_lock (
     selected_by TEXT NOT NULL REFERENCES app_user(id),
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS receptor_ensemble (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaign(id),
+    name TEXT NOT NULL,
+    reference_candidate_id TEXT NOT NULL,
+    pocket_residues_json TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(campaign_id, name)
+);
+CREATE TABLE IF NOT EXISTS receptor_ensemble_member (
+    ensemble_id TEXT NOT NULL REFERENCES receptor_ensemble(id),
+    candidate_kind TEXT NOT NULL CHECK(candidate_kind IN ('experimental', 'predicted')),
+    candidate_id TEXT NOT NULL,
+    chain_id TEXT NOT NULL,
+    residue_offset INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(ensemble_id, candidate_id)
+);
 CREATE INDEX IF NOT EXISTS idx_task_project ON task(project_id);
 CREATE INDEX IF NOT EXISTS idx_task_access_user ON task_access(user_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_project_owner ON project(owner_user_id, id);
