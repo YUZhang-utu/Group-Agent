@@ -15,7 +15,7 @@ aidd-doctor = "aidd_agent.doctor:main"
 [project.optional-dependencies]
 chemistry = ["rdkit"]
 structures = ["gemmi", "biopython"]
-workstation = ["rdkit", "gemmi", "biopython", "pandas", "pyarrow"]
+workstation = ["rdkit", "gemmi", "biopython", "pandas", "pyarrow", "faiss-cpu", "psutil"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

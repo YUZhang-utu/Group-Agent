@@ -366,6 +366,14 @@
 - Offline runner tests and the complete suite pass: 68 tests. Real hydrogen/
   flip/angle validation is pending execution on the Linux workstation.
 
+## 2026-09-02 - Workstation dependency hotfix
+
+- Linux validation exposed an undeclared top-level `psutil` import in the FAISS
+  benchmark. Moved it into the RSS-measuring execution path so pure helpers and
+  test collection do not require optional monitoring dependencies.
+- Declared both `psutil` and `faiss-cpu` in the standard and Linux workstation
+  environments and the Python workstation extra. Full suite: 69 passed.
+
 ## 2026-09-02 - First real QT9 anchor snapshot
 
 - Implemented an mmCIF protein-contact extractor that labels direct polar

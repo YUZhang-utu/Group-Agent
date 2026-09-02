@@ -10,6 +10,8 @@ dependencies:
   - rdkit>=2024.03
   - gemmi>=0.6
   - biopython>=1.83
+  - faiss-cpu>=1.8
+  - psutil>=5.9
   - pymol-open-source>=3
   - pytest>=8
   - pip

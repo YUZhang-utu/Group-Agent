@@ -9,7 +9,6 @@ import tempfile
 import time
 
 import numpy as np
-import psutil
 
 
 def _faiss():
@@ -54,6 +53,10 @@ def run_benchmark(count: int, queries: int, train_size: int, truth_k: int,
                   candidate_k: int, nlist: int, nprobe: int, seed: int,
                   output: Path) -> dict:
     faiss = _faiss()
+    try:
+        import psutil
+    except ImportError as exc:
+        raise RuntimeError("psutil is required to record benchmark memory usage") from exc
     process = psutil.Process(os.getpid())
     started = time.perf_counter()
     raw = synthetic_usrcat(count + queries, seed)
