@@ -2,12 +2,14 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .venv/
+.local_deps/
 envs/
 pkgs/
 *.egg-info/
 .env
 .env.*
 !.env.example
+configs/tools/*.local.json
 data/
 6aa/
 workspaces/

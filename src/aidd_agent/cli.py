@@ -33,6 +33,8 @@ from .ligand_workflow import (
     campaign_ligand_status, compare_campaign_ligands, register_campaign_ligands,
     run_hierarchical_library_search, select_query_ligand,
 )
+from .chemistry_prep import build_library_indices, prepare_campaign_ligands
+from .reduce_pocket import export_query_pocket_pdb, run_reduce
 from .context import (
     activate_task, active_task, create_task, create_user, deactivate_task, list_tasks,
 )
@@ -245,6 +247,36 @@ def build_parser() -> argparse.ArgumentParser:
     ligand_import.add_argument("--user", required=True)
     ligand_import.add_argument("--campaign", required=True)
     ligand_import.add_argument("--manifest", type=Path, required=True)
+
+    ligand_prepare = subparsers.add_parser(
+        "prepare-campaign-ligands", help="Extract retained mmCIF ligands using authoritative RCSB CCD bonds")
+    ligand_prepare.add_argument("--db", type=Path, required=True)
+    ligand_prepare.add_argument("--user", required=True)
+    ligand_prepare.add_argument("--campaign", required=True)
+    ligand_prepare.add_argument("--structures-dir", type=Path, required=True)
+    ligand_prepare.add_argument("--output-dir", type=Path, required=True)
+    ligand_prepare.add_argument("--ccd-cache", type=Path, required=True)
+
+    index_build = subparsers.add_parser(
+        "build-library-indices", help="Build production Morgan and conformer-level USRCAT indices")
+    index_build.add_argument("--db", type=Path, required=True)
+    index_build.add_argument("--library", required=True)
+    index_build.add_argument("--output-dir", type=Path, required=True)
+
+    reduce_export = subparsers.add_parser(
+        "export-reduce-pocket", help="Export a query ligand and complete 5A pocket residues as PDB")
+    reduce_export.add_argument("--mmcif", type=Path, required=True)
+    reduce_export.add_argument("--output", type=Path, required=True)
+    reduce_export.add_argument("--ccd-id", required=True)
+    reduce_export.add_argument("--chain", required=True)
+    reduce_export.add_argument("--residue", required=True)
+    reduce_export.add_argument("--radius", type=float, default=5.0)
+
+    reduce_run = subparsers.add_parser(
+        "run-reduce-pocket", help="Hydrogenate and optimize a query pocket using Linux Reduce")
+    reduce_run.add_argument("--profile", type=Path, required=True)
+    reduce_run.add_argument("--pocket-pdb", type=Path, required=True)
+    reduce_run.add_argument("--output-dir", type=Path, required=True)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -665,6 +697,27 @@ def main(argv: list[str] | None = None) -> int:
             ligand_ids = register_campaign_ligands(
                 connection, args.user, args.campaign, records)
         print(json.dumps({"inserted": len(ligand_ids), "ligand_ids": ligand_ids}, indent=2))
+        return 0
+    if args.command == "prepare-campaign-ligands":
+        with connect(args.db) as connection:
+            result = prepare_campaign_ligands(
+                connection, args.user, args.campaign, args.structures_dir,
+                args.output_dir, args.ccd_cache)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "build-library-indices":
+        with connect(args.db) as connection:
+            result = build_library_indices(connection, args.library, args.output_dir)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "export-reduce-pocket":
+        result = export_query_pocket_pdb(args.mmcif, args.output, args.ccd_id,
+                                         args.chain, args.residue, args.radius)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "run-reduce-pocket":
+        result = run_reduce(args.profile, args.pocket_pdb, args.output_dir)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:

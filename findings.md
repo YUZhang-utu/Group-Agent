@@ -2,6 +2,55 @@
 
 ## Current understanding
 
+- Automatic ligand preparation must preserve crystal instance identity while
+  sourcing connectivity separately from authoritative CCD definitions; mmCIF
+  coordinates alone are not a safe bond-order source.
+- The production MOL2 build can scan each large source file once in registry
+  order, avoiding retention of all 299,999 raw MOL2 blocks in memory.
+- The complete local macrocycle library can be sanitized and converted to real
+  USRCAT on this laptop in about 6.2 minutes single-process with zero failures;
+  parsing is not a blocker at the current 299,999-conformer scale.
+- For 8BJU/QT9, broad FAISS recall is controlled mainly by IVF list coverage,
+  not m20-vs-m30 PQ resolution. m20 remains viable for L1 pending more queries.
+- Random access to selected chemistry, not Gaussian alignment compute, dominated
+  the first L2 prototype: 7.3 seconds combined scoring versus 85.6 seconds wall
+  time due to a full MOL2 rescan. Offset-addressed local binaries are justified.
+- RDKit BaseFeatures matching, not MOL2 parsing, USRCAT, or PMI, dominates the
+  richer artifact build (24.61 of 25.53 profiled seconds per 1,000 conformers).
+  Feature topology is reusable across conformers: the first 100 three-conformer
+  molecules had identical family/atom membership in all conformers, while their
+  feature coordinates still require per-conformer recomputation.
+- Molecule-level template reuse plus local multiprocessing makes rich 3D
+  preprocessing practical at the current scale: 24 workers sustained 737.5
+  conformers/s on a 30,000-conformer real sample with zero failures. The next
+  constraint to measure is ordered IPC/binary writing, not feature computation.
+- The full parallel writer sustained about 759 conformers/s including local
+  binary I/O and checksums, completing all 299,999 conformers in 6.59 minutes.
+  Int16 coordinates/features preserved source positions within the expected
+  0.00501-angstrom half-bin error and USRCAT remained bit-identical.
+- Offset-addressed mmap makes candidate materialization negligible at this
+  scale: all coordinates/features for 10,000 candidates loaded in about 91 ms
+  when sorted by file offset, versus the prior 85-second MOL2-rescan workflow.
+- The library mapping is genuinely one-time and appendable: immutable artifact
+  shards can be added to a trained FAISS IVF-PQ index with stable global int64
+  IDs. Adding each 150K-conformer shard took about 0.3 seconds after chemistry
+  preprocessing; final QT9 retrieval retained 100% of exact top-1,000 and
+  99.69% of exact top-10,000 in a 100K candidate pool at about 14 ms.
+- Anchor assignment captures observed interactions, not proven necessities.
+  Anchors, projected sites, and feature counts are therefore reversible ranking
+  evidence only. Broad anchor-independent recall defines admission, while
+  atom-centered/projected/unweighted/anchored scores and per-anchor coverage
+  remain stored for later reranking.
+- A single transform is insufficient when atom-centered and projected color
+  participate in optimization: each named objective must retain its own pose,
+  and all reported scores must state the pose under which they were evaluated.
+  Raw per-anchor cross/self overlaps plus a query-level anchor-definition
+  snapshot make later normalization and human-readable reranking reproducible.
+- For QT9, all three distance-supported polar contacts are also almost fully
+  buried by atom-level SASA, so two hydrogen-independent observations agree.
+  Reduce is absent locally; angles and Asn/Gln/His orientation remain unresolved
+  instead of being inferred from missing hydrogens.
+
 - The initial macrocycle library may contain many MOL2 molecule records per
   file; file count is not molecule count.
 - Conformer identity must be modeled separately from molecule identity and later

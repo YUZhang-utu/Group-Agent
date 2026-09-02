@@ -1,0 +1,5 @@
+{
+  "executable": "reduce",
+  "het_dictionary": null,
+  "build_arguments": ["-build"]
+}

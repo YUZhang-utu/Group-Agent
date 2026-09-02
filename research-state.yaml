@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E017-hierarchical-2d-3d-library-search
+current_experiment: E019-million-scale-faiss-gaussian-prototype
 last_checkpoint:
   date: 2026-09-01
   git_commit: 2859048
@@ -44,8 +44,19 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - update the university workstation to commit 2859048 and confirm 49 tests
-  - automatically extract retained ligand instances from Campaign mmCIF structures
+  - acquire and checksum the Platinum conformer benchmark and define the symmetry-aware RMSD evaluator
+  - audit the production library protonation convention and conformer counts stratified by flexibility
+  - implement one-pass NFS-to-local uncompressed conformer artifact ingestion
+  - train a one-million-record FAISS IVF-PQ prototype and benchmark recall against exhaustive joint scoring
+  - extend the real FAISS sweep across additional WEE1 queries and operating points
+  - implement local coords/features/meta/bounds-PMI artifacts to eliminate MOL2 rescans
+  - add an append-only shard catalog and incremental FAISS add_with_ids workflow
+  - implement/query benchmark anchor extraction, projected features, Tversky, exclusion grid, and torsion refinement on local artifacts
+  - implement anchor extraction, projected features, q-biased Tversky, exclusion grid, and terminal torsion refinement
+  - acquire Platinum and LIT-PCBA and complete conformer/enrichment benchmarks
+  - run shape/color/anchor/projection/Tversky ablations on LIT-PCBA and DUD-E
+  - sync the E018 implementation to the university workstation and confirm 53 tests
+  - run prepare-campaign-ligands against the production Campaign mmCIF structures
   - obtain authoritative RCSB CCD bond orders and generate standardized ligand SMILES/SDF artifacts
   - compute real crystal-conformer USRCAT descriptors and register the WEE1 ligands
   - compare WEE1 co-crystal ligands and create an advisory LLM query-selection request
@@ -63,7 +74,6 @@ implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
   human_structure_selection_checkpoint: completed
-  tests: 49_passed
   production_registry_migration: completed
   multi_user_task_context: completed
   task_workspace_isolation: completed
@@ -108,3 +118,21 @@ implementation_status:
   query_ligand_lock: completed
   ligand_query_llm_interface: completed
   hierarchical_2d_3d_search: completed_core_production_index_validation_pending
+  automatic_mmcif_ccd_ligand_preparation: implemented_offline_workstation_validation_pending
+  production_mol2_index_builder: implemented_offline_workstation_validation_pending
+  faiss_scaled_smoke_benchmark: completed_synthetic_1m_exploratory
+  real_library_usrcat_preprocessing: completed_299999_conformers_zero_failures
+  real_qt9_faiss_benchmark: completed_exploratory
+  real_qt9_rdkit_shape_color_baseline: completed_top1000_exploratory
+  incremental_conformer_artifact_schema: completed_two_real_shards_validated
+  parallel_ingest_benchmark: completed_30k_24workers_737_5_conformers_per_second
+  local_offset_read_benchmark: completed_warm_10k_records_90_5ms_sorted
+  append_only_artifact_catalog: completed_299999_conformers_two_shards
+  incremental_faiss_index: completed_two_shards_stable_ids
+  incremental_faiss_validation: completed_qt9_top1000_recall_1_0_top10000_0_9969
+  anchor_policy: reranking_only_no_hard_filter_weights_1_5_1_0_0_5
+  l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
+  qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
+  reduce_hydrogen_validation: linux_workstation_adapter_ready_runtime_pending
+  tests: 68_passed
+  qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

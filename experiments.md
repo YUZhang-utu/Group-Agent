@@ -856,3 +856,355 @@ without an all-against-all exact 3D alignment.
 - The production library still needs chemistry-side standardized SMILES and
   conformer descriptors to build its real indices; existing MOL2 registration
   alone does not fabricate those representations.
+
+## E018 — Authoritative ligand preparation and production index build
+
+Status: protocol locked — implementation and workstation validation pending
+
+### Hypothesis
+
+Campaign mmCIF coordinates can be joined to cached RCSB CCD definitions by
+atom name, preserving authoritative CCD bond orders, and the registered MOL2
+records can be streamed through one versioned RDKit standardization policy to
+produce reproducible molecule-level Morgan and conformer-level USRCAT indices
+without inventing chemistry or coordinates.
+
+### Protocol
+
+1. Enumerate only retained Campaign ligand instances from `_atom_site`, keeping
+   model, author chain/residue/insertion code, and explicit alternate location.
+2. Fetch each CCD definition from the official RCSB ligand endpoint into a
+   content-addressed cache; reject component-ID mismatches and missing bonds.
+3. Join crystal atom names to CCD atoms, use only CCD bond orders, standardize
+   the parent with an explicit RDKit policy/version, and write one SDF plus a
+   checksummed manifest record per valid crystal conformer.
+4. Compute USRCAT only when the joined molecule has a valid 3D conformer;
+   report skipped/invalid instances instead of generating coordinates.
+5. Stream every registered MOL2 conformer through RDKit, require conformers of
+   one registered molecule to agree on standardized parent SMILES, and build a
+   molecule Morgan index, conformer USRCAT index, conformer-to-molecule map,
+   and checksummed manifest.
+6. Make preparation and index construction resumable CLI operations whose
+   outputs remain outside Git and whose manifests capture input/output hashes,
+   software versions, parameters, counts, and failures.
+
+### Acceptance criteria
+
+- Retained-component filtering and full crystal instance identity are tested.
+- CCD bond orders, never distance guesses, define ligand connectivity.
+- Missing CCD atoms/bonds, invalid 3D records, and inconsistent MOL2 parents
+  fail or skip visibly according to the locked policy.
+- Repeated builds have deterministic ordering and manifests.
+- The existing 49-test suite remains green without requiring network, RDKit,
+  Gemmi, or production data; dependency-required paths fail clearly.
+
+### Classification
+
+Confirmatory implementation validation. The real WEE1 extraction and full
+`LIB-AFA68EE6888C` build remain production workstation runs.
+
+## E019 — Million-scale FAISS/Gaussian retrieval prototype
+
+Status: protocol locked — implementation pending
+
+### Hypothesis
+
+An in-memory FAISS IVF-PQ index over USRCAT can provide a broad, alignment-free
+L1 recall set from a billion conformers, after which local-NVMe shape metadata
+and joint Gaussian shape/color optimization can recover accurate rankings.
+Protein-interaction anchors, projected polar points, and a pocket exclusion
+grid advance only if controlled ablations justify their complexity.
+
+### Protocol
+
+1. Calibrate the immutable library conformer protocol on Platinum: symmetry-
+   corrected minimum heavy-atom RMSD to the bound pose, overall and stratified
+   by rotatable bonds, heavy atoms, ring systems, molecular weight, and a
+   query-chemotype-matched subset. Also report library conformer-count
+   distributions within the same strata.
+2. Audit every crystal query before feature extraction: resolution, occupancy,
+   atom B factors, available RSCC/EDIA, CCD bond orders, added hydrogens, and
+   protonation compatibility with the library. Unsupported polar atoms cannot
+   become anchors.
+3. In one sequential, rate-limited pass over read-only NFS shards, generate all
+   local artifacts together: int16 heavy-atom coordinates at 0.01 angstrom,
+   int16 feature coordinates and types, USRCAT float32 vectors, binary metadata,
+   heavy-atom bounding boxes, and PMI axes. Each shard has an atomic done marker
+   and checksums. Never fetch coordinates from NFS during online search.
+   Store heavy-atom count and six parent-feature counts (HBD/HBA/cation/anion/
+   hydrophobe/aromatic as uint8) in the L1.5 record; alternative projected
+   directions do not count as separate functional features.
+   Artifacts are immutable append-only shards registered by a small catalog;
+   adding molecules creates new shards and stable global int64 conformer IDs
+   without rewriting old data. FAISS uses `add_with_ids` for new shards. Track
+   transformed-vector centroid/variance and coarse-list occupancy drift; retrain
+   a new versioned IVF-PQ index only when measured recall or drift crosses a
+   preregistered threshold, while retaining the previous index for rollback.
+4. Preserve every supplied library conformer; do not RMSD-deduplicate or cap
+   conformer counts. Prefer SDF where equivalent SDF and MOL2 sources exist.
+   Parse independent shards concurrently and throttle aggregate NFS reads to an
+   operator-configured fraction of measured bandwidth.
+5. Separate graph chemistry from coordinate ingestion. Perform the minimum
+   documented RDKit sanitization needed for aromaticity, formal charge,
+   hybridization, hydrogen addition, and pharmacophore typing once per unique
+   molecular graph; reuse it across conformers. A `sanitize=False` coordinate
+   fast path cannot itself define chemical features.
+   First audit whether conformers are contiguous and which source ID reliably
+   defines molecule identity. The reusable template contains graph atom roles
+   and projection rules, while projection coordinates are recomputed for every
+   conformer from that conformer's geometry.
+6. Use six feature types: HBD, HBA, cation, anion, hydrophobe, and aromatic-ring
+   center. Use two query weight classes only: anchor=2.0, ordinary=1.0;
+   solvent-exposed polar features are removed. Place polar anchor color points
+   at validated ideal/protein-side hydrogen-bond projection points.
+7. Define color Gaussian overlap with sigma=1.0 angstrom, same-type matches
+   only, and skip pairs beyond 4.5 angstrom. Report both standard ColorTanimoto
+   and query-biased ColorTversky (alpha=0.95, beta=0.05). Do not reuse standard
+   ROCS Combo thresholds for weighted scores; calibrate cutoffs empirically.
+8. After all USRCAT vectors are durable, train FAISS IVF-PQ on a fixed random 1%
+   sample and add all vectors in resumable batches. Store per-dimension mean/std
+   from that sample and z-score both database and query vectors identically;
+   apply optional HBD/HBA block weights after z-scoring so normalization does
+   not cancel them. Compare d60/m20, d60/m30, and zero-padded d64/m32 at nbits=8
+   and initial nlist=32768. Retain the 240-GB raw float32 vectors for retraining.
+   Explicitly load without mmap, verify direct_map is disabled, and warm up.
+   After add/write, restart a clean process before steady-state memory/query
+   benchmarks so build buffers and allocator fragmentation are released.
+9. L1 retrieves a configurable 300,000--1,000,000 conformers. L1.5 uses stored
+   bounding boxes, volume/extent ratios, and PMI eigenvalue ratios to reduce
+   the set to an initial target near 100,000 without reading NFS. Under an
+   injective parent-feature coverage rule, first reject candidates whose six-
+   type feature counts cannot cover the required query anchors.
+10. Generate rigid seeds without a triplet index: four proper PMI-axis sign
+   assignments plus anchor-centroid/axis alignments with six sampled rotations.
+   Deduplicate transforms and jointly optimize rotation/translation for shape
+   and color from each seed. Prototype 10 seeds and 12--15 L-BFGS iterations,
+   but treat the claimed 2--5 minute latency as a benchmark target, not fact.
+11. Apply a 0.5-angstrom protein excluded-volume grid after overlay. For the
+   final 10,000 candidates only, optionally relax one or two terminal rotatable
+   bonds connected to polar groups and recompute the joint score.
+12. Prototype on a one-million-molecule subset with Python orchestration and
+   vectorized/compiled primitives. Measure before fixing the C++/Rust/CUDA
+   production representation.
+13. Generate directional interaction-site projections deterministically. HBD
+   sites extend 1.9 angstrom from each explicit H along D--H. HBA sites extend
+   2.9 angstrom from the acceptor along enumerated lone-pair directions: two
+   in-plane +/-60 degree sites for carbonyl-like sp2 oxygen, two tetrahedral
+   sites for sp3 oxygen, and one in-plane site for pyridine/imidazole-like sp2
+   nitrogen. Ions remain at atom/group centroids. Aromatics initially use ring
+   centers; +/-3.5 angstrom normal projections are a separate ablation.
+14. Use the same versioned protonation, tautomer, hydrogen-addition, and local
+    geometry policy for CCD-derived queries and library molecules. Record it in
+    every feature/index manifest. Enumerate ambiguous donor-H/lone-pair
+    directions explicitly rather than choosing an undocumented orientation.
+15. Treat multiple projection points as one functional feature in weighting.
+    Split its functional weight equally across its `n` alternative projected
+    directions (`W/n` per point), and record the parent feature ID so reporting
+    and ablations remain group-aware. Because this mixture convention changes
+    self-overlap relative to a single point, calibrate all Tanimoto/Tversky
+    thresholds empirically and never compare them with ROCS values.
+16. Store ShapeTanimoto, query-biased ShapeTversky, ColorTanimoto, and
+    `color_tversky_qbiased` separately. Define the Tversky operand direction in
+    the schema. Call the experimental sum `anchor_combo`, not ROCS
+    ComboTanimoto, and mark it incomparable to ROCS thresholds.
+17. Calibrate retain/priority/high-similarity cutoffs on 3--5 development
+    targets with multiple known actives. Use one cocrystal query per target,
+    held-out actives, and at least 100,000 fixed random molecules. Initialize
+    retention at the random-score 99.9th percentile and report fixed-N hits;
+    freeze thresholds before evaluating held-out targets. Bind every cutoff to
+    the exact feature/projection/weight/protonation/score configuration.
+18. Write one immutable result directory per query/configuration hash. Store
+    molecule ID, conformer ID, component scores, anchor RMSD, seed provenance,
+    and final 4x4 rigid transform for every ranked result. Export overlaid SDF
+    only for the top 1,000 by default.
+
+### Required ablations and acceptance criteria
+
+- FAISS candidate recall@N against exhaustive joint scoring on a tractable
+  subset; report recall@100, @1000, and @10000 across nlist/nprobe/PQ settings.
+- Artifact bytes/conformer, NFS ingest throughput, parsing throughput, FAISS
+  train/add time, cold/warm latency, L1/L1.5 candidate counts, mmap page faults,
+  and every L2/L3/L4 stage latency percentile.
+- If cold-cache local record reads dominate, sort candidates by file offset for
+  batched near-sequential reads and restore result order by conformer ID.
+- Shape-only, shape+unweighted-color, shape+anchors, projected-vs-atom-centered
+  anchors, Tanimoto-vs-query-Tversky, and terminal-torsion-refinement ablations.
+- DUD-E and LIT-PCBA retrospective evaluation with EF1%, BEDROC, hit rate at
+  fixed N (especially 1,000 and 10,000), per-target results, and uncertainty.
+  Interpret LIT-PCBA as relative method-vs-baseline evidence, not absolute
+  binding truth. DUD-E is secondary because of known analogue/decoy biases.
+- Mandatory ordered baselines: Morgan 2D; USRCAT; aligned shape-only Gaussian;
+  shape plus unweighted atom-centered color; and the full anchor-weighted,
+  projected-color scheme. The 3->4 and 4->5 deltas determine whether color and
+  then anchors/projections justify their complexity.
+- The complex method advances to a native billion-scale engine only if index
+  recall is acceptable and color/anchor variants materially improve early
+  enrichment over shape-only and USRCAT baselines.
+- Molecular overlap uses one documented approximation order consistently for
+  cross-overlap and both self-overlaps.
+
+### Classification
+
+Confirmatory benchmark and architecture-selection experiment. All parameter
+tuning discovered after protocol lock is exploratory until repeated on a held-
+out benchmark split.
+
+### Exploratory laptop smoke results (2026-09-02)
+
+### Protocol amendment: anchors are reranking evidence only (2026-09-02)
+
+The earlier hard anchor-count L1.5 gate and zero-weight solvent-exposed feature
+rule are withdrawn. Observed protein--ligand hydrogen bonds are structural
+facts, but their biological necessity is unknown; anchor-derived information
+must not cause irreversible candidate deletion.
+
+1. L1 remains anchor-independent USRCAT/FAISS with a deliberately broad pool.
+   L1.5 may hard-filter only anchor-independent geometry such as very loose
+   volume and PMI aspect-ratio bounds. Feature counts are annotations or
+   ranking signals, not admission criteria.
+2. Default query weights become anchor=1.5, ordinary=1.0, and
+   solvent-exposed=0.5. No chemically valid polar feature receives zero weight.
+3. L2 stores the transform, shape scores, unweighted atom-centered color
+   scores, anchored color, atom-centered and projected color, and one separate
+   overlap value for every query anchor for every retained conformer.
+4. Atom-centered and projected representations remain independently normalized
+   scoring views. Projected color cannot replace atom-centered color or gate a
+   candidate. Initial ranking uses atom-centered color; max-color and
+   projected-only remain reversible evaluation views.
+5. L2 output count is configured from downstream capacity, initially 2--5x the
+   next stage's consumption. No universal fixed cutoff is chemical truth.
+6. Compare anchored and unweighted rankings with Spearman correlation and
+   top-1,000 overlap. Above 90% overlap motivates simplification; below 60%
+   triggers discordant-hit review before anchor ranking is promoted.
+
+This amendment supersedes E019 steps 5 and 9 only where they specify zero
+weights or anchor-count filtering. The original text remains for auditability.
+
+### Result-schema amendment: anchor identity and objective-specific poses
+
+1. Every query output directory contains `query_manifest.json`. Each anchor has
+   a stable ID, ligand atom indices, feature type, atom center, all projected
+   point coordinates, evidence fields (interaction type, distance, angle, and
+   burial), and the weight used for the materialized anchored-score column.
+2. A candidate contains one named pose per optimized objective, for example
+   `shape_only`, `atomcentered_joint`, and `projected_joint`. Every pose owns a
+   separate 4x4 transform and a full set of shape/color scores evaluated under
+   exactly that transform. Scores from different optimal transforms cannot be
+   silently combined.
+3. `per_anchor_overlap_raw[i]` stores the unnormalized query-anchor/candidate
+   cross-overlap and `per_anchor_self_overlap_raw[i]` stores the corresponding
+   query self-overlap. Position `i` maps to the ordered anchor definitions in
+   `query_manifest.json`; reporting and reranking expose stable anchor IDs.
+4. The 1.5/1.0/0.5 weights are a recorded materialization preset, not a search
+   invariant. Raw component data support later weight/normalization changes
+   without rigid realignment. Any derived anchored column records its weights.
+
+The first resource-scaled test used synthetic, correlated, scale-heterogeneous
+60-D vectors. It validates the benchmark machinery and memory safety only; it
+does not establish performance on real USRCAT or at billion scale.
+
+- Laptop: 32 logical CPUs, 31.05 GiB RAM, 16.97 GiB available at start.
+- 200,000 vectors, 20 queries, IVF1024-equivalent small setting (nlist=512,
+  nprobe=32), exact top-100 covered by returned top-1000: all three PQ variants
+  reached 100% candidate recall, so the setting was not discriminative.
+- Strict run: 1,000,000 vectors, 50 queries, nlist=1024, nprobe=8, returned
+  top-100 evaluated against exact top-100.
+- d60/m20: recall 0.9010, 28.32 serialized bytes/vector.
+- d60/m30: recall 0.9464, 38.32 serialized bytes/vector.
+- padded-d64/m32: recall 0.9474, 40.34 serialized bytes/vector.
+- The padded variant gained only 0.001 absolute recall over m30 while adding
+  about 2.02 bytes/vector in this synthetic run. m30 is the provisional default,
+  but no production choice is made until real-vector and nprobe/top-N sweeps.
+- Strict-run wall time was 16.45 seconds; peak observed process RSS among the
+  reported configurations was 0.864 GiB. These timings include only synthetic
+  vector generation, exact neighbor truth, and FAISS—not chemistry or L2.
+
+### Real 100K-molecule/299,999-conformer results (2026-09-02)
+
+- Query: WEE1 8BJU QT9, model 1, author chain A, residue 601. The 1.53-angstrom
+  structure's validation report gives ligand RSCC 0.933, EDIA mean 0.951,
+  occupancy 1.000, 42/42 density-supported atoms, and mean B factor 26.74
+  square angstrom. CCD supplied bond orders; extraction produced 42 heavy atoms.
+- Full library RDKit/USRCAT build: 299,999/299,999 valid, zero failures, 373.93
+  seconds single-process. Conformer distribution reconfirmed: 99,999 molecules
+  with three and one molecule with two.
+- Morgan radius-2/2048-bit baseline: 100,000/100,000 valid, 177.57 seconds.
+  Morgan and exact-USRCAT molecule Top-1000 overlap was only five molecules;
+  their recall channels are complementary for this out-of-library-type query.
+- Real FAISS benchmark used 30,000 training conformers, nlist=512, and a broad
+  candidate pool. At nprobe=128, exact USRCAT Top-100/Top-1000 recall was
+  1.000/0.989. At nprobe=256, Top-100/Top-1000 were both 1.000 and exact
+  Top-10,000 recall in a 100,000-candidate pool was 0.9958. Query latency was
+  14--26 ms depending on PQ configuration/nprobe.
+- m20, m30, and padded-m32 produced nearly identical broad-candidate recall,
+  showing coarse IVF-list coverage—not PQ code length—was limiting at this
+  scale. m20 was smallest/fastest and remains in the next sweep.
+- RDKit alignment baseline on the exact-USRCAT nearest 1,000 conformers:
+  1,000/1,000 valid; pure shape compute 3.33 seconds and jointly optimized
+  shape+unweighted-color compute 3.94 seconds. Total wall time was 85.57 seconds
+  because the prototype rescanned 3.4 GB MOL2 to locate candidates, directly
+  motivating local binary offsets and offset-sorted reads.
+- The best RDKit unweighted joint shape+color sum was about 0.58; this low value
+  is consistent with QT9 being chemically dissimilar to the macrocycle library
+  (maximum Morgan only 0.10). It is not evidence about anchor weighting,
+  projected points, Tversky, enrichment, or biological activity.
+- Incremental artifact prototype profiling identified RDKit BaseFeatures as the
+  dominant cost: on 1,000 conformers, parsing/FeatureFactory/PMI/USRCAT took
+  0.75/24.61/0.02/0.14 seconds. A slow half-library shard run was stopped after
+  about 30 minutes before atomic promotion; no partial data entered the catalog.
+- Feature-template reuse was validated on 100 molecules x 3 conformers: all
+  family/atom-membership signatures were identical within each molecule.
+- Real multiprocessing benchmark with template reuse, full sanitization,
+  features, USRCAT, and PMI: on 3,000 conformers, 1/4/8/16 workers achieved
+  95.5/330.2/515.5/647.0 conformers/s with zero failures. On 30,000 conformers,
+  8/16/24 workers achieved 413.7/583.8/737.5 conformers/s, again zero failures.
+  Twenty-four workers is the current laptop ingestion default, subject to a
+  full writer/I/O benchmark; its compute-only extrapolation is about 6.8 minutes
+  for 299,999 conformers.
+- The 24-worker atomic writer then completed both real shards: 149,999
+  conformers in 190.31 seconds and 150,000 in 204.81 seconds (395.12 seconds
+  total, about 759 conformers/s including binary writes and checksums). It wrote
+  17,174,338 heavy atoms and 12,801,478 base pharmacophore features.
+- Both shards had continuous global IDs (0--299,998), exact terminal offsets and
+  byte lengths, valid hashes, and bit-identical USRCAT versus the independent
+  single-process build (maximum absolute delta 0).
+- Quantization audit: 100 random original conformers had maximum heavy-atom
+  coordinate error 0.0050004 angstrom. On 100 direct FeatureFactory comparisons,
+  stored feature types were exactly identical and maximum center error was
+  0.0050004 angstrom, consistent with the 0.01-angstrom grid.
+- Warm local mmap reads of complete coordinate+feature records took 9.1 ms for
+  1,000 offset-sorted QT9 candidates and 90.5 ms for 10,000; random order took
+  13.0 and 110.5 ms. Checksums and record counts agreed. Cold-cache behavior
+  remains to be measured separately on the future larger local artifact set.
+- The append-only IVF-PQ build trained once on 30,000 records (0.741 s), added
+  shard 1 (149,999 conformers) in 0.312 s, persisted/reloaded it, then added
+  shard 2 (150,000 conformers) in 0.302 s. The final m20 index contains 299,999
+  stable int64 IDs and occupies 8,588,568 bytes; direct-map storage is disabled.
+- Incremental-query validation used stage-local exhaustive USRCAT truth. At
+  nprobe=256, both one- and two-shard indices recovered 100% of exact top-100
+  and top-1,000. Top-10,000 recall was 0.9914 before append and 0.9969 after
+  append; QT9 query latency was 9.2 and 13.9 ms. Boundary conformer IDs 0 and
+  149,999 self-retrieved after append, confirming stable old/new ID semantics.
+- These are warm laptop results and validate append mechanics, not billion-scale
+  latency. A later independent MOL2 shard remains required for end-to-end
+  production acceptance, but is not needed to continue anchor-scoring work.
+- Exploratory direct-contact extraction on 8BJU/QT9 produced three distance-
+  supported polar interaction records: ligand HBD atom 30 to CYS379 O at 2.876
+  angstrom, ligand HBA atom 29 to CYS379 N at 2.983 angstrom, and ligand HBA
+  atom 39 to ASN376 ND2 at 2.838 angstrom. The current mmCIF has no explicit
+  hydrogens, so angle is deliberately recorded as null/not-evaluated rather
+  than fabricated. These records are provisional ranking evidence; directional
+  projection and chemically explicit hydrogen-angle validation remain next.
+- Hydrogen preparation is scoped to the query ligand and residues having any
+  atom within 5 angstrom. Reduce/Reduce2 is responsible for adjustable hydrogen
+  groups and Asn/Gln/His orientation; its output remains ranking evidence only.
+- Deterministic 960-point atom-level Shrake--Rupley SASA (1.4-angstrom probe)
+  records isolated SASA, complex SASA, and relative burial. QT9's three contacts
+  have relative burials 1.000, 1.000, and 0.990 and complex SASA 0.00, 0.00,
+  and 0.33 square angstrom. Distance and burial agree; angle remains null
+  because Reduce is not installed locally.
+- Linux workstation execution is now implemented as a portable handoff: a
+  dedicated environment update adds Reduce to `aidd-workstation`; CLI export
+  produced a real QT9 pocket containing 25 complete protein residues; and the
+  runner preserves the hydrogenated structure, stderr/flip report, command,
+  and hashes. Runtime chemical validation remains pending on Linux.

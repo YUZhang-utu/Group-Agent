@@ -18,6 +18,32 @@ aidd-agent doctor
 pytest -q
 ```
 
+For the Linux chemistry workstation, update the same named environment with
+the Reduce-enabled specification:
+
+```bash
+conda env update -n aidd-workstation -f environments/aidd-workstation-linux.yml --prune
+conda activate aidd-workstation
+python -m pip install --no-deps -e .
+cp configs/tools/reduce.example.json configs/tools/reduce.local.json
+reduce -help
+```
+
+Machine-specific HET dictionary paths belong in the ignored
+`configs/tools/reduce.local.json`. Windows does not require Reduce; it can still
+compute heavy-atom distance and SASA evidence.
+
+Prepare and run the query-only 5-angstrom pocket on Linux:
+
+```bash
+aidd-agent export-reduce-pocket --mmcif /path/to/8BJU.cif --output query-pocket-5A.pdb --ccd-id QT9 --chain A --residue 601
+aidd-agent run-reduce-pocket --profile configs/tools/reduce.local.json --pocket-pdb query-pocket-5A.pdb --output-dir reduce-QT9
+```
+
+The output directory preserves the hydrogenated PDB, Reduce stderr/flip report,
+input/output hashes, exact argument array, and scope. These data annotate query
+anchors and never filter library candidates.
+
 PyMOL is included in the Conda environment. If its package is unavailable for a
 particular platform, remove `pymol-open-source` from the environment file,
 create the environment, and install a licensed/local PyMOL build separately.

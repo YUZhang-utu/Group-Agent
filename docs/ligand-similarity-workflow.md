@@ -72,3 +72,36 @@ aidd-agent search-similar-ligands --db "$AIDD_DB" --user USR-... \
 The search record stores the locked query snapshot, index SHA-256 values,
 parameters, best conformer, 2D and 3D scores, completed stages, and final rank.
 It does not submit docking automatically.
+# Production chemistry preparation
+
+The registry and hierarchical search do not infer chemistry from component
+names. On a workstation with `.[workstation]`, prepare retained crystal ligands
+from downloaded Campaign mmCIF files and authoritative RCSB CCD definitions:
+
+```bash
+aidd-agent prepare-campaign-ligands --db "$AIDD_DB" --user USR-... \
+  --campaign CAM-... --structures-dir "$PROJECT_ROOT/inputs/structures" \
+  --ccd-cache "$RUNTIME_ROOT/cache/rcsb-ccd" \
+  --output-dir "$RUNTIME_ROOT/campaigns/CAM-.../ligands"
+aidd-agent register-campaign-ligands --db "$AIDD_DB" --user USR-... \
+  --campaign CAM-... \
+  --manifest "$RUNTIME_ROOT/campaigns/CAM-.../ligands/campaign-ligands.json"
+```
+
+Preparation joins crystal coordinates to CCD atoms by atom name and accepts
+connectivity only from CCD bond tables. It does not guess bonds or generate
+missing conformers. Missing heavy atoms and invalid chemistry are recorded in
+the manifest's `errors` array.
+
+After reviewing and locking a query ligand, build the registered MOL2 library
+indices:
+
+```bash
+aidd-agent build-library-indices --db "$AIDD_DB" \
+  --library LIB-AFA68EE6888C \
+  --output-dir "$RUNTIME_ROOT/libraries/LIB-AFA68EE6888C/indices/v1"
+```
+
+The output includes the Morgan molecule index, conformer-level USRCAT index,
+conformer-to-molecule map, and a checksummed version manifest. A production run
+must archive its console output and verify manifest counts before search.
