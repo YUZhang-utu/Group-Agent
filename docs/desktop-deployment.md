@@ -38,11 +38,16 @@ Prepare and run the query-only 5-angstrom pocket on Linux:
 ```bash
 aidd-agent export-reduce-pocket --mmcif /path/to/8BJU.cif --output query-pocket-5A.pdb --ccd-id QT9 --chain A --residue 601
 aidd-agent run-reduce-pocket --profile configs/tools/reduce.local.json --pocket-pdb query-pocket-5A.pdb --output-dir reduce-QT9
+aidd-agent validate-reduce-pocket --output-dir reduce-QT9 --ccd-id QT9 --chain A --residue 601
 ```
 
 The output directory preserves the hydrogenated PDB, Reduce stderr/flip report,
 input/output hashes, exact argument array, and scope. These data annotate query
 anchors and never filter library candidates.
+
+`het_dictionary: null` in the run manifest means Reduce used its default lookup;
+it is acceptable only when validation confirms that QT9 and protein hydrogen
+counts increased and no dictionary/connectivity warning was emitted.
 
 PyMOL is included in the Conda environment. If its package is unavailable for a
 particular platform, remove `pymol-open-source` from the environment file,

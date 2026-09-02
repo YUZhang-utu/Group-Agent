@@ -374,6 +374,15 @@
 - Declared both `psutil` and `faiss-cpu` in the standard and Linux workstation
   environments and the Python workstation extra. Full suite: 69 passed.
 
+## 2026-09-02 - Reduce output acceptance gate
+
+- Clarified that a null HET dictionary means Reduce default lookup, not absence
+  of a dictionary. Added validation of manifest hashes, ligand/protein hydrogen
+  count increases, dictionary/connectivity warnings, and flip records.
+- Angle calculation is enabled only when those checks pass. The validator writes
+  `reduce_validation.json`; all evidence remains query annotation/reranking and
+  does not affect retrieval. Full suite: 70 passed.
+
 ## 2026-09-02 - First real QT9 anchor snapshot
 
 - Implemented an mmCIF protein-contact extractor that labels direct polar

@@ -93,3 +93,63 @@ def run_reduce(profile_path: Path, pocket_pdb: Path, output_dir: Path,
     manifest_path = output_dir / "reduce_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def _pdb_atoms(path: Path) -> list[dict]:
+    atoms = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line[:6].strip() not in {"ATOM", "HETATM"}:
+            continue
+        element = line[76:78].strip().upper() if len(line) >= 78 else ""
+        atom_name = line[12:16].strip()
+        if not element:
+            element = atom_name.lstrip("0123456789")[:1].upper()
+        atoms.append({"record": line[:6].strip(), "atom_name": atom_name,
+                      "resname": line[17:20].strip(), "chain": line[21:22].strip(),
+                      "residue": line[22:26].strip(), "element": element})
+    return atoms
+
+
+def validate_reduce_run(output_dir: Path, ccd_id: str, chain_id: str,
+                        residue_number: str) -> dict:
+    """Verify that Reduce actually hydrogenated the query ligand and pocket."""
+    manifest_path = output_dir / "reduce_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    input_path = Path(manifest["input"]["path"])
+    output_path = Path(manifest["output"]["path"])
+    log_path = Path(manifest["stderr_log"]["path"])
+    hash_checks = {"input": _sha256(input_path) == manifest["input"]["sha256"],
+                   "output": _sha256(output_path) == manifest["output"]["sha256"],
+                   "stderr_log": _sha256(log_path) == manifest["stderr_log"]["sha256"]}
+    before, after = _pdb_atoms(input_path), _pdb_atoms(output_path)
+
+    def ligand(atom: dict) -> bool:
+        return (atom["resname"] == ccd_id and atom["chain"] == chain_id
+                and atom["residue"] == str(residue_number))
+
+    before_ligand_h = sum(a["element"] == "H" and ligand(a) for a in before)
+    after_ligand_h = sum(a["element"] == "H" and ligand(a) for a in after)
+    before_protein_h = sum(a["element"] == "H" and not ligand(a) for a in before)
+    after_protein_h = sum(a["element"] == "H" and not ligand(a) for a in after)
+    log_lines = log_path.read_text(encoding="utf-8").splitlines()
+    warnings = [line for line in log_lines
+                if any(token in line.lower() for token in
+                       ("warning", "unknown", "not found", "no connectivity"))
+                or ("het" in line.lower() and any(token in line.lower() for token in
+                                                   ("error", "missing", "failed")))]
+    flips = [line for line in log_lines if "flip" in line.lower() or "user  mod" in line.lower()]
+    accepted = (all(hash_checks.values()) and after_ligand_h > before_ligand_h
+                and after_protein_h > before_protein_h and not warnings)
+    report = {"format": "aidd-reduce-query-pocket-validation", "version": 1,
+              "query": {"ccd_id": ccd_id, "chain_id": chain_id,
+                        "residue_number": str(residue_number)},
+              "hash_checks": hash_checks, "hydrogen_counts": {
+                  "ligand_before": before_ligand_h, "ligand_after": after_ligand_h,
+                  "protein_before": before_protein_h, "protein_after": after_protein_h},
+              "flip_records": flips, "warnings": warnings,
+              "angle_ready": accepted, "accepted": accepted,
+              "het_dictionary_mode": ("explicit_override" if manifest.get("het_dictionary")
+                                      else "reduce_default_lookup")}
+    (output_dir / "reduce_validation.json").write_text(
+        json.dumps(report, indent=2), encoding="utf-8")
+    return report

@@ -34,7 +34,7 @@ from .ligand_workflow import (
     run_hierarchical_library_search, select_query_ligand,
 )
 from .chemistry_prep import build_library_indices, prepare_campaign_ligands
-from .reduce_pocket import export_query_pocket_pdb, run_reduce
+from .reduce_pocket import export_query_pocket_pdb, run_reduce, validate_reduce_run
 from .context import (
     activate_task, active_task, create_task, create_user, deactivate_task, list_tasks,
 )
@@ -277,6 +277,13 @@ def build_parser() -> argparse.ArgumentParser:
     reduce_run.add_argument("--profile", type=Path, required=True)
     reduce_run.add_argument("--pocket-pdb", type=Path, required=True)
     reduce_run.add_argument("--output-dir", type=Path, required=True)
+
+    reduce_validate = subparsers.add_parser(
+        "validate-reduce-pocket", help="Verify ligand/pocket hydrogenation and Reduce warnings")
+    reduce_validate.add_argument("--output-dir", type=Path, required=True)
+    reduce_validate.add_argument("--ccd-id", required=True)
+    reduce_validate.add_argument("--chain", required=True)
+    reduce_validate.add_argument("--residue", required=True)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -719,6 +726,10 @@ def main(argv: list[str] | None = None) -> int:
         result = run_reduce(args.profile, args.pocket_pdb, args.output_dir)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
+    if args.command == "validate-reduce-pocket":
+        result = validate_reduce_run(args.output_dir, args.ccd_id, args.chain, args.residue)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0 if result["accepted"] else 2
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:
             result = campaign_ligand_status(connection, args.user, args.campaign)
