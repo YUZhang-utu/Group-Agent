@@ -424,6 +424,15 @@
 - This enrichment changes evidence/reranking only and cannot remove candidates.
   Full suite: 74 passed.
 
+## 2026-09-02 - Continuity checkpoint after Linux Reduce validation
+
+- User confirmed the official wwPDB QT9 HET entry produced an accepted Reduce
+  run with all 34 ligand hydrogens. This supersedes the failed default/generated
+  dictionary attempts while preserving them as useful negative results.
+- Recorded the exact implementation/validation boundary and next Linux command
+  in `to_human/resume-checkpoint-2026-09-02.md`. Real angle/projection enrichment
+  remains pending; code availability is not misreported as completed evidence.
+
 ## 2026-09-02 - Reduce explicit dictionary activation hotfix
 
 - The first Linux rerun added 160 protein hydrogens and evaluated a GLN375
