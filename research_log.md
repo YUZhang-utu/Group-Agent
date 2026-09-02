@@ -413,6 +413,17 @@
   pre-existing ligand hydrogen and zero ligand delta; it is accepted when the
   output contains ligand/protein hydrogens and no fatal warning. Tests: 73.
 
+## 2026-09-02 - Reduce angle and projection enrichment
+
+- The Linux QT9 run passed after using the official wwPDB legacy HET entry and
+  added all 34 ligand hydrogens. Protein hydrogenation and GLN375 flip evidence
+  are therefore suitable for directional annotation.
+- Added query-manifest enrichment from the hydrogenated PDB: donor hydrogen,
+  D-H...A angle, H...A distance, and observed protein-partner projection point
+  are stored per stable anchor ID. Missing hydrogens remain explicitly null.
+- This enrichment changes evidence/reranking only and cannot remove candidates.
+  Full suite: 74 passed.
+
 ## 2026-09-02 - Reduce explicit dictionary activation hotfix
 
 - The first Linux rerun added 160 protein hydrogens and evaluated a GLN375

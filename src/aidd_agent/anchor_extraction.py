@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import json
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -8,6 +9,7 @@ import numpy as np
 
 from .chemistry_prep import _ccd_molecule, _column, _mmcif_dict, enumerate_ligand_instances
 from .screening_rerank import AnchorDefinition, QueryManifest
+from .reduce_pocket import _pdb_atoms
 
 
 SIDECHAIN_DONORS = {
@@ -166,3 +168,68 @@ def extract_query_manifest(mmcif: Path, ccd: Path, ccd_id: str,
     return QueryManifest(query_id, "direct-hbond-atomcenter-v1",
                          {"anchor": 1.5, "ordinary": 1.0, "solvent_exposed": 0.5},
                          tuple(anchors))
+
+
+def donor_hydrogen_angle(donor: np.ndarray, hydrogen: np.ndarray,
+                         acceptor: np.ndarray) -> float:
+    left, right = donor - hydrogen, acceptor - hydrogen
+    cosine = np.dot(left, right) / (np.linalg.norm(left) * np.linalg.norm(right))
+    return float(np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0))))
+
+
+def enrich_manifest_with_reduce(query_manifest: Path, ccd_path: Path,
+                                hydrogenated_pdb: Path, output: Path) -> dict:
+    """Add observed D-H-A angles and protein-side projection points."""
+    import gemmi
+
+    document = json.loads(query_manifest.read_text(encoding="utf-8"))
+    atoms = _pdb_atoms(hydrogenated_pdb)
+    ccd = gemmi.cif.read_file(str(ccd_path)).sole_block()
+    ccd_atoms = [(str(row[0]), str(row[1]).upper()) for row in
+                 ccd.find(["_chem_comp_atom.atom_id", "_chem_comp_atom.type_symbol"])]
+    heavy_names = [name for name, element in ccd_atoms if element != "H"]
+
+    def match(resname, chain, residue, atom_name):
+        found = [atom for atom in atoms if atom["resname"] == resname
+                 and atom["chain"] == chain and atom["residue"] == str(residue)
+                 and atom["atom_name"] == atom_name]
+        if len(found) != 1:
+            raise ValueError(f"Expected one PDB atom {resname} {chain}:{residue}:{atom_name}, found {len(found)}")
+        return found[0]
+
+    for anchor in document["anchors"]:
+        ligand_indices = anchor["ligand_atom_indices"]
+        if len(ligand_indices) != 1:
+            anchor["evidence"]["angle_status"] = "not_evaluated_multi_atom_feature"
+            continue
+        ligand_name = heavy_names[int(ligand_indices[0])]
+        query_parts = document["query_id"].split(":")
+        ligand = match(query_parts[1], query_parts[2], query_parts[3], ligand_name)
+        partner_def = anchor["evidence"]["protein_partner"]
+        partner = match(partner_def["residue"], partner_def["chain"],
+                        partner_def["residue_number"], partner_def["atom_name"])
+        donor, acceptor = (ligand, partner) if anchor["feature_type"] == "HBD" else (partner, ligand)
+        donor_xyz, acceptor_xyz = np.asarray(donor["xyz"]), np.asarray(acceptor["xyz"])
+        hydrogens = [atom for atom in atoms if atom["element"] == "H"
+                     and atom["resname"] == donor["resname"] and atom["chain"] == donor["chain"]
+                     and atom["residue"] == donor["residue"]
+                     and np.linalg.norm(np.asarray(atom["xyz"]) - donor_xyz) <= 1.35]
+        if not hydrogens:
+            anchor["evidence"]["angle_status"] = "not_evaluated_no_bonded_donor_hydrogen"
+            continue
+        evaluated = [(donor_hydrogen_angle(donor_xyz, np.asarray(h["xyz"]), acceptor_xyz), h)
+                     for h in hydrogens]
+        angle, hydrogen = max(evaluated, key=lambda item: item[0])
+        anchor["evidence"].update({
+            "angle_degrees": angle, "angle_status": "evaluated_reduce_hydrogen",
+            "donor_atom": donor["atom_name"], "donor_hydrogen": hydrogen["atom_name"],
+            "hydrogen_acceptor_distance_angstrom": float(np.linalg.norm(
+                np.asarray(hydrogen["xyz"]) - acceptor_xyz)),
+            "projection_method": "observed_protein_partner_heavy_atom",
+        })
+        anchor["projected_points"] = [list(map(float, partner["xyz"]))]
+    document["feature_definition_version"] = "direct-hbond-reduce-angle-projection-v1"
+    document["reduce_source"] = str(hydrogenated_pdb.resolve())
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(document, indent=2), encoding="utf-8")
+    return document

@@ -156,7 +156,8 @@ def _pdb_atoms(path: Path) -> list[dict]:
             element = atom_name.lstrip("0123456789")[:1].upper()
         atoms.append({"record": line[:6].strip(), "atom_name": atom_name,
                       "resname": line[17:20].strip(), "chain": line[21:22].strip(),
-                      "residue": line[22:26].strip(), "element": element})
+                      "residue": line[22:26].strip(), "element": element,
+                      "xyz": [float(line[30:38]), float(line[38:46]), float(line[46:54])]})
     return atoms
 
 

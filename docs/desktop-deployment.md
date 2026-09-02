@@ -70,6 +70,21 @@ line `-DB <absolute-path>` and also records `dictionary_cli_applied: true` in
 the run manifest. Environment-variable lookup alone is not considered proof
 that the dictionary was loaded.
 
+After `validate-reduce-pocket` reports `angle_ready: true`, enrich the immutable
+query snapshot without changing the original manifest:
+
+```bash
+aidd-agent enrich-query-anchors \
+  --query-manifest data/e019_query_8bju/query_manifest.json \
+  --ccd data/e019_query_8bju/QT9.cif \
+  --hydrogenated-pdb data/e019_query_8bju/reduce-QT9-v3/query-pocket.reduce.pdb \
+  --output data/e019_query_8bju/query_manifest.reduce.json
+```
+
+Each evaluated anchor records the selected donor hydrogen, D-H...A angle,
+H...A distance, and observed protein-partner projection point. Missing donor
+hydrogens remain explicitly unevaluated and never become recall filters.
+
 PyMOL is included in the Conda environment. If its package is unavailable for a
 particular platform, remove `pymol-open-source` from the environment file,
 create the environment, and install a licensed/local PyMOL build separately.

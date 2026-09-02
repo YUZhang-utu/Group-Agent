@@ -1,6 +1,6 @@
 import numpy as np
 
-from aidd_agent.anchor_extraction import atomic_sasa, protein_hbond_roles
+from aidd_agent.anchor_extraction import atomic_sasa, donor_hydrogen_angle, protein_hbond_roles
 
 
 def test_protein_backbone_and_sidechain_hbond_roles():
@@ -17,3 +17,8 @@ def test_atomic_sasa_decreases_with_nearby_occluder():
     occluded = atomic_sasa(center, ["O"], np.asarray([[0., 0., 0.], [0., 0., 3.]]),
                            ["O", "C"], target_occluder_indices=[0])
     assert 0 < occluded[0] < isolated[0]
+
+
+def test_donor_hydrogen_acceptor_linear_angle():
+    assert donor_hydrogen_angle(np.array([0., 0., 0.]), np.array([1., 0., 0.]),
+                                np.array([2.8, 0., 0.])) == 180.0

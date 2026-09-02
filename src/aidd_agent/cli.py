@@ -34,6 +34,7 @@ from .ligand_workflow import (
     run_hierarchical_library_search, select_query_ligand,
 )
 from .chemistry_prep import build_library_indices, prepare_campaign_ligands
+from .anchor_extraction import enrich_manifest_with_reduce
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -292,6 +293,13 @@ def build_parser() -> argparse.ArgumentParser:
     reduce_dictionary.add_argument("--ccd", type=Path, required=True)
     reduce_dictionary.add_argument("--ccd-id", required=True)
     reduce_dictionary.add_argument("--output", type=Path, required=True)
+
+    reduce_enrich = subparsers.add_parser(
+        "enrich-query-anchors", help="Add Reduce angles and projection points to a query manifest")
+    reduce_enrich.add_argument("--query-manifest", type=Path, required=True)
+    reduce_enrich.add_argument("--ccd", type=Path, required=True)
+    reduce_enrich.add_argument("--hydrogenated-pdb", type=Path, required=True)
+    reduce_enrich.add_argument("--output", type=Path, required=True)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -741,6 +749,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build-reduce-het-dictionary":
         result = build_reduce_het_dictionary(args.ccd, args.ccd_id, args.output)
         print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "enrich-query-anchors":
+        result = enrich_manifest_with_reduce(args.query_manifest, args.ccd,
+                                             args.hydrogenated_pdb, args.output)
+        print(json.dumps({"output": str(args.output), "anchors": len(result["anchors"])}, indent=2))
         return 0
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:
