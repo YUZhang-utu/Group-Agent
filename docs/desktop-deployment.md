@@ -64,6 +64,11 @@ absolute path, recreate `reduce-QT9`, then rerun Reduce and validation. Pocket
 boundary warnings saying residues "appear unbonded" are retained as expected
 truncation warnings; absent HET connectivity remains fatal.
 
+The runner applies a configured dictionary through the explicit Reduce command
+line `-DB <absolute-path>` and also records `dictionary_cli_applied: true` in
+the run manifest. Environment-variable lookup alone is not considered proof
+that the dictionary was loaded.
+
 PyMOL is included in the Conda environment. If its package is unavailable for a
 particular platform, remove `pymol-open-source` from the environment file,
 create the environment, and install a licensed/local PyMOL build separately.

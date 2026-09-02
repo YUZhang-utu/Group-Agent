@@ -116,9 +116,15 @@ def run_reduce(profile_path: Path, pocket_pdb: Path, output_dir: Path,
     profile = load_reduce_profile(profile_path)
     output_dir.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()
+    dictionary_path = None
     if profile["het_dictionary"]:
-        environment["REDUCE_HET_DICT"] = str(Path(profile["het_dictionary"]).resolve())
-    command = [profile["executable"], *profile["build_arguments"], str(pocket_pdb.resolve())]
+        dictionary_path = Path(profile["het_dictionary"]).resolve()
+        if not dictionary_path.is_file():
+            raise FileNotFoundError(f"Reduce HET dictionary does not exist: {dictionary_path}")
+        environment["REDUCE_HET_DICT"] = str(dictionary_path)
+    dictionary_arguments = ["-DB", str(dictionary_path)] if dictionary_path else []
+    command = [profile["executable"], *dictionary_arguments,
+               *profile["build_arguments"], str(pocket_pdb.resolve())]
     completed = runner(command, capture_output=True, text=True, check=False, env=environment)
     if completed.returncode != 0:
         raise RuntimeError(f"Reduce failed ({completed.returncode}): {completed.stderr.strip()}")
@@ -129,7 +135,8 @@ def run_reduce(profile_path: Path, pocket_pdb: Path, output_dir: Path,
     manifest = {"format": "aidd-reduce-query-pocket", "version": 1,
                 "scope": "query_ligand_and_complete_protein_residues_within_5A",
                 "input": {"path": str(pocket_pdb.resolve()), "sha256": _sha256(pocket_pdb)},
-                "command": command, "het_dictionary": profile["het_dictionary"],
+                "command": command, "het_dictionary": (str(dictionary_path) if dictionary_path else None),
+                "dictionary_cli_applied": bool(dictionary_path),
                 "returncode": int(completed.returncode),
                 "output": {"path": str(hydrogenated.resolve()), "sha256": _sha256(hydrogenated)},
                 "stderr_log": {"path": str(log.resolve()), "sha256": _sha256(log)}}

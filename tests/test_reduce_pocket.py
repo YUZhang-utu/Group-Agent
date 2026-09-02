@@ -24,6 +24,23 @@ def test_reduce_profile_and_execution_manifest(tmp_path: Path):
     assert Path(manifest["output"]["path"]).read_text() == "ATOM H\n"
 
 
+def test_reduce_dictionary_is_applied_with_explicit_db_argument(tmp_path: Path):
+    dictionary = tmp_path / "qt9.dict"; dictionary.write_text("RESIDUE QT9      1\nEND\n")
+    profile = tmp_path / "reduce.json"
+    profile.write_text(json.dumps({"executable": "reduce", "het_dictionary": str(dictionary),
+                                   "build_arguments": ["-build"]}))
+    pocket = tmp_path / "pocket.pdb"; pocket.write_text("ATOM\n")
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, stdout="ATOM H\n", stderr="")
+
+    manifest = run_reduce(profile, pocket, tmp_path / "out", runner=runner)
+    assert calls[0][:4] == ["reduce", "-DB", str(dictionary.resolve()), "-build"]
+    assert manifest["dictionary_cli_applied"] is True
+
+
 def test_reduce_profile_rejects_non_flag_arguments(tmp_path: Path):
     profile = tmp_path / "bad.json"
     profile.write_text(json.dumps({"executable": "reduce", "build_arguments": ["input.pdb"]}))

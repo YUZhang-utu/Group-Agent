@@ -403,3 +403,12 @@
   produced 76 atom definitions, including 34 hydrogens and 81 bonds.
 - Split validation warnings into fatal connectivity/dictionary problems and
   expected pocket-fragment "appear unbonded" warnings. Full suite: 71 passed.
+
+## 2026-09-02 - Reduce explicit dictionary activation hotfix
+
+- The first Linux rerun added 160 protein hydrogens and evaluated a GLN375
+  flip, but added zero QT9 hydrogens; stderr proved the configured dictionary
+  was not actually loaded through environment lookup.
+- The runner now passes `-DB <absolute dictionary path>` explicitly, verifies
+  the dictionary exists before execution, and records
+  `dictionary_cli_applied` in its manifest. Tests: 72 passed.
