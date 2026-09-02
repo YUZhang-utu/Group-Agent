@@ -393,3 +393,13 @@
   made from these distance-supported observations.
 - Query weights and evidence are serialized beside stable anchor IDs in the
   ignored local `query_manifest.json`. Verification increased to 65 tests.
+
+## 2026-09-02 - QT9-specific Reduce dictionary correction
+
+- Linux reported zero ligand hydrogens because the installed default Reduce HET
+  dictionary lacks QT9. This is a fatal ligand-angle failure, not an acceptable
+  null-dictionary case.
+- Added authoritative CCD-to-Reduce dictionary generation. The real QT9 CCD
+  produced 76 atom definitions, including 34 hydrogens and 81 bonds.
+- Split validation warnings into fatal connectivity/dictionary problems and
+  expected pocket-fragment "appear unbonded" warnings. Full suite: 71 passed.

@@ -31,6 +31,49 @@ def load_reduce_profile(path: Path) -> dict:
             "build_arguments": arguments}
 
 
+def _reduce_atom_name(name: str) -> str:
+    name = name.strip()
+    if not 1 <= len(name) <= 4:
+        raise ValueError(f"Reduce cannot represent CCD atom name {name!r}")
+    if len(name) == 4:
+        return name
+    return f" {name:<3}"
+
+
+def build_reduce_het_dictionary(ccd_path: Path, ccd_id: str, output: Path) -> dict:
+    """Create a minimal query-specific Reduce dictionary from authoritative CCD."""
+    import gemmi
+
+    ccd_id = ccd_id.upper()
+    block = gemmi.cif.read_file(str(ccd_path)).sole_block()
+    atom_rows = block.find(["_chem_comp_atom.atom_id", "_chem_comp_atom.type_symbol"])
+    bond_rows = block.find(["_chem_comp_bond.atom_id_1", "_chem_comp_bond.atom_id_2"])
+    atoms = [(str(row[0]), str(row[1]).upper()) for row in atom_rows]
+    if not atoms or not bond_rows:
+        raise ValueError(f"CCD {ccd_id} lacks atoms or bonds")
+    neighbors = {name: [] for name, _ in atoms}
+    for row in bond_rows:
+        left, right = str(row[0]), str(row[1])
+        if left in neighbors and right in neighbors:
+            neighbors[left].append(right); neighbors[right].append(left)
+    hydrogen_count = sum(element == "H" for _, element in atoms)
+    if hydrogen_count == 0:
+        raise ValueError(f"CCD {ccd_id} contains no hydrogen definitions")
+    lines = [f"RESIDUE {ccd_id:>3}{len(atoms):7d}"]
+    for name, _ in atoms:
+        connected = neighbors[name]
+        formatted = " ".join(_reduce_atom_name(other) for other in connected)
+        lines.append(f"CONECT {_reduce_atom_name(name)}{len(connected):5d} {formatted}".rstrip())
+    lines.append("END")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(lines) + "\n", encoding="ascii")
+    return {"format": "aidd-reduce-het-dictionary", "version": 1,
+            "ccd_id": ccd_id, "ccd_path": str(ccd_path.resolve()),
+            "ccd_sha256": _sha256(ccd_path), "path": str(output.resolve()),
+            "sha256": _sha256(output), "atoms": len(atoms),
+            "hydrogens": hydrogen_count, "bonds": len(bond_rows)}
+
+
 def export_query_pocket_pdb(mmcif: Path, output: Path, ccd_id: str,
                             chain_id: str, residue_number: str,
                             radius_angstrom: float = 5.0) -> dict:
@@ -137,9 +180,11 @@ def validate_reduce_run(output_dir: Path, ccd_id: str, chain_id: str,
                        ("warning", "unknown", "not found", "no connectivity"))
                 or ("het" in line.lower() and any(token in line.lower() for token in
                                                    ("error", "missing", "failed")))]
+    fragment_warnings = [line for line in warnings if "unbonded" in line.lower()]
+    fatal_warnings = [line for line in warnings if line not in fragment_warnings]
     flips = [line for line in log_lines if "flip" in line.lower() or "user  mod" in line.lower()]
     accepted = (all(hash_checks.values()) and after_ligand_h > before_ligand_h
-                and after_protein_h > before_protein_h and not warnings)
+                and after_protein_h > before_protein_h and not fatal_warnings)
     report = {"format": "aidd-reduce-query-pocket-validation", "version": 1,
               "query": {"ccd_id": ccd_id, "chain_id": chain_id,
                         "residue_number": str(residue_number)},
@@ -147,6 +192,8 @@ def validate_reduce_run(output_dir: Path, ccd_id: str, chain_id: str,
                   "ligand_before": before_ligand_h, "ligand_after": after_ligand_h,
                   "protein_before": before_protein_h, "protein_after": after_protein_h},
               "flip_records": flips, "warnings": warnings,
+              "expected_fragment_warnings": fragment_warnings,
+              "fatal_warnings": fatal_warnings,
               "angle_ready": accepted, "accepted": accepted,
               "het_dictionary_mode": ("explicit_override" if manifest.get("het_dictionary")
                                       else "reduce_default_lookup")}

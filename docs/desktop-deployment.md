@@ -49,6 +49,21 @@ anchors and never filter library candidates.
 it is acceptable only when validation confirms that QT9 and protein hydrogen
 counts increased and no dictionary/connectivity warning was emitted.
 
+If QT9 is absent from the installed dictionary, build a query-specific Reduce
+dictionary from the authoritative CCD:
+
+```bash
+aidd-agent build-reduce-het-dictionary \
+  --ccd data/e019_query_8bju/QT9.cif \
+  --ccd-id QT9 \
+  --output data/e019_query_8bju/QT9.reduce_het_dict.txt
+```
+
+Set `het_dictionary` in `configs/tools/reduce.local.json` to that file's
+absolute path, recreate `reduce-QT9`, then rerun Reduce and validation. Pocket
+boundary warnings saying residues "appear unbonded" are retained as expected
+truncation warnings; absent HET connectivity remains fatal.
+
 PyMOL is included in the Conda environment. If its package is unavailable for a
 particular platform, remove `pymol-open-source` from the environment file,
 create the environment, and install a licensed/local PyMOL build separately.

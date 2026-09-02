@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from aidd_agent.reduce_pocket import load_reduce_profile, run_reduce, validate_reduce_run
+from aidd_agent.reduce_pocket import (
+    _reduce_atom_name, load_reduce_profile, run_reduce, validate_reduce_run,
+)
 
 
 def test_reduce_profile_and_execution_manifest(tmp_path: Path):
@@ -44,7 +46,7 @@ def test_reduce_validation_requires_ligand_and_protein_hydrogens(tmp_path: Path)
         return SimpleNamespace(returncode=0, stdout=pocket.read_text() +
             "HETATM    3  H1  QT9 A 601       0.900   0.000   0.000  1.00 10.00           H\n"
             "ATOM      4  H   ALA A 100       1.900   0.000   0.000  1.00 10.00           H\n",
-            stderr="USER  MOD Flip A 101 ASN\n")
+            stderr="WARNING: residues 303 and 305 appear unbonded\nUSER  MOD Flip A 101 ASN\n")
 
     profile = tmp_path / "reduce.json"
     profile.write_text(json.dumps({"executable": "reduce", "het_dictionary": None,
@@ -54,3 +56,10 @@ def test_reduce_validation_requires_ligand_and_protein_hydrogens(tmp_path: Path)
     assert report["accepted"] and report["angle_ready"]
     assert report["hydrogen_counts"]["ligand_after"] == 1
     assert report["het_dictionary_mode"] == "reduce_default_lookup"
+    assert report["fatal_warnings"] == []
+    assert len(report["expected_fragment_warnings"]) == 1
+
+
+def test_reduce_dictionary_atom_name_format():
+    assert _reduce_atom_name("C1") == " C1 "
+    assert _reduce_atom_name("H123") == "H123"
