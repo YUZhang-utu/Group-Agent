@@ -46,8 +46,9 @@ input/output hashes, exact argument array, and scope. These data annotate query
 anchors and never filter library candidates.
 
 `het_dictionary: null` in the run manifest means Reduce used its default lookup;
-it is acceptable only when validation confirms that QT9 and protein hydrogen
-counts increased and no dictionary/connectivity warning was emitted.
+it is acceptable only when validation confirms that the output QT9 and protein
+contain hydrogens and no dictionary/connectivity warning was emitted. Hydrogen
+counts need not increase when the input already contains valid hydrogens.
 
 If QT9 is absent from the installed dictionary, build a query-specific Reduce
 dictionary from the authoritative CCD:

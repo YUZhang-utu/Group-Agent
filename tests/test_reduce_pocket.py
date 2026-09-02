@@ -80,3 +80,25 @@ def test_reduce_validation_requires_ligand_and_protein_hydrogens(tmp_path: Path)
 def test_reduce_dictionary_atom_name_format():
     assert _reduce_atom_name("C1") == " C1 "
     assert _reduce_atom_name("H123") == "H123"
+
+
+def test_reduce_validation_accepts_preexisting_ligand_hydrogens(tmp_path: Path):
+    ligand_h = "HETATM    3  H1  QT9 A 601       0.900   0.000   0.000  1.00 10.00           H\n"
+    pocket = tmp_path / "pocket.pdb"
+    pocket.write_text(
+        "HETATM    1  O1  QT9 A 601       0.000   0.000   0.000  1.00 10.00           O\n"
+        "ATOM      2  N   ALA A 100       2.800   0.000   0.000  1.00 10.00           N\n" + ligand_h)
+    profile = tmp_path / "reduce.json"
+    profile.write_text(json.dumps({"executable": "reduce", "het_dictionary": None,
+                                   "build_arguments": ["-build"]}))
+
+    def runner(command, **kwargs):
+        return SimpleNamespace(returncode=0, stdout=pocket.read_text() +
+            "ATOM      4  H   ALA A 100       1.900   0.000   0.000  1.00 10.00           H\n",
+            stderr="")
+
+    out = tmp_path / "out"; run_reduce(profile, pocket, out, runner=runner)
+    report = validate_reduce_run(out, "QT9", "A", "601")
+    assert report["accepted"]
+    assert report["hydrogen_counts"]["ligand_delta"] == 0
+    assert report["hydrogen_presence"]["ligand_output_has_hydrogen"]

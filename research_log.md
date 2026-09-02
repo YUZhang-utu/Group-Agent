@@ -404,6 +404,15 @@
 - Split validation warnings into fatal connectivity/dictionary problems and
   expected pocket-fragment "appear unbonded" warnings. Full suite: 71 passed.
 
+## 2026-09-02 - Reduce pre-existing hydrogen acceptance correction
+
+- Corrected the validator: a valid output needs ligand and protein hydrogens,
+  not a positive before-to-after count delta. Reduce may preserve/reorient an
+  already hydrogenated ligand without changing its hydrogen count.
+- Hydrogen deltas remain diagnostic fields. Added a regression case with one
+  pre-existing ligand hydrogen and zero ligand delta; it is accepted when the
+  output contains ligand/protein hydrogens and no fatal warning. Tests: 73.
+
 ## 2026-09-02 - Reduce explicit dictionary activation hotfix
 
 - The first Linux rerun added 160 protein hydrogens and evaluated a GLN375

@@ -190,14 +190,20 @@ def validate_reduce_run(output_dir: Path, ccd_id: str, chain_id: str,
     fragment_warnings = [line for line in warnings if "unbonded" in line.lower()]
     fatal_warnings = [line for line in warnings if line not in fragment_warnings]
     flips = [line for line in log_lines if "flip" in line.lower() or "user  mod" in line.lower()]
-    accepted = (all(hash_checks.values()) and after_ligand_h > before_ligand_h
-                and after_protein_h > before_protein_h and not fatal_warnings)
+    ligand_hydrogenated = after_ligand_h > 0
+    protein_hydrogenated = after_protein_h > 0
+    accepted = (all(hash_checks.values()) and ligand_hydrogenated
+                and protein_hydrogenated and not fatal_warnings)
     report = {"format": "aidd-reduce-query-pocket-validation", "version": 1,
               "query": {"ccd_id": ccd_id, "chain_id": chain_id,
                         "residue_number": str(residue_number)},
               "hash_checks": hash_checks, "hydrogen_counts": {
                   "ligand_before": before_ligand_h, "ligand_after": after_ligand_h,
-                  "protein_before": before_protein_h, "protein_after": after_protein_h},
+                  "ligand_delta": after_ligand_h - before_ligand_h,
+                  "protein_before": before_protein_h, "protein_after": after_protein_h,
+                  "protein_delta": after_protein_h - before_protein_h},
+              "hydrogen_presence": {"ligand_output_has_hydrogen": ligand_hydrogenated,
+                                    "protein_output_has_hydrogen": protein_hydrogenated},
               "flip_records": flips, "warnings": warnings,
               "expected_fragment_warnings": fragment_warnings,
               "fatal_warnings": fatal_warnings,
