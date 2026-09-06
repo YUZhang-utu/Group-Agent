@@ -36,6 +36,13 @@
   IDs. Adding each 150K-conformer shard took about 0.3 seconds after chemistry
   preprocessing; final QT9 retrieval retained 100% of exact top-1,000 and
   99.69% of exact top-10,000 in a 100K candidate pool at about 14 ms.
+- Partial three-dimensional motif admission can also reuse the immutable local
+  artifacts: type-pair/distance-bin postings are built independently per shard
+  from stored feature coordinates. A new co-crystal compiles to a small hashed
+  invariant query and never triggers library MOL2 or feature recomputation.
+- Loose, balanced, and strict pharmacophore evidence are nested views of one
+  candidate channel. Their union with FAISS/L1 is recall-additive: anchors may
+  admit additional local matches but cannot remove a baseline candidate.
 - Anchor assignment captures observed interactions, not proven necessities.
   Anchors, projected sites, and feature counts are therefore reversible ranking
   evidence only. Broad anchor-independent recall defines admission, while
@@ -67,6 +74,18 @@
   to retain with conf1/conf2 unless a replacement conformer is later supplied.
 
 ## Constraints
+
+- Physical laboratory automation requires a stricter authority boundary than
+  computational orchestration. An LLM may propose an experiment but cannot
+  issue free-form robot or instrument commands. Hardware execution requires a
+  typed/versioned protocol, deterministic compilation, capability and safety
+  validation, simulation or dry-run, and explicit human release.
+- `completed` equipment execution is not a scientific result. Raw-data
+  registration, assay QC, deterministic analysis, and adjudication are separate
+  states, and invalid experiments must not be converted into inactive labels.
+- Closed-loop learning requires exact molecule, batch, sample, container/well,
+  protocol, instrument, measurement, and model lineage. Plate position or a
+  filename alone is never sufficient identity.
 
 - Source structures and experimental data remain local.
 - The LLM controls workflow decisions but does not become the scientific compute

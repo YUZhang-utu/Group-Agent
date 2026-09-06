@@ -441,3 +441,33 @@
 - The runner now passes `-DB <absolute dictionary path>` explicitly, verifies
   the dictionary exists before execution, and records
   `dictionary_cli_applied` in its manifest. Tests: 72 passed.
+
+## 2026-09-06 - End-to-end DMTA and laboratory-automation roadmap
+
+- Extended the architecture roadmap from retrieval through validated docking,
+  independent rescoring, versioned activity/property prediction, Pareto
+  nomination, inventory/sample identity, assay execution, QC, and active
+  learning. Current E019 scope and completion claims remain unchanged.
+- Defined laboratory automation as a controlled execution plane. The LLM is
+  advisory and cannot send free-form device commands; physical Runs require a
+  typed/versioned protocol, deterministic device compilation, capability and
+  safety checks, simulation or dry-run, and explicit human release.
+- Added phased gates so sample lineage and a manually validated assay digital
+  twin precede hardware control, supervised execution precedes unattended
+  operation, and QC-approved prospective data precede closed-loop retraining.
+- Recorded the roadmap in `docs/end-to-end-roadmap.md`; this is an architecture
+  decision, not an executed laboratory experiment or validation claim.
+
+## 2026-09-06 - Reusable partial 3D pharmacophore retrieval
+
+- Locked E020 before implementation. The hypothesis separates an expensive
+  once-per-library shard index from small per-co-crystal query compilation.
+- Added immutable pharmacophore feature-type-pair/distance-bin postings built
+  directly from existing `meta.bin` and `feats.bin`; source MOL2 is not read.
+- Added library-independent hashed query plans and nested loose, balanced and
+  strict partial-motif retrieval. Results form a lossless union with external
+  FAISS/L1 candidates, preserving the anchor reranking-only safety policy.
+- Fixed Windows atomic promotion by releasing mmap handles before renaming the
+  completed shard index. Added CLI and operating documentation.
+- Offline synthetic validation and the complete suite pass: 77 tests. A real
+  full-library QT9 build/recall/runtime run remains pending on Linux.

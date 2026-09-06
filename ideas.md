@@ -27,3 +27,21 @@
 - Does the locked `W/n` normalized-mixture representation need an additional
   group-level self-overlap normalization, or is empirical Tversky calibration
   sufficient without improving enrichment?
+
+## Future docking, prediction, and laboratory-loop questions
+
+- Which redocking and cross-docking thresholds are sufficiently predictive to
+  promote a WEE1 docking protocol beyond pose generation?
+- How should receptor-ensemble and pose evidence be aggregated without hiding
+  a bad clash, high ligand strain, or an unsupported interaction?
+- Which prediction models have prospective calibration and applicability-domain
+  coverage for the macrocycle chemical space?
+- Does Pareto selection improve potency/property/diversity tradeoffs over a
+  fixed weighted score in prospective rounds?
+- What is the smallest manually validated plate assay that can serve as the
+  first complete sample-to-result automation vertical slice?
+- Which vendor-neutral protocol representation can compile deterministically to
+  the laboratory's actual liquid handler, robot arm, and reader?
+- What QC and induced-failure tests are required before unattended operation?
+- Which active-learning objective improves valid information per experiment
+  over random, similarity, and expert-selection baselines?

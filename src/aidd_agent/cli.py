@@ -35,6 +35,10 @@ from .ligand_workflow import (
 )
 from .chemistry_prep import build_library_indices, prepare_campaign_ligands
 from .anchor_extraction import enrich_manifest_with_reduce
+from .pharmacophore_index import (
+    build_pharmacophore_index, compile_pharmacophore_query,
+    load_external_l1_ids, search_pharmacophore_index,
+)
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -300,6 +304,28 @@ def build_parser() -> argparse.ArgumentParser:
     reduce_enrich.add_argument("--ccd", type=Path, required=True)
     reduce_enrich.add_argument("--hydrogenated-pdb", type=Path, required=True)
     reduce_enrich.add_argument("--output", type=Path, required=True)
+
+    pharmacophore_build = subparsers.add_parser(
+        "build-pharmacophore-index",
+        help="Build reusable shard-local 3D pharmacophore pair postings from artifacts")
+    pharmacophore_build.add_argument("--artifact-catalog", type=Path, required=True)
+    pharmacophore_build.add_argument("--output-dir", type=Path, required=True)
+    pharmacophore_build.add_argument("--bin-width", type=float, default=0.5)
+    pharmacophore_build.add_argument("--max-distance", type=float, default=20.0)
+
+    pharmacophore_compile = subparsers.add_parser(
+        "compile-pharmacophore-query",
+        help="Compile one co-crystal anchor manifest without reading the library")
+    pharmacophore_compile.add_argument("--query-manifest", type=Path, required=True)
+    pharmacophore_compile.add_argument("--output", type=Path, required=True)
+
+    pharmacophore_search = subparsers.add_parser(
+        "search-pharmacophore-index",
+        help="Run loose/balanced/strict partial 3D motif retrieval and union external L1 IDs")
+    pharmacophore_search.add_argument("--index-catalog", type=Path, required=True)
+    pharmacophore_search.add_argument("--query-plan", type=Path, required=True)
+    pharmacophore_search.add_argument("--external-l1-ids", type=Path)
+    pharmacophore_search.add_argument("--output", type=Path, required=True)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -754,6 +780,22 @@ def main(argv: list[str] | None = None) -> int:
         result = enrich_manifest_with_reduce(args.query_manifest, args.ccd,
                                              args.hydrogenated_pdb, args.output)
         print(json.dumps({"output": str(args.output), "anchors": len(result["anchors"])}, indent=2))
+        return 0
+    if args.command == "build-pharmacophore-index":
+        result = build_pharmacophore_index(
+            args.artifact_catalog, args.output_dir,
+            bin_width=args.bin_width, max_distance=args.max_distance)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "compile-pharmacophore-query":
+        result = compile_pharmacophore_query(args.query_manifest, args.output)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "search-pharmacophore-index":
+        external = load_external_l1_ids(args.external_l1_ids)
+        result = search_pharmacophore_index(
+            args.index_catalog, args.query_plan, args.output, external_l1_ids=external)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:

@@ -67,5 +67,9 @@ adapters will run structure preparation, docking, prediction, and MD. Heavy
 artifacts and experimental measurements do not enter LLM state.
 
 See `docs/architecture.md` for the planned screening graph.
+See `docs/end-to-end-roadmap.md` for the computational screening, docking,
+prediction, laboratory automation, and closed-loop learning roadmap.
+See `docs/local-pharmacophore-retrieval.md` for the once-per-library local 3D
+feature-pair index and per-co-crystal loose/balanced/strict query workflow.
 See `docs/cluster-bridge.md` for cross-platform authenticated Slurm submission.
 See `docs/desktop-deployment.md` for workstation, RDKit, PyMOL, and AlphaFold setup.

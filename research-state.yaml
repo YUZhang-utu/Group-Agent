@@ -2,6 +2,18 @@ project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E019-million-scale-faiss-gaussian-prototype
+roadmap:
+  document: docs/end-to-end-roadmap.md
+  current_phase: A_retrieval_foundation
+  future_phases:
+    - B_docking_and_pose_quality
+    - C_prediction_and_multi_objective_decision
+    - D_nomination_inventory_and_sample_identity
+    - E_assay_digital_twin_and_manual_pilot
+    - F_supervised_robotic_execution
+    - G_closed_loop_learning
+    - H_scale_transfer_and_regulated_readiness
+  laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
   date: 2026-09-02
   git_commit: 36b0f58
@@ -134,8 +146,12 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 74_passed
+  tests: 77_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
+  local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
+  per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
+  tiered_partial_3d_retrieval: implemented_loose_balanced_strict
+  pharmacophore_faiss_union: implemented_anchor_adds_recall_never_removes_l1
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

@@ -110,6 +110,12 @@ locate_user
   -> human_select_synthesis
 ```
 
+The screening graph extends into a controlled design--make--test--learn loop.
+Physical automation is deliberately separated from AI recommendations: a robot
+may execute only a versioned, validated, simulated, and human-released protocol
+through an allow-listed device adapter. The complete computational, laboratory,
+and closed-loop roadmap is defined in `docs/end-to-end-roadmap.md`.
+
 The candidate count is applied after conformer and pose aggregation. Twenty
 requested candidates therefore means twenty unique molecule IDs.
 
@@ -120,6 +126,11 @@ requested candidates therefore means twenty unique molecule IDs.
 3. PLANTS docking using the existing local installation and Slurm scripts.
 4. Versioned local property/model adapters.
 5. MD preparation, validation, submission, monitoring, and analysis.
+6. Versioned activity, selectivity, ADME, safety, and synthesis-feasibility
+   prediction adapters with uncertainty and applicability-domain reporting.
+7. Inventory, sample, barcode, plate-map, ELN/LIMS, and raw instrument adapters.
+8. Vendor-neutral protocol compilation and allow-listed laboratory-device
+   adapters, with simulation, safety review, and human release gates.
 
 Every expensive Run uses a compute key derived from input artifact hashes,
 tool/model version, parameters, and execution environment so successful results
