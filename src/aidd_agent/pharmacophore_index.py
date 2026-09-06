@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -81,19 +82,23 @@ def _feature_points(meta: np.void, features: np.ndarray, scale: float) -> np.nda
 
 
 def _conformer_pair_keys(points: np.ndarray, types: np.ndarray, bin_width: float,
-                         max_distance: float) -> set[int]:
-    keys: set[int] = set()
-    for left in range(len(points)):
-        delta = points[left + 1:] - points[left]
-        if not len(delta):
-            continue
-        distances = np.linalg.norm(delta, axis=1)
-        for offset in np.flatnonzero(distances <= max_distance):
-            right = left + 1 + int(offset)
-            keys.add(encode_pair_key(
-                int(types[left]), int(types[right]),
-                _distance_bin(float(distances[offset]), bin_width)))
-    return keys
+                         max_distance: float) -> np.ndarray:
+    """Return unique uint32 keys using one vectorized upper-triangle pass."""
+    if len(points) < 2:
+        return np.empty(0, dtype=np.uint32)
+    left, right = np.triu_indices(len(points), 1)
+    distances = np.linalg.norm(points[left] - points[right], axis=1)
+    keep = distances <= max_distance
+    if not np.any(keep):
+        return np.empty(0, dtype=np.uint32)
+    left, right, distances = left[keep], right[keep], distances[keep]
+    first = np.minimum(types[left], types[right]).astype(np.uint32)
+    second = np.maximum(types[left], types[right]).astype(np.uint32)
+    bins = np.floor(distances / bin_width).astype(np.uint32)
+    if len(bins) and int(bins.max()) > 65535:
+        raise ValueError("distance bin must fit uint16")
+    encoded = (first << 24) | (second << 16) | bins
+    return np.unique(encoded)
 
 
 def build_shard_pharmacophore_index(shard_directory: Path, output_directory: Path,
@@ -125,37 +130,63 @@ def build_shard_pharmacophore_index(shard_directory: Path, output_directory: Pat
     meta = np.memmap(shard_directory / "meta.bin", dtype=META_DTYPE, mode="r")
     feats = np.memmap(shard_directory / "feats.bin", dtype=FEATURE_DTYPE, mode="r")
     scale = float(source_manifest.get("coordinate_scale", COORD_SCALE))
-    buffers: dict[int, list[int]] = {}
+    buffered_keys: list[np.ndarray] = []
+    buffered_ids: list[np.ndarray] = []
     counts: dict[int, int] = {}
+    streams: OrderedDict[int, object] = OrderedDict()
+    max_open_streams = 256
     buffered = 0
+
+    def posting_stream(key: int):
+        stream = streams.pop(key, None)
+        if stream is None:
+            if len(streams) >= max_open_streams:
+                _, oldest = streams.popitem(last=False)
+                oldest.close()
+            stream = (postings_dir / f"{key:08x}.i64").open("ab")
+        streams[key] = stream
+        return stream
 
     def flush() -> None:
         nonlocal buffered
-        for key in sorted(buffers):
-            values = np.asarray(buffers[key], dtype="<i8")
-            with (postings_dir / f"{key:08x}.i64").open("ab") as stream:
-                values.tofile(stream)
-            counts[key] = counts.get(key, 0) + len(values)
-        buffers.clear()
+        keys = np.concatenate(buffered_keys)
+        gids = np.concatenate(buffered_ids)
+        order = np.argsort(keys, kind="stable")
+        keys, gids = keys[order], gids[order]
+        unique_keys, starts, key_counts = np.unique(
+            keys, return_index=True, return_counts=True)
+        for key, start, key_count in zip(unique_keys, starts, key_counts):
+            values = np.asarray(gids[start:start + key_count], dtype="<i8")
+            integer_key = int(key)
+            values.tofile(posting_stream(integer_key))
+            counts[integer_key] = counts.get(integer_key, 0) + len(values)
+        buffered_keys.clear(); buffered_ids.clear()
         buffered = 0
 
     previous_gid = -1
     row = None
-    for row in meta:
-        gid = int(row["global_id"])
-        if gid <= previous_gid:
-            raise ValueError("artifact global IDs must be strictly increasing within a shard")
-        previous_gid = gid
-        offset, count = int(row["feature_offset"]), int(row["features"])
-        record = feats[offset:offset + count]
-        points = _feature_points(row, record, scale)
-        for key in _conformer_pair_keys(points, record["type"], bin_width, max_distance):
-            buffers.setdefault(key, []).append(gid)
-            buffered += 1
-        if buffered >= flush_records:
+    try:
+        for row in meta:
+            gid = int(row["global_id"])
+            if gid <= previous_gid:
+                raise ValueError("artifact global IDs must be strictly increasing within a shard")
+            previous_gid = gid
+            offset, count = int(row["feature_offset"]), int(row["features"])
+            record = feats[offset:offset + count]
+            points = _feature_points(row, record, scale)
+            keys = _conformer_pair_keys(points, record["type"], bin_width, max_distance)
+            if len(keys):
+                buffered_keys.append(keys)
+                buffered_ids.append(np.full(len(keys), gid, dtype="<i8"))
+                buffered += len(keys)
+            if buffered >= flush_records:
+                flush()
+        if buffered:
             flush()
-    if buffered:
-        flush()
+    finally:
+        for stream in streams.values():
+            stream.close()
+        streams.clear()
     # Windows will not atomically rename the directory while memmaps are open.
     del row, meta, feats
 

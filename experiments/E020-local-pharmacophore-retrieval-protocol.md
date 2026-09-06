@@ -65,6 +65,6 @@ experiment and must not be inferred from unit tests.
 - A synthetic translated query recovered the exact invariant three-pair match;
   a one-pair partial match entered loose only; an unrelated external L1 ID was
   retained unchanged.
-- Complete dependency-light suite: 77 passed.
+- Complete dependency-light suite: 78 passed.
 - The full 299,999-conformer index build and QT9 recall/runtime measurements
   remain unexecuted on the Linux workstation and are not claimed here.

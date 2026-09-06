@@ -91,3 +91,38 @@ at least one compatible feature pair occurs at a similar separation somewhere
 in a stored conformer. Exact feature assignment, rigid alignment, Gaussian
 shape/color, query-biased Tversky, protein exclusion volume and limited torsion
 refinement are later reranking stages over this unchanged union.
+
+## Complete QT9 workstation validation
+
+After pulling and reinstalling the package, run the checked-in wrapper with the
+seven real paths used by the existing E019 run:
+
+```bash
+bash scripts/validate_qt9_pharmacophore.sh \
+  /path/to/artifacts/catalog.json \
+  /path/to/incremental-faiss-index-directory \
+  data/e019_query_8bju/query_manifest.reduce.json \
+  data/e019_query_8bju/8BJU.cif \
+  data/e019_query_8bju/QT9.cif \
+  /path/to/reusable-indices/pharmacophore-pairs-v1 \
+  data/e020_qt9_pharmacophore_validation \
+  QT9
+```
+
+The first execution builds the reusable pair index. Later QT9 executions reuse
+it; other co-crystal ligands reuse the same index and compile only a new query.
+The wrapper also generates a fresh 100,000-ID FAISS baseline using `nprobe=256`,
+unions it with all partial-motif hits, validates that every FAISS ID survives,
+and writes:
+
+- `faiss-global-ids.npy`;
+- `pharmacophore-query-v1.json`;
+- `pharmacophore-hits.npz`;
+- `pharmacophore-hits.manifest.json`;
+- `validation-report.json`;
+- `validation.log`.
+
+Acceptance requires `accepted: true`, no failed checks, valid stable-ID ranges,
+nested tiers, manifest/array count agreement, and complete preservation of the
+FAISS baseline. Candidate counts and timing are measurements, not fixed pass
+thresholds in the first real run; record them before setting performance gates.

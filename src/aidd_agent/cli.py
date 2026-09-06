@@ -39,6 +39,7 @@ from .pharmacophore_index import (
     build_pharmacophore_index, compile_pharmacophore_query,
     load_external_l1_ids, search_pharmacophore_index,
 )
+from .pharmacophore_validation import run_pharmacophore_validation
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -326,6 +327,23 @@ def build_parser() -> argparse.ArgumentParser:
     pharmacophore_search.add_argument("--query-plan", type=Path, required=True)
     pharmacophore_search.add_argument("--external-l1-ids", type=Path)
     pharmacophore_search.add_argument("--output", type=Path, required=True)
+
+    pharmacophore_validate = subparsers.add_parser(
+        "validate-pharmacophore-retrieval",
+        help="Build/reuse, query, search, and validate the complete pre-docking admission stage")
+    pharmacophore_validate.add_argument("--artifact-catalog", type=Path, required=True)
+    pharmacophore_validate.add_argument("--pharmacophore-index-dir", type=Path, required=True)
+    pharmacophore_validate.add_argument("--query-manifest", type=Path, required=True)
+    pharmacophore_validate.add_argument("--output-dir", type=Path, required=True)
+    pharmacophore_validate.add_argument("--external-l1-ids", type=Path)
+    pharmacophore_validate.add_argument("--faiss-index-dir", type=Path)
+    pharmacophore_validate.add_argument("--mmcif", type=Path)
+    pharmacophore_validate.add_argument("--ccd", type=Path)
+    pharmacophore_validate.add_argument("--ccd-id")
+    pharmacophore_validate.add_argument("--faiss-k", type=int, default=100_000)
+    pharmacophore_validate.add_argument("--nprobe", type=int, default=256)
+    pharmacophore_validate.add_argument("--bin-width", type=float, default=0.5)
+    pharmacophore_validate.add_argument("--max-distance", type=float, default=20.0)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -797,6 +815,17 @@ def main(argv: list[str] | None = None) -> int:
             args.index_catalog, args.query_plan, args.output, external_l1_ids=external)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
+    if args.command == "validate-pharmacophore-retrieval":
+        result = run_pharmacophore_validation(
+            args.artifact_catalog, args.pharmacophore_index_dir,
+            args.query_manifest, args.output_dir,
+            external_l1_path=args.external_l1_ids,
+            faiss_index_dir=args.faiss_index_dir, mmcif=args.mmcif,
+            ccd=args.ccd, ccd_id=args.ccd_id, faiss_k=args.faiss_k,
+            nprobe=args.nprobe, bin_width=args.bin_width,
+            max_distance=args.max_distance)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0 if result["accepted"] else 2
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:
             result = campaign_ligand_status(connection, args.user, args.campaign)

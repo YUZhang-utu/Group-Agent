@@ -469,5 +469,10 @@
   FAISS/L1 candidates, preserving the anchor reranking-only safety policy.
 - Fixed Windows atomic promotion by releasing mmap handles before renaming the
   completed shard index. Added CLI and operating documentation.
-- Offline synthetic validation and the complete suite pass: 77 tests. A real
+- Offline synthetic validation and the complete suite pass: 78 tests. A real
   full-library QT9 build/recall/runtime run remains pending on Linux.
+- Added a single-command workstation validator that can generate a fresh QT9
+  FAISS L1 set from the persisted incremental index, build or reuse the local
+  pair index, compile the query, execute all tiers, verify nesting/ranges/counts
+  and prove every external L1 ID survived. It writes a machine-readable
+  acceptance report and retains all intermediate inputs and outputs.
