@@ -1,6 +1,6 @@
 # E023 Staged, parallel, resumable Gaussian reranking protocol
 
-Status: offline confirmatory implementation passed; real 16-worker validation pending
+Status: real staged workstation performance confirmed; interruption/resume and ranking analysis pending
 
 ## Motivation and observed baseline
 
@@ -88,3 +88,20 @@ will not be inferred from offline synthetic tests.
 - Complete dependency-light suite passed: 92 tests.
 - Real 1-vs-16-worker scaling, interruption recovery, full coarse runtime, and
   refined ranking remain workstation confirmation tasks.
+
+## Real workstation results (2026-09-07)
+
+- The 16-worker PCA coarse stage scored all 299,999 conformers in 40.83 seconds
+  inside the runner (42.58 seconds whole-command wall), about 7,045 end-to-end
+  conformers/s, while retaining every ID in 300 validated chunks.
+- Stable per-objective Top-5,000 union selected 7,704 conformers, only 51.4% of
+  the 15,000 no-overlap maximum, demonstrating substantial objective overlap.
+- Pair refinement completed all 7,704 conformers in 77.99 seconds inside the
+  runner (79.67 seconds whole-command wall), about 96.7 conformers/s.
+- Refine used 591.86 user CPU seconds over 79.67 wall seconds (743% CPU) and
+  171,356 KiB peak RSS with no major page faults or swaps.
+- Only eight refine chunks existed at chunk size 1,000, so at most eight of the
+  requested 16 workers could run concurrently; the observed 743% is consistent
+  with saturating that available chunk parallelism rather than a worker fault.
+- From-scratch coarse plus refine compute was about two minutes. Score/rank
+  analysis and a real interrupted-command resume check remain pending.

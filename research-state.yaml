@@ -56,12 +56,11 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - sync E023 to the workstation and confirm the complete dependency-light suite
-  - compare one-worker and 16-worker optimized scoring on the locked QT9 1000-candidate set
-  - interrupt and resume a real coarse-stage run to verify chunk reuse
-  - run all-299999-conformer PCA coarse scoring with 16 workers and retain timing
-  - refine the union of the three objective Top-5000 sets with 16 workers
-  - inspect objective overlap, pose quality, and score distributions before docking integration
+  - verify identical-command real resume reports eight reused refine chunks and zero recomputed chunks
+  - analyze coarse-to-refine score monotonicity, objective Top-N overlap, and unique molecule counts
+  - collapse refined conformers to molecule-level representatives without discarding pose provenance
+  - export top objective-specific transforms and aligned structures for human pose review
+  - inspect pose quality and score distributions before docking integration
   - design artifact schema v2 companion data for atomic identity, topology, directional projection points, and terminal torsions
   - implement pocket exclusion-volume scoring after real atom-centered Gaussian validation
   - acquire and checksum the Platinum conformer benchmark and define the symmetry-aware RMSD evaluator
@@ -177,6 +176,9 @@ implementation_status:
   gaussian_parallel_workers: implemented_offline_1_vs_2_identical_real_16_pending
   gaussian_chunk_checkpoints: implemented_atomic_hash_validated_resume
   gaussian_two_stage_pipeline: implemented_all_candidate_pca_then_topn_union_pair_refine
+  gaussian_real_coarse: completed_299999_in_40_83_seconds_16_workers
+  gaussian_real_refine: completed_7704_in_77_99_seconds_eight_chunks
+  gaussian_real_staged_status: complete_rank_analysis_and_resume_check_pending
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

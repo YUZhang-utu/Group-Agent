@@ -527,3 +527,18 @@
   Full suite: 92 passed.
 - Real 16-worker throughput and interruption recovery remain to be measured;
   no linear speedup is inferred from synthetic tests.
+
+## 2026-09-07 - E023 real full-library staged run
+
+- Workstation completed PCA coarse scoring for 299,999/299,999 conformers in
+  40.83 seconds inside the runner using 300 chunks and 16 requested workers.
+- The union of three independently ranked Top-5,000 lists contained 7,704
+  conformers, substantially below the 15,000 disjoint-list maximum.
+- Pair refinement completed 7,704/7,704 in 77.99 seconds inside the runner;
+  whole-command wall was 79.67 seconds, CPU 743%, peak RSS 171,356 KiB, with no
+  swaps or major page faults.
+- Refine had only eight 1,000-record chunks, structurally limiting active
+  concurrency to eight workers and explaining the measured CPU utilization.
+- Run manifest status is complete and all stages/results have content hashes.
+  Next checks are score monotonicity/rank overlap, molecule-level collapse,
+  pose review, and a real resume-reuse invocation.

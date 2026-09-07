@@ -67,6 +67,16 @@
   atomically. Complete coarse scores remain evidence even though only Top-N
   unions receive expensive refinement; selection is compute allocation rather
   than retroactive candidate admission.
+- Real staging changed the operational conclusion: all 299,999 conformers can
+  receive PCA Gaussian scores in about 41 seconds and the 7,704-member Top-5,000
+  objective union can receive pair refinement in about 78 seconds. The full
+  Gaussian path is therefore approximately two minutes on the workstation,
+  not the hours implied by the original serial reference.
+- Refine CPU utilization was 743% because 7,704 candidates at chunk size 1,000
+  create only eight chunks; only eight workers can be occupied. Future runs can
+  use approximately 500-candidate chunks when maximizing 16-worker refinement
+  utilization matters, although the present runtime is already operationally
+  small.
 - Anchor assignment captures observed interactions, not proven necessities.
   Anchors, projected sites, and feature counts are therefore reversible ranking
   evidence only. Broad anchor-independent recall defines admission, while
