@@ -57,6 +57,16 @@
   claims: it lacks directional candidate projections and molecular topology.
   Those require a versioned companion artifact rather than inference from
   feature centers.
+- Real E022 timing identified the Gaussian bottleneck as single-core repeated
+  pose computation rather than storage: pair mode used 219.70 seconds/1,000,
+  PCA-only used 16.59 seconds/1,000, both at about one logical CPU and roughly
+  55 MB RSS. Therefore expensive pair alignment belongs after all-candidate PCA
+  scoring, on the union of independent objective Top-N sets.
+- The staged implementation now caches rigid-invariant self-overlaps, distributes
+  contiguous ID chunks across processes, and commits hash-validated chunks
+  atomically. Complete coarse scores remain evidence even though only Top-N
+  unions receive expensive refinement; selection is compute allocation rather
+  than retroactive candidate admission.
 - Anchor assignment captures observed interactions, not proven necessities.
   Anchors, projected sites, and feature counts are therefore reversible ranking
   evidence only. Broad anchor-independent recall defines admission, while

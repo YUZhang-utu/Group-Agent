@@ -7,8 +7,8 @@ import pytest
 
 from aidd_agent.conformer_artifacts import FEATURE_DTYPE, META_DTYPE
 from aidd_agent.gaussian_batch import (
-    ArtifactCatalogReader, load_candidate_ids, score_gaussian_candidates,
-    write_gaussian_query,
+    ArtifactCatalogReader, load_candidate_ids, run_staged_gaussian_reranking,
+    score_gaussian_candidates, write_gaussian_query,
 )
 from aidd_agent.gaussian_overlay import score_overlay
 
@@ -42,6 +42,42 @@ def _artifact(tmp_path: Path) -> Path:
                "shards": [{"name": "shard-a", "path": "Z:/stale/windows/path",
                            "global_id_start": 0, "conformers": 1}]}
     path = tmp_path / "catalog.json"
+    path.write_text(json.dumps(catalog), encoding="utf-8")
+    return path
+
+
+def _multi_artifact(tmp_path: Path, count: int = 6) -> Path:
+    shard = tmp_path / "shard-multi"
+    shard.mkdir()
+    coords, feature_records, meta_rows = [], [], []
+    for index in range(count):
+        origin = np.asarray([10.0 + index, -2.0, 4.0], dtype=np.float32)
+        points = np.asarray([
+            [0, 0, 0], [100 + 5 * index, 0, 0],
+            [0, 200 - 3 * index, 0], [0, 0, 300 + 2 * index]], dtype="<i2")
+        features = np.empty(2, dtype=FEATURE_DTYPE)
+        features["xyz"] = points[[0, 3]]
+        features["type"] = [1, 2]
+        features["parent"] = [0, 1]
+        coords.append(points); feature_records.append(features)
+        meta_rows.append((index, index * 4, index * 2, 4, 2, origin,
+                          [1, 2, 3], [1, 2, 3], [1, 1, 0, 0, 0, 0], [0, 0]))
+    np.concatenate(coords).tofile(shard / "coords.bin")
+    np.concatenate(feature_records).tofile(shard / "feats.bin")
+    np.asarray(meta_rows, dtype=META_DTYPE).tofile(shard / "meta.bin")
+    np.asarray([f"CONF-{i}".encode() for i in range(count)], dtype="S16").tofile(
+        shard / "conformer_ids.bin")
+    np.asarray([f"MOL-{i}".encode() for i in range(count)], dtype="S16").tofile(
+        shard / "molecule_ids.bin")
+    manifest = {"format": "aidd-conformer-artifact-shard", "version": 1,
+                "library_id": "LIB-M", "global_id_start": 0,
+                "conformers": count, "coordinate_scale": 100.0}
+    (shard / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    catalog = {"format": "aidd-conformer-artifact-catalog", "version": 1,
+               "library_id": "LIB-M", "conformers": count,
+               "shards": [{"name": shard.name, "path": str(shard),
+                           "global_id_start": 0, "conformers": count}]}
+    path = tmp_path / "catalog-multi.json"
     path.write_text(json.dumps(catalog), encoding="utf-8")
     return path
 
@@ -116,3 +152,72 @@ def test_batch_retains_ids_and_recovers_locked_rigid_pose(tmp_path: Path):
     score_gaussian_candidates(catalog, query, ids, output)
     with np.load(output, allow_pickle=False) as second:
         assert all(np.array_equal(first[key], second[key]) for key in first)
+
+
+def _staged_inputs(tmp_path: Path):
+    catalog = _multi_artifact(tmp_path)
+    reference = ArtifactCatalogReader(catalog).get(3)
+    query = tmp_path / "staged-query.npz"
+    write_gaussian_query(
+        query, shape_points=reference.shape_points,
+        feature_points=reference.feature_points, feature_types=[1, 2],
+        anchored_weights=[1.5, 1.5], anchor_feature_indices=[0, 1],
+        source={"query_id": "staged-synthetic"})
+    ids = tmp_path / "staged-ids.npy"
+    np.save(ids, np.arange(6, dtype=np.int64))
+    return catalog, query, ids
+
+
+def _load_arrays(path: Path) -> dict[str, np.ndarray]:
+    with np.load(path, allow_pickle=False) as archive:
+        return {name: archive[name].copy() for name in archive.files}
+
+
+def test_staged_workers_match_and_selection_is_exact_union(tmp_path: Path):
+    catalog, query, ids = _staged_inputs(tmp_path)
+    common = dict(stage="all", chunk_size=2, top_n_per_objective=2,
+                  max_pair_seeds=6, progress_every=0)
+    one = tmp_path / "run-one"
+    two = tmp_path / "run-two"
+    run_staged_gaussian_reranking(catalog, query, ids, one, workers=1, **common)
+    run_staged_gaussian_reranking(catalog, query, ids, two, workers=2, **common)
+    for relative in ("coarse/merged-scores.npz", "refine/selected-candidates.npz",
+                     "refine/merged-scores.npz"):
+        left, right = _load_arrays(one / relative), _load_arrays(two / relative)
+        assert left.keys() == right.keys()
+        assert all(np.array_equal(left[key], right[key]) for key in left)
+    coarse = _load_arrays(one / "coarse/merged-scores.npz")
+    selection = _load_arrays(one / "refine/selected-candidates.npz")
+    refined = _load_arrays(one / "refine/merged-scores.npz")
+    assert coarse["global_ids"].tolist() == list(range(6))
+    expected = set()
+    for name in coarse["objective_names"].astype(str):
+        expected.update(np.argsort(-coarse[f"{name}__objective"], kind="stable")[:2])
+    assert set(selection["coarse_indices"]) == expected
+    assert len(selection["global_ids"]) <= 6
+    assert np.array_equal(refined["global_ids"], selection["global_ids"])
+    assert not list(one.rglob("*.partial"))
+
+
+def test_staged_resume_reuses_valid_chunk_and_repairs_corrupt_chunk(tmp_path: Path):
+    catalog, query, ids = _staged_inputs(tmp_path)
+    output = tmp_path / "resume-run"
+    kwargs = dict(stage="coarse", workers=1, chunk_size=2,
+                  top_n_per_objective=2, max_pair_seeds=6, progress_every=0)
+    run_staged_gaussian_reranking(catalog, query, ids, output, **kwargs)
+    chunk0 = output / "coarse/chunks/chunk-000000.npz"
+    chunk1 = output / "coarse/chunks/chunk-000001.npz"
+    chunk0_hash, chunk0_mtime = _hash(chunk0), chunk0.stat().st_mtime_ns
+    chunk1.write_bytes(b"interrupted-or-corrupt")
+    run_staged_gaussian_reranking(catalog, query, ids, output, **kwargs)
+    assert _hash(chunk0) == chunk0_hash
+    assert chunk0.stat().st_mtime_ns == chunk0_mtime
+    with np.load(chunk1, allow_pickle=False) as repaired:
+        assert repaired["global_ids"].tolist() == [2, 3]
+    stage_manifest = json.loads(
+        (output / "coarse/merged-scores.manifest.json").read_text(encoding="utf-8"))
+    assert stage_manifest["chunks_reused"] == 2
+    assert stage_manifest["chunks_computed"] == 1
+    with pytest.raises(ValueError, match="different inputs or parameters"):
+        run_staged_gaussian_reranking(
+            catalog, query, ids, output, **dict(kwargs, top_n_per_objective=3))

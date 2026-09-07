@@ -1,20 +1,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import hashlib
 import json
+import os
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence
+import sys
+import time
+from typing import Mapping, Sequence
 
 import numpy as np
 
 from .conformer_artifacts import FEATURE_DTYPE, FEATURE_TYPES, META_DTYPE
-from .gaussian_overlay import pair_alignment_seeds, principal_axis_seeds, score_overlay
+from .gaussian_overlay import (
+    apply_transform, gaussian_overlap, gaussian_self_overlap, pair_alignment_seeds,
+    principal_axis_seeds, query_biased_tversky, tanimoto,
+)
 
 
 QUERY_FORMAT = "aidd-gaussian-query"
 RESULT_FORMAT = "aidd-gaussian-batch-scores"
 SCHEMA_VERSION = 1
+STAGED_FORMAT = "aidd-staged-gaussian-reranking"
+STAGED_VERSION = 1
 OBJECTIVES = (
     "shape_only", "atomcentered_unweighted_joint", "atomcentered_anchored_joint")
 ANCHOR_TO_ARTIFACT_TYPE = {"HBD": FEATURE_TYPES["Donor"],
@@ -256,22 +265,44 @@ def _objective(score: Mapping, name: str) -> float:
     return 0.5 * (shape + float(score["color"]["query_biased_tversky"]))
 
 
-def score_gaussian_candidates(artifact_catalog: Path, query_path: Path,
-                              candidate_ids_path: Path, output_path: Path, *,
-                              sigma: float = 1.0, cutoff: float | None = 4.5,
-                              pair_tolerance: float = 2.0, axial_samples: int = 6,
-                              max_pair_seeds: int = 512) -> dict:
-    if max_pair_seeds < 0:
-        raise ValueError("max_pair_seeds must be non-negative")
-    reader = ArtifactCatalogReader(artifact_catalog)
-    query_manifest, query = _load_query(query_path.resolve())
-    ids = load_candidate_ids(candidate_ids_path.resolve())
+def _overlap_record(cross: float, query_self: float, candidate_self: float) -> dict:
+    return {
+        "cross_overlap_raw": cross,
+        "query_self_overlap_raw": query_self,
+        "candidate_self_overlap_raw": candidate_self,
+        "tanimoto": tanimoto(cross, query_self, candidate_self),
+        "query_biased_tversky": query_biased_tversky(
+            cross, query_self, candidate_self),
+    }
+
+
+def _query_self_overlaps(query: Mapping[str, np.ndarray], sigma: float,
+                         cutoff: float | None) -> dict[str, float]:
+    return {
+        "shape": gaussian_self_overlap(
+            query["shape_points"], sigma=sigma, cutoff=cutoff),
+        "color_unweighted": gaussian_self_overlap(
+            query["feature_points"], sigma=sigma, cutoff=cutoff,
+            types=query["feature_types"]),
+        "color_anchored": gaussian_self_overlap(
+            query["feature_points"], sigma=sigma, cutoff=cutoff,
+            weights=query["anchored_weights"], types=query["feature_types"]),
+    }
+
+
+def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
+               ids: np.ndarray, *, sigma: float, cutoff: float | None,
+               pair_tolerance: float, axial_samples: int,
+               max_pair_seeds: int) -> dict[str, np.ndarray]:
+    """Score a locked ID slice while caching every rigid-invariant self overlap."""
     query_shape = query["shape_points"]
     query_features = query["feature_points"]
     query_types = query["feature_types"]
     query_weights = query["anchored_weights"]
     anchor_indices = query["anchor_feature_indices"]
+    query_self = _query_self_overlaps(query, sigma, cutoff)
     seed_ids, molecule_ids, conformer_ids = [], [], []
+    seed_counts, pair_seed_counts = [], []
     values = {name: {"objective": [], "shape_tanimoto": [], "shape_tversky": [],
                      "color_tanimoto": [], "color_tversky": [], "shape_cross": [],
                      "shape_query_self": [], "shape_candidate_self": [], "color_cross": [],
@@ -279,24 +310,56 @@ def score_gaussian_candidates(artifact_catalog: Path, query_path: Path,
               for name in OBJECTIVES}
     for gid in ids:
         candidate = reader.get(int(gid))
-        molecule_ids.append(candidate.molecule_id); conformer_ids.append(candidate.conformer_id)
+        molecule_ids.append(candidate.molecule_id)
+        conformer_ids.append(candidate.conformer_id)
         seeds = list(principal_axis_seeds(candidate.shape_points, query_shape))
-        if len(anchor_indices) >= 2 and len(candidate.feature_points) >= 2:
+        pair_count = 0
+        if (max_pair_seeds and len(anchor_indices) >= 2
+                and len(candidate.feature_points) >= 2):
             pair_seeds = pair_alignment_seeds(
                 candidate.feature_points, candidate.feature_types,
                 query_features[anchor_indices], query_types[anchor_indices],
                 tolerance=pair_tolerance, axial_samples=axial_samples)
-            seeds.extend(pair_seeds[:max_pair_seeds])
+            pair_seeds = pair_seeds[:max_pair_seeds]
+            pair_count = len(pair_seeds)
+            seeds.extend(pair_seeds)
+        seed_counts.append(len(seeds)); pair_seed_counts.append(pair_count)
+        candidate_self = {
+            "shape": gaussian_self_overlap(
+                candidate.shape_points, sigma=sigma, cutoff=cutoff),
+            "color": gaussian_self_overlap(
+                candidate.feature_points, sigma=sigma, cutoff=cutoff,
+                types=candidate.feature_types),
+        }
         best = {name: None for name in OBJECTIVES}
         for seed_index, seed in enumerate(seeds):
-            base_kwargs = dict(
-                query_shape=query_shape, candidate_shape=candidate.shape_points,
-                query_features=query_features, query_feature_types=query_types,
-                candidate_features=candidate.feature_points,
-                candidate_feature_types=candidate.feature_types,
-                transform_matrix=seed.transform_matrix, sigma=sigma, cutoff=cutoff)
-            unweighted = score_overlay(**base_kwargs)
-            anchored = score_overlay(**base_kwargs, query_feature_weights=query_weights)
+            moved_shape = apply_transform(candidate.shape_points, seed.transform_matrix)
+            moved_features = apply_transform(candidate.feature_points, seed.transform_matrix)
+            shape_cross = gaussian_overlap(
+                query_shape, moved_shape, sigma=sigma, cutoff=cutoff)
+            color_cross = gaussian_overlap(
+                query_features, moved_features, sigma=sigma, cutoff=cutoff,
+                types_a=query_types, types_b=candidate.feature_types)
+            anchored_cross = gaussian_overlap(
+                query_features, moved_features, sigma=sigma, cutoff=cutoff,
+                weights_a=query_weights, types_a=query_types,
+                types_b=candidate.feature_types)
+            shape_record = _overlap_record(
+                shape_cross, query_self["shape"], candidate_self["shape"])
+            unweighted = {
+                "shape": shape_record,
+                "color": _overlap_record(
+                    color_cross, query_self["color_unweighted"],
+                    candidate_self["color"]),
+                "transform_matrix": list(seed.transform_matrix),
+            }
+            anchored = {
+                "shape": shape_record,
+                "color": _overlap_record(
+                    anchored_cross, query_self["color_anchored"],
+                    candidate_self["color"]),
+                "transform_matrix": list(seed.transform_matrix),
+            }
             scored = {"shape_only": unweighted,
                       "atomcentered_unweighted_joint": unweighted,
                       "atomcentered_anchored_joint": anchored}
@@ -317,20 +380,44 @@ def score_gaussian_candidates(artifact_catalog: Path, query_path: Path,
                 target[f"{prefix}_query_self"].append(record["query_self_overlap_raw"])
                 target[f"{prefix}_candidate_self"].append(record["candidate_self_overlap_raw"])
             target["transform"].append(score["transform_matrix"])
-    arrays = {"global_ids": ids,
-              "molecule_ids": np.asarray(molecule_ids, dtype="U16"),
-              "conformer_ids": np.asarray(conformer_ids, dtype="U16"),
-              "best_seed_ids": np.asarray(seed_ids, dtype="U96"),
-              "objective_names": np.asarray(OBJECTIVES, dtype="U40")}
+    arrays = {
+        "global_ids": np.asarray(ids, dtype=np.int64),
+        "molecule_ids": np.asarray(molecule_ids, dtype="U16"),
+        "conformer_ids": np.asarray(conformer_ids, dtype="U16"),
+        "best_seed_ids": np.asarray(seed_ids, dtype="U96"),
+        "seed_counts": np.asarray(seed_counts, dtype=np.int32),
+        "pair_seed_counts": np.asarray(pair_seed_counts, dtype=np.int32),
+        "objective_names": np.asarray(OBJECTIVES, dtype="U40"),
+    }
     for name, records in values.items():
         for metric, payload in records.items():
             arrays[f"{name}__{metric}"] = np.asarray(payload, dtype=np.float64)
-    output_path = output_path.resolve()
-    if output_path.suffix.lower() != ".npz":
-        raise ValueError("Gaussian score output must use .npz")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(output_path, **arrays)
-    manifest = {
+    return arrays
+
+
+def _atomic_savez(path: Path, arrays: Mapping[str, np.ndarray]) -> None:
+    temporary = path.with_name(path.name + ".partial")
+    with temporary.open("wb") as stream:
+        np.savez_compressed(stream, **arrays)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def _atomic_json(path: Path, document: Mapping) -> None:
+    temporary = path.with_name(path.name + ".partial")
+    with temporary.open("w", encoding="utf-8") as stream:
+        json.dump(document, stream, indent=2)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def _result_manifest(artifact_catalog: Path, query_path: Path,
+                     candidate_ids_path: Path, output_path: Path, ids: np.ndarray,
+                     *, sigma: float, cutoff: float | None, pair_tolerance: float,
+                     axial_samples: int, max_pair_seeds: int) -> dict:
+    return {
         "format": RESULT_FORMAT, "version": SCHEMA_VERSION,
         "result_npz": output_path.name, "result_npz_sha256": _sha256(output_path),
         "artifact_catalog": str(artifact_catalog.resolve()),
@@ -351,11 +438,351 @@ def score_gaussian_candidates(artifact_catalog: Path, query_path: Path,
                        "pair_tolerance_angstrom": pair_tolerance,
                        "axial_samples": axial_samples, "max_pair_seeds": max_pair_seeds,
                        "tversky_alpha_query": 0.95, "tversky_beta_candidate": 0.05},
-        "query_manifest": query_manifest,
         "limitations": ["artifact-v1 has atom-centered features only",
                         "projected pharmacophore color was not scored",
                         "scores rerank and never alter L1 admission"],
     }
-    output_path.with_suffix(".manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8")
+
+
+def score_gaussian_candidates(artifact_catalog: Path, query_path: Path,
+                              candidate_ids_path: Path, output_path: Path, *,
+                              sigma: float = 1.0, cutoff: float | None = 4.5,
+                              pair_tolerance: float = 2.0, axial_samples: int = 6,
+                              max_pair_seeds: int = 512) -> dict:
+    if max_pair_seeds < 0:
+        raise ValueError("max_pair_seeds must be non-negative")
+    reader = ArtifactCatalogReader(artifact_catalog)
+    _, query = _load_query(query_path.resolve())
+    ids = load_candidate_ids(candidate_ids_path.resolve())
+    arrays = _score_ids(
+        reader, query, ids, sigma=sigma, cutoff=cutoff,
+        pair_tolerance=pair_tolerance, axial_samples=axial_samples,
+        max_pair_seeds=max_pair_seeds)
+    output_path = output_path.resolve()
+    if output_path.suffix.lower() != ".npz":
+        raise ValueError("Gaussian score output must use .npz")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_savez(output_path, arrays)
+    manifest = _result_manifest(
+        artifact_catalog, query_path, candidate_ids_path, output_path, ids,
+        sigma=sigma, cutoff=cutoff, pair_tolerance=pair_tolerance,
+        axial_samples=axial_samples, max_pair_seeds=max_pair_seeds)
+    _atomic_json(output_path.with_suffix(".manifest.json"), manifest)
     return manifest
+
+
+_WORKER_READER: ArtifactCatalogReader | None = None
+_WORKER_QUERY: dict[str, np.ndarray] | None = None
+_WORKER_PARAMETERS: dict | None = None
+
+
+def _worker_initialize(artifact_catalog: str, query_path: str, parameters: dict) -> None:
+    global _WORKER_READER, _WORKER_QUERY, _WORKER_PARAMETERS
+    _WORKER_READER = ArtifactCatalogReader(Path(artifact_catalog))
+    _, _WORKER_QUERY = _load_query(Path(query_path))
+    _WORKER_PARAMETERS = parameters
+
+
+def _ids_sha256(ids: np.ndarray) -> str:
+    values = np.ascontiguousarray(ids, dtype="<i8")
+    return hashlib.sha256(values.tobytes()).hexdigest()
+
+
+def _chunk_paths(stage_directory: Path, chunk_index: int) -> tuple[Path, Path]:
+    stem = f"chunk-{chunk_index:06d}"
+    return stage_directory / "chunks" / f"{stem}.npz", \
+        stage_directory / "chunks" / f"{stem}.manifest.json"
+
+
+def _write_chunk(stage_directory: Path, stage: str, chunk_index: int,
+                 start: int, stop: int, ids: np.ndarray, arrays: Mapping[str, np.ndarray],
+                 config_hash: str, seconds: float) -> dict:
+    result_path, manifest_path = _chunk_paths(stage_directory, chunk_index)
+    _atomic_savez(result_path, arrays)
+    manifest = {
+        "format": "aidd-gaussian-score-chunk", "version": 1,
+        "stage": stage, "chunk_index": chunk_index, "start": start, "stop": stop,
+        "candidates": len(ids), "ids_sha256": _ids_sha256(ids),
+        "config_hash": config_hash, "result": result_path.name,
+        "result_sha256": _sha256(result_path), "seconds": seconds,
+    }
+    _atomic_json(manifest_path, manifest)
+    return manifest
+
+
+def _validate_chunk(stage_directory: Path, stage: str, chunk_index: int,
+                    start: int, stop: int, ids: np.ndarray,
+                    config_hash: str) -> dict | None:
+    result_path, manifest_path = _chunk_paths(stage_directory, chunk_index)
+    if not result_path.is_file() or not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected = {
+            "format": "aidd-gaussian-score-chunk", "version": 1,
+            "stage": stage, "chunk_index": chunk_index, "start": start,
+            "stop": stop, "candidates": len(ids), "ids_sha256": _ids_sha256(ids),
+            "config_hash": config_hash,
+        }
+        if any(manifest.get(key) != value for key, value in expected.items()):
+            return None
+        if manifest.get("result_sha256") != _sha256(result_path):
+            return None
+        with np.load(result_path, allow_pickle=False) as archive:
+            if not np.array_equal(archive["global_ids"], ids):
+                return None
+            if tuple(map(str, archive["objective_names"])) != OBJECTIVES:
+                return None
+        return manifest
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+
+def _worker_run_chunk(task: tuple) -> dict:
+    if _WORKER_READER is None or _WORKER_QUERY is None or _WORKER_PARAMETERS is None:
+        raise RuntimeError("Gaussian worker was not initialized")
+    stage_directory, stage, chunk_index, start, stop, ids, config_hash = task
+    started = time.perf_counter()
+    arrays = _score_ids(
+        _WORKER_READER, _WORKER_QUERY, ids, **_WORKER_PARAMETERS)
+    return _write_chunk(
+        Path(stage_directory), stage, chunk_index, start, stop, ids, arrays,
+        config_hash, time.perf_counter() - started)
+
+
+def _merge_chunks(stage_directory: Path, stage: str, ids: np.ndarray,
+                  chunk_size: int, config_hash: str) -> tuple[Path, dict]:
+    pieces: dict[str, list[np.ndarray]] = {}
+    objective_names = None
+    chunk_count = (len(ids) + chunk_size - 1) // chunk_size
+    for chunk_index in range(chunk_count):
+        result_path, _ = _chunk_paths(stage_directory, chunk_index)
+        with np.load(result_path, allow_pickle=False) as archive:
+            current_names = archive["objective_names"].copy()
+            if objective_names is None:
+                objective_names = current_names
+            elif not np.array_equal(objective_names, current_names):
+                raise ValueError("objective names differ between Gaussian chunks")
+            for name in archive.files:
+                if name != "objective_names":
+                    pieces.setdefault(name, []).append(archive[name].copy())
+    arrays = {name: np.concatenate(records, axis=0) for name, records in pieces.items()}
+    arrays["objective_names"] = objective_names
+    if not np.array_equal(arrays["global_ids"], ids):
+        raise ValueError(f"{stage} merged IDs do not reproduce locked input order")
+    output_path = stage_directory / "merged-scores.npz"
+    _atomic_savez(output_path, arrays)
+    manifest = {
+        "format": "aidd-gaussian-merged-stage", "version": 1,
+        "stage": stage, "config_hash": config_hash, "chunks": chunk_count,
+        "candidates": len(ids), "ids_sha256": _ids_sha256(ids),
+        "result": output_path.name, "result_sha256": _sha256(output_path),
+    }
+    _atomic_json(output_path.with_suffix(".manifest.json"), manifest)
+    return output_path, manifest
+
+
+def _execute_stage(stage_directory: Path, stage: str, ids: np.ndarray, *,
+                   artifact_catalog: Path, query_path: Path, parameters: dict,
+                   config_hash: str, workers: int, chunk_size: int,
+                   resume: bool, progress_every: int) -> tuple[Path, dict]:
+    stage_directory.mkdir(parents=True, exist_ok=True)
+    (stage_directory / "chunks").mkdir(exist_ok=True)
+    chunks = []
+    reused = 0
+    for chunk_index, start in enumerate(range(0, len(ids), chunk_size)):
+        stop = min(len(ids), start + chunk_size)
+        chunk_ids = ids[start:stop]
+        valid = _validate_chunk(
+            stage_directory, stage, chunk_index, start, stop, chunk_ids, config_hash)
+        if resume and valid is not None:
+            reused += 1
+        else:
+            chunks.append((str(stage_directory), stage, chunk_index, start, stop,
+                           chunk_ids, config_hash))
+    total_chunks = reused + len(chunks)
+    finished = reused
+    started = time.perf_counter()
+
+    def report(manifest: Mapping) -> None:
+        nonlocal finished
+        finished += 1
+        if progress_every and (finished % progress_every == 0 or finished == total_chunks):
+            elapsed = time.perf_counter() - started
+            newly_done = max(1, finished - reused)
+            remaining = max(0, total_chunks - finished)
+            eta = elapsed / newly_done * remaining
+            print(f"[{stage}] chunks {finished}/{total_chunks}; "
+                  f"last={manifest['candidates']} in {manifest['seconds']:.2f}s; "
+                  f"resume_reused={reused}; ETA={eta/60:.1f} min",
+                  file=sys.stderr, flush=True)
+
+    initializer_args = (str(artifact_catalog), str(query_path), parameters)
+    if workers == 1:
+        _worker_initialize(*initializer_args)
+        for task in chunks:
+            report(_worker_run_chunk(task))
+    elif chunks:
+        for variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+            os.environ.setdefault(variable, "1")
+        with ProcessPoolExecutor(
+                max_workers=workers, initializer=_worker_initialize,
+                initargs=initializer_args) as executor:
+            futures = [executor.submit(_worker_run_chunk, task) for task in chunks]
+            for future in as_completed(futures):
+                report(future.result())
+    for chunk_index, start in enumerate(range(0, len(ids), chunk_size)):
+        stop = min(len(ids), start + chunk_size)
+        if _validate_chunk(stage_directory, stage, chunk_index, start, stop,
+                           ids[start:stop], config_hash) is None:
+            raise ValueError(f"{stage} chunk {chunk_index} failed final validation")
+    output_path, merged = _merge_chunks(
+        stage_directory, stage, ids, chunk_size, config_hash)
+    merged["chunks_reused"] = reused
+    merged["chunks_computed"] = len(chunks)
+    merged["workers"] = workers
+    merged["wall_seconds_this_invocation"] = time.perf_counter() - started
+    _atomic_json(output_path.with_suffix(".manifest.json"), merged)
+    return output_path, merged
+
+
+def _select_refinement_candidates(coarse_path: Path, output_path: Path,
+                                  top_n_per_objective: int,
+                                  config_hash: str) -> tuple[np.ndarray, dict]:
+    with np.load(coarse_path, allow_pickle=False) as coarse:
+        ids = coarse["global_ids"].copy()
+        objective_names = coarse["objective_names"].astype(str)
+        count = len(ids)
+        limit = min(top_n_per_objective, count)
+        selected_by = np.zeros((count, len(objective_names)), dtype=bool)
+        best_rank = np.full(count, count + 1, dtype=np.int64)
+        ranks = np.full((count, len(objective_names)), -1, dtype=np.int64)
+        for column, name in enumerate(objective_names):
+            order = np.argsort(-coarse[f"{name}__objective"], kind="stable")
+            chosen = order[:limit]
+            selected_by[chosen, column] = True
+            ranks[order, column] = np.arange(count, dtype=np.int64)
+            best_rank[chosen] = np.minimum(best_rank[chosen], ranks[chosen, column])
+    indices = np.flatnonzero(selected_by.any(axis=1))
+    indices = indices[np.lexsort((indices, best_rank[indices]))]
+    selected_ids = ids[indices]
+    arrays = {
+        "global_ids": selected_ids,
+        "coarse_indices": indices.astype(np.int64),
+        "selected_by_objective": selected_by[indices],
+        "coarse_ranks": ranks[indices],
+        "best_coarse_rank": best_rank[indices],
+        "objective_names": objective_names.astype("U40"),
+    }
+    _atomic_savez(output_path, arrays)
+    manifest = {
+        "format": "aidd-gaussian-refinement-selection", "version": 1,
+        "config_hash": config_hash, "coarse_result": str(coarse_path.resolve()),
+        "coarse_result_sha256": _sha256(coarse_path),
+        "top_n_per_objective": top_n_per_objective,
+        "selected_candidates": len(selected_ids),
+        "maximum_candidates": min(count, top_n_per_objective * len(OBJECTIVES)),
+        "ids_sha256": _ids_sha256(selected_ids), "selection": output_path.name,
+        "selection_sha256": _sha256(output_path),
+        "policy": "union of stable per-objective Top-N; compute allocation only",
+    }
+    _atomic_json(output_path.with_suffix(".manifest.json"), manifest)
+    return selected_ids, manifest
+
+
+def run_staged_gaussian_reranking(artifact_catalog: Path, query_path: Path,
+                                  candidate_ids_path: Path, output_dir: Path, *,
+                                  stage: str = "all", workers: int = 16,
+                                  chunk_size: int = 1000,
+                                  top_n_per_objective: int = 5000,
+                                  sigma: float = 1.0, cutoff: float | None = 4.5,
+                                  pair_tolerance: float = 2.0,
+                                  axial_samples: int = 6,
+                                  max_pair_seeds: int = 512,
+                                  resume: bool = True,
+                                  progress_every: int = 1) -> dict:
+    """Run all-candidate PCA coarse scoring then Top-N-union pair refinement."""
+    if stage not in {"coarse", "refine", "all"}:
+        raise ValueError("stage must be coarse, refine, or all")
+    if workers <= 0 or chunk_size <= 0 or top_n_per_objective <= 0:
+        raise ValueError("workers, chunk_size, and top_n_per_objective must be positive")
+    if max_pair_seeds <= 0:
+        raise ValueError("staged refinement requires max_pair_seeds to be positive")
+    if progress_every < 0:
+        raise ValueError("progress_every must be non-negative")
+    artifact_catalog = artifact_catalog.resolve()
+    query_path = query_path.resolve()
+    candidate_ids_path = candidate_ids_path.resolve()
+    output_dir = output_dir.resolve()
+    ids = load_candidate_ids(candidate_ids_path)
+    config = {
+        "artifact_catalog": str(artifact_catalog),
+        "artifact_catalog_sha256": _sha256(artifact_catalog),
+        "query": str(query_path), "query_sha256": _sha256(query_path),
+        "candidate_ids": str(candidate_ids_path),
+        "candidate_ids_sha256": _sha256(candidate_ids_path),
+        "candidate_count": len(ids), "candidate_ids_sha256_canonical": _ids_sha256(ids),
+        "chunk_size": chunk_size, "top_n_per_objective": top_n_per_objective,
+        "sigma_angstrom": sigma, "cutoff_angstrom": cutoff,
+        "pair_tolerance_angstrom": pair_tolerance,
+        "axial_samples": axial_samples, "max_pair_seeds": max_pair_seeds,
+        "objectives": list(OBJECTIVES),
+    }
+    canonical = json.dumps(config, sort_keys=True, separators=(",", ":")).encode()
+    config_hash = hashlib.sha256(canonical).hexdigest()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    run_manifest_path = output_dir / "run-manifest.json"
+    if run_manifest_path.is_file():
+        run_manifest = json.loads(run_manifest_path.read_text(encoding="utf-8"))
+        if (run_manifest.get("format") != STAGED_FORMAT
+                or run_manifest.get("config_hash") != config_hash):
+            raise ValueError(
+                "existing staged Gaussian run has different inputs or parameters; "
+                "use a new output directory")
+    else:
+        run_manifest = {
+            "format": STAGED_FORMAT, "version": STAGED_VERSION,
+            "config_hash": config_hash, "config": config,
+            "status": "initialized", "stages": {},
+        }
+        _atomic_json(run_manifest_path, run_manifest)
+
+    coarse_parameters = {
+        "sigma": sigma, "cutoff": cutoff, "pair_tolerance": pair_tolerance,
+        "axial_samples": axial_samples, "max_pair_seeds": 0,
+    }
+    refine_parameters = dict(coarse_parameters, max_pair_seeds=max_pair_seeds)
+    coarse_dir = output_dir / "coarse"
+    coarse_path = coarse_dir / "merged-scores.npz"
+    if stage in {"coarse", "all"}:
+        coarse_path, coarse_manifest = _execute_stage(
+            coarse_dir, "coarse", ids, artifact_catalog=artifact_catalog,
+            query_path=query_path, parameters=coarse_parameters,
+            config_hash=config_hash, workers=workers, chunk_size=chunk_size,
+            resume=resume, progress_every=progress_every)
+        run_manifest["stages"]["coarse"] = coarse_manifest
+        run_manifest["status"] = "coarse_complete"
+        _atomic_json(run_manifest_path, run_manifest)
+    elif not coarse_path.is_file():
+        raise ValueError("refine stage requires a completed coarse/merged-scores.npz")
+
+    if stage == "coarse":
+        return run_manifest
+
+    selection_path = output_dir / "refine" / "selected-candidates.npz"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selected_ids, selection_manifest = _select_refinement_candidates(
+        coarse_path, selection_path, top_n_per_objective, config_hash)
+    run_manifest["stages"]["selection"] = selection_manifest
+    _atomic_json(run_manifest_path, run_manifest)
+    refine_path, refine_manifest = _execute_stage(
+        output_dir / "refine", "refine", selected_ids,
+        artifact_catalog=artifact_catalog, query_path=query_path,
+        parameters=refine_parameters, config_hash=config_hash, workers=workers,
+        chunk_size=chunk_size, resume=resume, progress_every=progress_every)
+    run_manifest["stages"]["refine"] = refine_manifest
+    run_manifest["status"] = "complete"
+    run_manifest["final_result"] = str(refine_path)
+    run_manifest["final_result_sha256"] = _sha256(refine_path)
+    _atomic_json(run_manifest_path, run_manifest)
+    return run_manifest

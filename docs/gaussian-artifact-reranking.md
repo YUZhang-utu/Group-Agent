@@ -50,3 +50,50 @@ features. It does not contain atomic radii/topology or directional candidate
 projection points. Therefore this implementation is a deterministic reference
 reranker; it does not claim projected-color, exclusion-volume, terminal-torsion,
 or production-scale native-engine performance.
+
+## Staged parallel production path
+
+Use one persistent output directory. Scientific parameters are locked in
+`run-manifest.json`; rerunning the identical command reuses every valid chunk.
+A changed input or parameter requires a new output directory.
+
+```bash
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+STAGED_OUTPUT="$VALIDATION_OUTPUT/gaussian-staged-v1"
+```
+
+Run the complete PCA-only coarse stage with 16 worker processes:
+
+```bash
+python -m aidd_agent.cli run-staged-gaussian-reranking \
+  --artifact-catalog "$ARTIFACT_CATALOG" \
+  --query "$GAUSSIAN_QUERY" \
+  --candidate-ids "$PHARMA_HITS" \
+  --output-dir "$STAGED_OUTPUT" \
+  --stage coarse --workers 16 --chunk-size 1000 \
+  --top-n-per-objective 5000 --max-pair-seeds 512
+```
+
+After coarse completion, run refinement with the same locked parameters:
+
+```bash
+python -m aidd_agent.cli run-staged-gaussian-reranking \
+  --artifact-catalog "$ARTIFACT_CATALOG" \
+  --query "$GAUSSIAN_QUERY" \
+  --candidate-ids "$PHARMA_HITS" \
+  --output-dir "$STAGED_OUTPUT" \
+  --stage refine --workers 16 --chunk-size 1000 \
+  --top-n-per-objective 5000 --max-pair-seeds 512
+```
+
+Power loss or interruption requires no special repair: rerun the same command.
+Valid chunks are skipped; missing, partial, checksum-invalid, or ID-invalid
+chunks are recomputed. Main outputs are:
+
+- `coarse/merged-scores.npz`: every admitted conformer;
+- `refine/selected-candidates.npz`: per-objective Top-N union and provenance;
+- `refine/merged-scores.npz`: pair-refined selected conformers;
+- `run-manifest.json`: locked configuration and completion state.
+
+`--stage all` runs both stages in one invocation. `--no-resume` deliberately
+recomputes all chunks but retains atomic writes.

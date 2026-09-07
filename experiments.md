@@ -1228,3 +1228,19 @@ QT9 ranking/runtime/enrichment pending.
   numerically deterministic. Full suite: 90 passed.
 - Artifact schema v1 cannot support projected color or torsion refinement;
   those remain a versioned companion-artifact task.
+
+## E023 — Staged parallel and resumable Gaussian reranking
+
+Protocol: `experiments/E023-staged-parallel-resumable-gaussian-protocol.md`.
+
+Result classification: confirmatory offline orchestration validation; real
+workstation scaling pending.
+
+- The observed 13.2-fold PCA/pair runtime gap motivated a two-stage compute
+  policy rather than full-library pair-seed scoring.
+- Coarse scoring preserves all input IDs; refine scoring receives the stable
+  union of three separately ranked Top-N lists.
+- Rigid-invariant self overlaps are cached, candidate chunks run in worker
+  processes, and completion order cannot change merged order.
+- Atomic, hash-validated chunk manifests provide power-loss recovery. Synthetic
+  interruption and one-vs-two-worker checks passed. Full suite: 92 passed.

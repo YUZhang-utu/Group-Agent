@@ -1,6 +1,6 @@
 # E023 Staged, parallel, resumable Gaussian reranking protocol
 
-Status: protocol locked before implementation -- confirmatory validation pending
+Status: offline confirmatory implementation passed; real 16-worker validation pending
 
 ## Motivation and observed baseline
 
@@ -71,3 +71,20 @@ arrays, then run the complete 299,999-conformer PCA coarse stage. Interrupt and
 restart one real run to confirm checkpoint reuse before launching pair
 refinement. Runtime scaling and final Top-N overlap are empirical results and
 will not be inferred from offline synthetic tests.
+
+## Offline results (2026-09-07)
+
+- Implemented rigid-invariant query/candidate self-overlap caching; each seed
+  now computes only the three required cross-overlaps.
+- Implemented deterministic PCA coarse scoring over every input ID and stable
+  per-objective Top-N union for pair refinement.
+- Implemented process workers with per-worker read-only artifact/query state,
+  contiguous chunks, progress/ETA reporting, and parent-order merge.
+- Implemented atomic NPZ/JSON chunk pairs, configuration locking, checksum/ID
+  validation, corrupt-chunk repair, and identical-command resume.
+- One- and two-worker synthetic runs produced identical coarse, selection, and
+  refine arrays. A deliberately corrupted chunk was recomputed while two valid
+  chunks retained their hashes and timestamps. No partial files remained.
+- Complete dependency-light suite passed: 92 tests.
+- Real 1-vs-16-worker scaling, interruption recovery, full coarse runtime, and
+  refined ranking remain workstation confirmation tasks.

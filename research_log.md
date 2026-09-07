@@ -509,3 +509,21 @@
 - Result is confirmatory for orchestration correctness only. Real QT9 runtime,
   ranking and enrichment remain pending on the workstation. Projected color,
   exclusion volume, and terminal torsion are not claimed by artifact schema v1.
+
+## 2026-09-07 - Staged parallel and resumable Gaussian execution
+
+- User workstation confirmed the E022 real runner on 1,000 candidates. Pair
+  mode required 219.70 seconds versus 16.59 seconds for PCA-only; CPU was
+  approximately one logical core and RSS approximately 55 MB in both runs.
+- Locked E023 before implementation: score all candidates coarsely, refine the
+  deterministic union of three objective Top-N sets, and preserve atomic chunks
+  across interruption or power loss.
+- Added invariant self-overlap caching, process-local mmap/query initialization,
+  configurable workers/chunks/progress, stable merge, and run-configuration
+  hashing. Added coarse/refine/all CLI stages.
+- Offline confirmatory tests showed exact one-vs-two-worker arrays, complete
+  coarse ID retention, exact Top-N union, corrupt-chunk repair without rewriting
+  valid chunks, configuration mismatch rejection, and no leftover partials.
+  Full suite: 92 passed.
+- Real 16-worker throughput and interruption recovery remain to be measured;
+  no linear speedup is inferred from synthetic tests.

@@ -83,6 +83,11 @@
   reruns. Runtime is reported separately for query packaging, artifact reads,
   seed generation, and scoring; synthetic correctness is not an enrichment or
   production-throughput claim.
+- E023 performance reporting uses the same fixed candidate IDs for 1- and
+  16-worker runs and records wall/user/system time, aggregate CPU utilization,
+  peak RSS, chunks reused/computed, candidates/s, and score-array equality.
+  A deliberate interruption/restart must reuse completed real chunks before a
+  full run is accepted as resumable.
 - `query_manifest.json` defines the ordered anchor list using stable IDs, ligand
   atom indices, feature type, atom/projected coordinates, interaction evidence
   (distance, angle, burial), and materialized weights.

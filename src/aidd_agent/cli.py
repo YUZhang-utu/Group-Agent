@@ -40,7 +40,10 @@ from .pharmacophore_index import (
     load_external_l1_ids, search_pharmacophore_index,
 )
 from .pharmacophore_validation import run_pharmacophore_validation
-from .gaussian_batch import prepare_gaussian_query, score_gaussian_candidates
+from .gaussian_batch import (
+    prepare_gaussian_query, run_staged_gaussian_reranking,
+    score_gaussian_candidates,
+)
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -366,6 +369,26 @@ def build_parser() -> argparse.ArgumentParser:
     gaussian_score.add_argument("--pair-tolerance", type=float, default=2.0)
     gaussian_score.add_argument("--axial-samples", type=int, default=6)
     gaussian_score.add_argument("--max-pair-seeds", type=int, default=512)
+
+    gaussian_staged = subparsers.add_parser(
+        "run-staged-gaussian-reranking",
+        help="Run resumable parallel PCA coarse scoring and Top-N pair refinement")
+    gaussian_staged.add_argument("--artifact-catalog", type=Path, required=True)
+    gaussian_staged.add_argument("--query", type=Path, required=True)
+    gaussian_staged.add_argument("--candidate-ids", type=Path, required=True)
+    gaussian_staged.add_argument("--output-dir", type=Path, required=True)
+    gaussian_staged.add_argument("--stage", choices=("coarse", "refine", "all"),
+                                 default="all")
+    gaussian_staged.add_argument("--workers", type=int, default=16)
+    gaussian_staged.add_argument("--chunk-size", type=int, default=1000)
+    gaussian_staged.add_argument("--top-n-per-objective", type=int, default=5000)
+    gaussian_staged.add_argument("--sigma", type=float, default=1.0)
+    gaussian_staged.add_argument("--cutoff", type=float, default=4.5)
+    gaussian_staged.add_argument("--pair-tolerance", type=float, default=2.0)
+    gaussian_staged.add_argument("--axial-samples", type=int, default=6)
+    gaussian_staged.add_argument("--max-pair-seeds", type=int, default=512)
+    gaussian_staged.add_argument("--progress-every", type=int, default=1)
+    gaussian_staged.add_argument("--no-resume", action="store_true")
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -859,6 +882,20 @@ def main(argv: list[str] | None = None) -> int:
             sigma=args.sigma, cutoff=args.cutoff,
             pair_tolerance=args.pair_tolerance, axial_samples=args.axial_samples,
             max_pair_seeds=args.max_pair_seeds)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "run-staged-gaussian-reranking":
+        result = run_staged_gaussian_reranking(
+            args.artifact_catalog, args.query, args.candidate_ids,
+            args.output_dir, stage=args.stage, workers=args.workers,
+            chunk_size=args.chunk_size,
+            top_n_per_objective=args.top_n_per_objective,
+            sigma=args.sigma, cutoff=args.cutoff,
+            pair_tolerance=args.pair_tolerance,
+            axial_samples=args.axial_samples,
+            max_pair_seeds=args.max_pair_seeds,
+            resume=not args.no_resume,
+            progress_every=args.progress_every)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":
