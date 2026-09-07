@@ -58,3 +58,20 @@ def test_fetch_ccd_rejects_wrong_component(tmp_path: Path):
 def test_dependency_failures_are_explicit(monkeypatch):
     monkeypatch.setattr(chemistry_prep, "_mmcif_dict", lambda path: {})
     assert chemistry_prep.enumerate_ligand_instances(Path("missing"), ["LIG"]) == []
+
+
+def test_ccd_explicit_kekule_order_wins_over_aromatic_flag():
+    class BondType:
+        SINGLE = "single"
+        DOUBLE = "double"
+        TRIPLE = "triple"
+        AROMATIC = "aromatic"
+
+    class FakeChem:
+        pass
+
+    FakeChem.BondType = BondType
+    assert chemistry_prep._ccd_bond_type(FakeChem, "SING", "Y") == "single"
+    assert chemistry_prep._ccd_bond_type(FakeChem, "DOUB", "Y") == "double"
+    assert chemistry_prep._ccd_bond_type(FakeChem, "AROM", "Y") == "aromatic"
+    assert chemistry_prep._ccd_bond_type(FakeChem, "unknown", "Y") == "aromatic"

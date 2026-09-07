@@ -111,6 +111,16 @@ def standardize_parent(molecule):
     return parent, Chem.MolToSmiles(parent, canonical=True, isomericSmiles=True)
 
 
+def _ccd_bond_type(Chem, order: str, aromatic: str):
+    """Map CCD bond order without discarding an explicit Kekule assignment."""
+    orders = {"SING": Chem.BondType.SINGLE, "DOUB": Chem.BondType.DOUBLE,
+              "TRIP": Chem.BondType.TRIPLE, "AROM": Chem.BondType.AROMATIC}
+    bond_type = orders.get(order.upper())
+    if bond_type is None and aromatic.upper() == "Y":
+        bond_type = Chem.BondType.AROMATIC
+    return bond_type
+
+
 def _ccd_molecule(ccd_path: Path, coordinates: list[dict[str, Any]]):
     try:
         import gemmi
@@ -148,11 +158,14 @@ def _ccd_molecule(ccd_path: Path, coordinates: list[dict[str, Any]]):
         indices[name] = index
         xyz = by_name[name]
         conformer.SetAtomPosition(index, (xyz["x"], xyz["y"], xyz["z"]))
-    orders = {"SING": Chem.BondType.SINGLE, "DOUB": Chem.BondType.DOUBLE,
-              "TRIP": Chem.BondType.TRIPLE, "AROM": Chem.BondType.AROMATIC}
     for left, right, order, aromatic in bonds:
         if left in indices and right in indices:
-            bond_type = Chem.BondType.AROMATIC if aromatic.upper() == "Y" else orders.get(order.upper())
+            # wwPDB CCD commonly provides an explicit Kekule SING/DOUB order
+            # together with pdbx_aromatic_flag=Y. Preserve that authoritative
+            # order and let RDKit perceive aromaticity during sanitization.
+            # Replacing every flagged bond with AROMATIC loses the Kekule
+            # assignment and fails for neutral [nH] fused systems such as 824.
+            bond_type = _ccd_bond_type(Chem, order, aromatic)
             if bond_type is None:
                 raise ValueError(f"Unsupported CCD bond order: {order}")
             rw.AddBond(indices[left], indices[right], bond_type)

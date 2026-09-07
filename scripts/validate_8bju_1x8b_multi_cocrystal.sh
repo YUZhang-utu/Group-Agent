@@ -5,9 +5,11 @@ ROOT=${1:-$(pwd)}
 AIDD_PY=${AIDD_PY:-python}
 QT9_VALIDATION=${QT9_VALIDATION:-$ROOT/data/e020_qt9_validation}
 QT9_RUN=${QT9_RUN:-$QT9_VALIDATION/gaussian-staged-v1}
-QUERY_DIR=${QUERY_DIR:-$ROOT/data/e026_query_1x8b}
-VALIDATION_DIR=${VALIDATION_DIR:-$ROOT/data/e026_1x8b_validation}
-AGGREGATION_DIR=${AGGREGATION_DIR:-$ROOT/data/e026_8bju_1x8b_aggregation}
+# E026-prefixed overrides avoid inheriting generic QUERY_DIR/VALIDATION_DIR
+# variables exported by an earlier QT9 terminal session.
+QUERY_DIR=${E026_QUERY_DIR:-$ROOT/data/e026_query_1x8b}
+VALIDATION_DIR=${E026_VALIDATION_DIR:-$ROOT/data/e026_1x8b_validation}
+AGGREGATION_DIR=${E026_AGGREGATION_DIR:-$ROOT/data/e026_8bju_1x8b_aggregation}
 
 QT9_REPORT=$QT9_VALIDATION/validation-report.json
 QT9_RESULT=$QT9_RUN/refine/merged-scores.npz
@@ -62,6 +64,8 @@ if [[ ! -f "$QUERY_MANIFEST" ]]; then
 else
   echo "Reusing query manifest: $QUERY_MANIFEST"
 fi
+$AIDD_PY -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d.get("query_id") == "1X8B:824:A:901", (sys.argv[1], d.get("query_id"))' \
+  "$QUERY_MANIFEST"
 
 RETRIEVAL_READY=false
 if [[ -f "$VALIDATION_DIR/validation-report.json" \

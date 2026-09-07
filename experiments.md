@@ -1294,3 +1294,8 @@ Linux workstation execution pending.
   invokes E025 aggregation.
 - Upstream NPZ products are reused after acceptance rather than regenerated,
   preserving hashes and Gaussian chunk recovery across interruption.
+- The first workstation attempt stopped before retrieval: a previously exported
+  generic `QUERY_DIR` redirected E026 to the 8BJU manifest, and conversion of
+  CCD 824 discarded its explicit Kekule orders. The runner now uses E026-only
+  override names and validates the query ID; CCD conversion preserves supplied
+  SING/DOUB orders before RDKit aromaticity perception. Rerun remains pending.

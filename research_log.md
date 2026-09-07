@@ -596,3 +596,19 @@
   staged Gaussian chunk hashes remain stable and power-loss resume is real.
 - Offline suite passes 103 tests. No 1X8B retrieval, overlap, RRF, or docking-task
   result is claimed until the Linux workstation run completes.
+
+## 2026-09-07 - E026 first workstation attempt failed before scoring
+
+- The log showed reuse of `data/e019_query_8bju/query_manifest.json`, proving an
+  exported generic `QUERY_DIR` had overridden the E026 default. The runner now
+  ignores generic output-directory variables, accepts only `E026_*` overrides,
+  and asserts the persisted query ID is exactly `1X8B:824:A:901`.
+- RDKit then raised `KekulizeException` for CCD 824. Root cause was conversion
+  code replacing every bond marked aromatic by wwPDB with `BondType.AROMATIC`,
+  even though the dictionary supplies an explicit alternating SING/DOUB Kekule
+  assignment. Preserving those authoritative orders sanitized successfully on
+  the complete official 824 heavy-atom graph and produced the expected neutral
+  fused `[nH]` structure.
+- This is an infrastructure-negative result, not a retrieval or enrichment
+  result. No library-scale stage ran. The hotfix suite passes 104 tests and a
+  clean workstation rerun is pending.

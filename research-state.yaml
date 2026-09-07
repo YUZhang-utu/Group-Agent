@@ -164,7 +164,7 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 103_passed
+  tests: 104_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
   local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
   per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
@@ -199,7 +199,8 @@ implementation_status:
   e025_real_multi_cocrystal_validation: pending_second_independent_query
   e026_8bju_1x8b_protocol: locked
   e026_1x8b_query_adapter: implemented_offline_validated
-  e026_real_dual_cocrystal_runner: implemented_workstation_execution_pending
+  e026_real_dual_cocrystal_runner: first_attempt_precompute_failed_hotfix_validated_rerun_pending
+  ccd_explicit_kekule_preservation: implemented_824_real_graph_validated
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending
