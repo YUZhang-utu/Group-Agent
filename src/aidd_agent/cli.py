@@ -49,6 +49,7 @@ from .scaled_search import (
     CandidateBudgets, build_candidate_schedule, merge_ranked_shards,
 )
 from .multi_query_aggregation import aggregate_multi_cocrystal_results
+from .multi_query_analysis import analyze_multi_cocrystal_result
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -459,6 +460,14 @@ def build_parser() -> argparse.ArgumentParser:
     multi_query.add_argument("--consensus-quota", type=int, default=5000)
     multi_query.add_argument("--global-limit-per-site", type=int, default=20000)
     multi_query.add_argument("--rrf-k", type=int, default=60)
+
+    multi_analysis = subparsers.add_parser(
+        "analyze-multi-cocrystal-search",
+        help="Measure query overlap, pose agreement, and docking queue composition")
+    multi_analysis.add_argument("--aggregation-dir", type=Path, required=True)
+    multi_analysis.add_argument("--output-dir", type=Path, required=True)
+    multi_analysis.add_argument("--top-k", type=int, nargs="+",
+                                default=(100, 500, 1000, 5000))
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -1015,6 +1024,11 @@ def main(argv: list[str] | None = None) -> int:
             consensus_quota=args.consensus_quota,
             global_limit_per_site=args.global_limit_per_site,
             rrf_k=args.rrf_k)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "analyze-multi-cocrystal-search":
+        result = analyze_multi_cocrystal_result(
+            args.aggregation_dir, args.output_dir, top_k=args.top_k)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":

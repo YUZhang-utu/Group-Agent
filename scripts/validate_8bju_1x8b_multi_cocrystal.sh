@@ -205,4 +205,10 @@ Path(sys.argv[9]).write_text(json.dumps(summary, indent=2), encoding="utf-8")
 print(json.dumps(summary, indent=2))
 PY
 
+$AIDD_PY -m aidd_agent.cli analyze-multi-cocrystal-search \
+  --aggregation-dir "$MULTI_OUTPUT" \
+  --output-dir "$AGGREGATION_DIR/analysis" \
+  --top-k 100 500 1000 5000
+
 echo "E026 complete: $AGGREGATION_DIR/e026-validation-summary.json"
+echo "E027 report: $AGGREGATION_DIR/analysis/analysis.md"

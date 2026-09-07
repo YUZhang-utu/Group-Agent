@@ -1281,8 +1281,7 @@ multi-cocrystal workstation inputs pending.
 
 Protocol: `experiments/E026-real-8bju-1x8b-multi-cocrystal-validation-protocol.md`.
 
-Result classification: protocol and runner implementation only; confirmatory
-Linux workstation execution pending.
+Result classification: confirmatory real Linux workstation validation accepted.
 
 - Query 1 reuses the accepted 8BJU/QT9 detailed result; query 2 is the WEE1A
   1X8B/824 co-crystal at auth chain A/residue 901.
@@ -1298,4 +1297,26 @@ Linux workstation execution pending.
   generic `QUERY_DIR` redirected E026 to the 8BJU manifest, and conversion of
   CCD 824 discarded its explicit Kekule orders. The runner now uses E026-only
   override names and validates the query ID; CCD conversion preserves supplied
-  SING/DOUB orders before RDKit aromaticity perception. Rerun remains pending.
+  SING/DOUB orders before RDKit aromaticity perception. This was corrected
+  before the accepted rerun below.
+- The corrected run was accepted. It produced 12,834 union molecules: 955
+  shared, 5,991 unique to 8BJU and 5,888 unique to 1X8B. The all-query overlap
+  is 7.44% of the union, supporting complementarity rather than redundancy.
+- 1X8B contributed five supported anchors, ten invariant pairs, retained all
+  299,999 conformers at broad retrieval and refined 8,073 conformers.
+- The 5,000 admitted molecules expanded into 5,834 receptor-specific tasks.
+  With exactly two queries, this implies 834 shared admitted molecules and
+  4,166 single-query admitted molecules.
+
+## E027 - Dual-cocrystal overlap and docking-queue analysis
+
+Protocol: `experiments/E027-dual-cocrystal-overlap-analysis-protocol.md`.
+
+Result classification: implementation validated offline; real E026 report run
+pending on the workstation.
+
+- Added hash-verified recomputation of query coverage, union/intersection,
+  pairwise Top-K overlap, shared-rank Spearman correlation, objective-specific
+  conformer agreement and docking-task multiplicity.
+- Emits both `analysis.json` and a human-readable `analysis.md`; no library
+  rescoring or molecule reconstruction is required.

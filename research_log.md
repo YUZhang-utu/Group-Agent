@@ -612,3 +612,20 @@
 - This is an infrastructure-negative result, not a retrieval or enrichment
   result. No library-scale stage ran. The hotfix suite passes 104 tests and a
   clean workstation rerun is pending.
+
+## 2026-09-07 - E026 real dual-cocrystal validation accepted
+
+- The corrected 8BJU/QT9 plus 1X8B/824 run completed with `accepted=true` and
+  preserved the no-cross-query-score-averaging invariant.
+- The molecule union contains 12,834 entries: 955 shared, 5,991 8BJU-only and
+  5,888 1X8B-only. Shared molecules are 7.44% of the union and approximately
+  13.75%/13.95% of each query's retrieved molecule set, so the second query
+  adds substantial nonredundant chemical space.
+- 1X8B used five supported anchors and ten anchor pairs; broad retrieval kept
+  299,999 conformers and detailed refinement selected 8,073.
+- 5,000 admitted molecules generated 5,834 receptor-specific docking tasks.
+  Under the two-query invariant, 834 admitted molecules carry both receptor
+  hypotheses. This is confirmatory for orchestration and complementarity, not
+  for binding or docking accuracy.
+- Locked E027 and implemented a hash-verified Top-K/rank/pose-agreement/queue
+  analysis report. Real report generation remains pending on the workstation.

@@ -249,3 +249,12 @@
   consensus support is an additional reversible priority signal.
 - A unique admitted molecule can require several docking tasks because every
   supporting co-crystal receptor is a distinct experimental hypothesis.
+- Real 8BJU/QT9 and 1X8B/824 validation confirms substantial complementarity:
+  only 955 of 12,834 union molecules are common to both queries (7.44%), while
+  the unique sets are balanced at 5,991 and 5,888. Multi-cocrystal retrieval
+  therefore needs a protected union; intersection-only selection would discard
+  more than 92% of the observed candidate space.
+- Of 5,000 admitted molecules, 834 support both receptor hypotheses and account
+  for the extra tasks in the 5,834-task queue. Shared support is a priority
+  signal, but unique-query molecules remain scientifically necessary because
+  the two deposited ligand/receptor conformations explore distinct regions.
