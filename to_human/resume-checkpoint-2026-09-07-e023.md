@@ -30,6 +30,15 @@
 Exact commands and output paths are in
 `docs/gaussian-artifact-reranking.md`.
 
+## Real staged result received
+
+- Coarse: 299,999 candidates, 300 chunks, 40.83 seconds inside runner.
+- Selection: three Top-5,000 union produced 7,704 conformers.
+- Refine: 7,704 candidates, eight chunks, 77.99 seconds inside runner.
+- Final manifest status: `complete`; all outputs have recorded SHA-256 hashes.
+- The eight refine chunks limited active concurrency to eight workers, matching
+  the observed 743% aggregate CPU.
+
 ## Boundary
 
 The full coarse result preserves every admitted conformer. Top-N union controls

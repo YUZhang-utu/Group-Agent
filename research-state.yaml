@@ -16,7 +16,7 @@ roadmap:
   laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
   date: 2026-09-07
-  git_commit: 4945d4d
+  git_commit: 1456b22
   test_result: 92_passed
   handoff: to_human/resume-checkpoint-2026-09-07-e023.md
 active_deployment:
