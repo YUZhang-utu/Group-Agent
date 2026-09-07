@@ -1244,3 +1244,18 @@ workstation scaling pending.
   processes, and completion order cannot change merged order.
 - Atomic, hash-validated chunk manifests provide power-loss recovery. Synthetic
   interruption and one-vs-two-worker checks passed. Full suite: 92 passed.
+
+## E024 - Billion-scale tiered retrieval and Gaussian execution
+
+Protocol: `experiments/E024-billion-scale-tiered-search-protocol.md`.
+
+Result classification: confirmatory offline architecture validation; physical
+10M, 100M, and 1B performance validation pending.
+
+- Added exact heap merging of memory-mapped shard-local ranked prefixes.
+- Added fixed budgets for baseline, strict, balanced, and loose channels;
+  baseline IDs are preserved and duplicate evidence flags are accumulated.
+- Added resumable slim coarse Gaussian chunks with a 20-byte logical row and
+  exact streaming per-objective Top-N selection.
+- Detailed pair refinement remains a separate retained result with a smaller
+  refine chunk size so worker concurrency does not collapse on short selections.

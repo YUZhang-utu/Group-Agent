@@ -107,3 +107,18 @@
 - Default query weights are anchor 1.5, ordinary 1.0, solvent-exposed 0.5.
 - Report Spearman rho and top-1,000 overlap between otherwise identical
   unweighted and anchored rankings; inspect discordant hits below 60% overlap.
+
+## E024 scale gates
+
+- Ranked-shard merge correctness: compare heap Top-K byte-for-byte with an
+  exhaustive concatenate/sort reference, including tied scores.
+- Resource metrics: wall time, peak RSS, page faults and bytes/read at 10M and
+  100M synthetic metadata, followed by a physical billion-vector run.
+- Retrieval correctness: sweep shard-local Top-K and verify global recall@K
+  against frozen exhaustive truth; global merging cannot repair shallow shards.
+- Schedule invariants: baseline prefix equality, per-channel new-admission
+  budgets, duplicate provenance flags, deterministic output hash.
+- Gaussian invariants: E024 slim coarse scores and streaming Top-N must reproduce
+  E023 on QT9; refined detailed arrays must reproduce for identical selected IDs.
+- Resume: interrupt both coarse and refine stages and require valid chunk reuse
+  with no `.partial` files.

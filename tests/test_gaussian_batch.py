@@ -7,7 +7,8 @@ import pytest
 
 from aidd_agent.conformer_artifacts import FEATURE_DTYPE, META_DTYPE
 from aidd_agent.gaussian_batch import (
-    ArtifactCatalogReader, load_candidate_ids, run_staged_gaussian_reranking,
+    ArtifactCatalogReader, load_candidate_ids, run_scaled_gaussian_reranking,
+    run_staged_gaussian_reranking,
     score_gaussian_candidates, write_gaussian_query,
 )
 from aidd_agent.gaussian_overlay import score_overlay
@@ -221,3 +222,39 @@ def test_staged_resume_reuses_valid_chunk_and_repairs_corrupt_chunk(tmp_path: Pa
     with pytest.raises(ValueError, match="different inputs or parameters"):
         run_staged_gaussian_reranking(
             catalog, query, ids, output, **dict(kwargs, top_n_per_objective=3))
+
+
+def test_scaled_slim_streaming_selection_matches_staged_and_resumes(tmp_path: Path):
+    catalog, query, ids = _staged_inputs(tmp_path)
+    staged = tmp_path / "staged-reference"
+    run_staged_gaussian_reranking(
+        catalog, query, ids, staged, stage="all", workers=1, chunk_size=2,
+        top_n_per_objective=2, max_pair_seeds=6, progress_every=0)
+    schedule = tmp_path / "schedule.npz"
+    np.savez(schedule, global_ids=np.arange(6, dtype=np.int64))
+    scaled = tmp_path / "scaled"
+    first = run_scaled_gaussian_reranking(
+        catalog, query, schedule, scaled, workers=2, coarse_chunk_size=2,
+        refine_chunk_size=1, top_n_per_objective=2,
+        max_pair_seeds=6, progress_every=0)
+    assert first["status"] == "complete"
+    assert not (scaled / "coarse/merged-scores.npz").exists()
+    for chunk in sorted((scaled / "coarse/chunks").glob("*.npz")):
+        with np.load(chunk, allow_pickle=False) as result:
+            assert set(result.files) == {
+                "global_ids", "objective_names", "objective_scores"}
+            assert result["objective_scores"].dtype == np.float32
+    reference = _load_arrays(staged / "refine/selected-candidates.npz")
+    streamed = _load_arrays(scaled / "refine/selected-candidates.npz")
+    assert np.array_equal(reference["global_ids"], streamed["global_ids"])
+    assert np.array_equal(reference["selected_by_objective"],
+                          streamed["selected_by_objective"])
+    chunk0 = scaled / "coarse/chunks/chunk-000000.npz"
+    before = (_hash(chunk0), chunk0.stat().st_mtime_ns)
+    second = run_scaled_gaussian_reranking(
+        catalog, query, schedule, scaled, workers=2, coarse_chunk_size=2,
+        refine_chunk_size=1, top_n_per_objective=2,
+        max_pair_seeds=6, progress_every=0)
+    assert second["stages"]["coarse"]["chunks_reused"] == 3
+    assert second["stages"]["coarse"]["chunks_computed"] == 0
+    assert (_hash(chunk0), chunk0.stat().st_mtime_ns) == before

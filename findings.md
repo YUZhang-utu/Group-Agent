@@ -221,3 +221,17 @@
   by itself provide standardized SMILES. Real Morgan/USRCAT production indices
   therefore require an explicit chemistry preprocessing artifact rather than
   inferred or fabricated representations.
+
+## Scalable retrieval execution
+
+- Broad retrieval and precise reranking are complementary stored products, not
+  mutually exclusive modes. Broad shard evidence remains auditable while only
+  a fixed schedule receives Gaussian work.
+- Billion-scale feasibility requires query-time work to depend primarily on
+  shard count and configured Top-K budgets. It does not justify scoring every
+  loose pharmacophore hit or writing one monolithic billion-row result.
+- Baseline recall is protected structurally: FAISS IDs occupy the first schedule
+  prefix and pharmacophore/anchor channels only add candidates and provenance.
+- Slim coarse Gaussian chunks preserve the information needed for exact Top-N
+  selection at 20 logical bytes per conformer; expensive pose detail belongs in
+  the much smaller refinement product.

@@ -542,3 +542,18 @@
 - Run manifest status is complete and all stages/results have content hashes.
   Next checks are score monotonicity/rank overlap, molecule-level collapse,
   pose review, and a real resume-reuse invocation.
+
+## 2026-09-07 - E024 scalable tiered execution implemented
+
+- Locked E024 before implementation and separated evidence retention from
+  expensive-compute admission.
+- Implemented deterministic global Top-K merging over memory-mapped ranked
+  shard prefixes. Tie order is score descending then stable global ID.
+- Implemented a fixed-budget baseline/strict/balanced/loose schedule. The
+  baseline prefix is asserted unchanged; later channels only add IDs or flags.
+- Implemented sharded slim PCA coarse output containing int64 ID plus three
+  float32 objectives, exact streaming Top-N union, and detailed pair refinement.
+- Added distinct coarse/refine chunk sizes, atomic hash validation, resume, CLI,
+  operating documentation, and synthetic equivalence checks against E023.
+- Offline validation is confirmatory for algorithms only. No billion-scale
+  latency, recall, or throughput claim is made before the physical scale ladder.

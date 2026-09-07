@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import hashlib
+import heapq
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,8 @@ RESULT_FORMAT = "aidd-gaussian-batch-scores"
 SCHEMA_VERSION = 1
 STAGED_FORMAT = "aidd-staged-gaussian-reranking"
 STAGED_VERSION = 1
+SCALED_FORMAT = "aidd-scaled-gaussian-reranking"
+SCALED_VERSION = 1
 OBJECTIVES = (
     "shape_only", "atomcentered_unweighted_joint", "atomcentered_anchored_joint")
 ANCHOR_TO_ARTIFACT_TYPE = {"HBD": FEATURE_TYPES["Donor"],
@@ -496,7 +499,7 @@ def _chunk_paths(stage_directory: Path, chunk_index: int) -> tuple[Path, Path]:
 
 def _write_chunk(stage_directory: Path, stage: str, chunk_index: int,
                  start: int, stop: int, ids: np.ndarray, arrays: Mapping[str, np.ndarray],
-                 config_hash: str, seconds: float) -> dict:
+                 config_hash: str, seconds: float, storage: str = "detailed") -> dict:
     result_path, manifest_path = _chunk_paths(stage_directory, chunk_index)
     _atomic_savez(result_path, arrays)
     manifest = {
@@ -505,6 +508,7 @@ def _write_chunk(stage_directory: Path, stage: str, chunk_index: int,
         "candidates": len(ids), "ids_sha256": _ids_sha256(ids),
         "config_hash": config_hash, "result": result_path.name,
         "result_sha256": _sha256(result_path), "seconds": seconds,
+        "storage": storage,
     }
     _atomic_json(manifest_path, manifest)
     return manifest
@@ -512,7 +516,7 @@ def _write_chunk(stage_directory: Path, stage: str, chunk_index: int,
 
 def _validate_chunk(stage_directory: Path, stage: str, chunk_index: int,
                     start: int, stop: int, ids: np.ndarray,
-                    config_hash: str) -> dict | None:
+                    config_hash: str, storage: str = "detailed") -> dict | None:
     result_path, manifest_path = _chunk_paths(stage_directory, chunk_index)
     if not result_path.is_file() or not manifest_path.is_file():
         return None
@@ -525,6 +529,8 @@ def _validate_chunk(stage_directory: Path, stage: str, chunk_index: int,
             "config_hash": config_hash,
         }
         if any(manifest.get(key) != value for key, value in expected.items()):
+            return None
+        if manifest.get("storage", "detailed") != storage:
             return None
         if manifest.get("result_sha256") != _sha256(result_path):
             return None
@@ -541,13 +547,21 @@ def _validate_chunk(stage_directory: Path, stage: str, chunk_index: int,
 def _worker_run_chunk(task: tuple) -> dict:
     if _WORKER_READER is None or _WORKER_QUERY is None or _WORKER_PARAMETERS is None:
         raise RuntimeError("Gaussian worker was not initialized")
-    stage_directory, stage, chunk_index, start, stop, ids, config_hash = task
+    stage_directory, stage, chunk_index, start, stop, ids, config_hash, storage = task
     started = time.perf_counter()
     arrays = _score_ids(
         _WORKER_READER, _WORKER_QUERY, ids, **_WORKER_PARAMETERS)
+    if storage == "slim":
+        arrays = {
+            "global_ids": arrays["global_ids"],
+            "objective_names": arrays["objective_names"],
+            "objective_scores": np.column_stack([
+                arrays[f"{name}__objective"] for name in OBJECTIVES
+            ]).astype(np.float32),
+        }
     return _write_chunk(
         Path(stage_directory), stage, chunk_index, start, stop, ids, arrays,
-        config_hash, time.perf_counter() - started)
+        config_hash, time.perf_counter() - started, storage)
 
 
 def _merge_chunks(stage_directory: Path, stage: str, ids: np.ndarray,
@@ -585,7 +599,10 @@ def _merge_chunks(stage_directory: Path, stage: str, ids: np.ndarray,
 def _execute_stage(stage_directory: Path, stage: str, ids: np.ndarray, *,
                    artifact_catalog: Path, query_path: Path, parameters: dict,
                    config_hash: str, workers: int, chunk_size: int,
-                   resume: bool, progress_every: int) -> tuple[Path, dict]:
+                   resume: bool, progress_every: int, storage: str = "detailed",
+                   merge: bool = True) -> tuple[Path, dict]:
+    if storage not in {"detailed", "slim"}:
+        raise ValueError("storage must be detailed or slim")
     stage_directory.mkdir(parents=True, exist_ok=True)
     (stage_directory / "chunks").mkdir(exist_ok=True)
     chunks = []
@@ -594,12 +611,13 @@ def _execute_stage(stage_directory: Path, stage: str, ids: np.ndarray, *,
         stop = min(len(ids), start + chunk_size)
         chunk_ids = ids[start:stop]
         valid = _validate_chunk(
-            stage_directory, stage, chunk_index, start, stop, chunk_ids, config_hash)
+            stage_directory, stage, chunk_index, start, stop, chunk_ids,
+            config_hash, storage)
         if resume and valid is not None:
             reused += 1
         else:
             chunks.append((str(stage_directory), stage, chunk_index, start, stop,
-                           chunk_ids, config_hash))
+                           chunk_ids, config_hash, storage))
     total_chunks = reused + len(chunks)
     finished = reused
     started = time.perf_counter()
@@ -634,16 +652,103 @@ def _execute_stage(stage_directory: Path, stage: str, ids: np.ndarray, *,
     for chunk_index, start in enumerate(range(0, len(ids), chunk_size)):
         stop = min(len(ids), start + chunk_size)
         if _validate_chunk(stage_directory, stage, chunk_index, start, stop,
-                           ids[start:stop], config_hash) is None:
+                           ids[start:stop], config_hash, storage) is None:
             raise ValueError(f"{stage} chunk {chunk_index} failed final validation")
-    output_path, merged = _merge_chunks(
-        stage_directory, stage, ids, chunk_size, config_hash)
+    if merge:
+        output_path, merged = _merge_chunks(
+            stage_directory, stage, ids, chunk_size, config_hash)
+    else:
+        output_path = stage_directory / "stage-manifest.json"
+        chunk_hashes = []
+        for chunk_index in range(total_chunks):
+            _, manifest_path = _chunk_paths(stage_directory, chunk_index)
+            chunk_hashes.append(json.loads(
+                manifest_path.read_text(encoding="utf-8"))["result_sha256"])
+        merged = {
+            "format": "aidd-gaussian-sharded-stage", "version": 1,
+            "stage": stage, "config_hash": config_hash, "chunks": total_chunks,
+            "candidates": len(ids), "ids_sha256": _ids_sha256(ids),
+            "storage": storage, "logical_bytes_per_row": 20 if storage == "slim" else None,
+            "chunk_result_hashes_sha256": hashlib.sha256(
+                "".join(chunk_hashes).encode()).hexdigest(),
+        }
     merged["chunks_reused"] = reused
     merged["chunks_computed"] = len(chunks)
     merged["workers"] = workers
     merged["wall_seconds_this_invocation"] = time.perf_counter() - started
-    _atomic_json(output_path.with_suffix(".manifest.json"), merged)
+    if merge:
+        _atomic_json(output_path.with_suffix(".manifest.json"), merged)
+    else:
+        _atomic_json(output_path, merged)
     return output_path, merged
+
+
+def _select_refinement_candidates_streaming(
+        coarse_directory: Path, ids: np.ndarray, chunk_size: int,
+        output_path: Path, top_n_per_objective: int,
+        config_hash: str) -> tuple[np.ndarray, dict]:
+    """Select exact stable per-objective Top-N without a full coarse merge."""
+    limit = min(top_n_per_objective, len(ids))
+    heaps: list[list[tuple[float, int, int]]] = [[] for _ in OBJECTIVES]
+    chunk_count = (len(ids) + chunk_size - 1) // chunk_size
+    chunk_hashes = []
+    for chunk_index in range(chunk_count):
+        result_path, manifest_path = _chunk_paths(coarse_directory, chunk_index)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        chunk_hashes.append(manifest["result_sha256"])
+        with np.load(result_path, allow_pickle=False) as archive:
+            chunk_ids = archive["global_ids"]
+            values = archive["objective_scores"]
+        start = chunk_index * chunk_size
+        if values.shape != (len(chunk_ids), len(OBJECTIVES)):
+            raise ValueError(f"invalid slim coarse score shape in chunk {chunk_index}")
+        for local, gid in enumerate(chunk_ids):
+            position = start + local
+            for column in range(len(OBJECTIVES)):
+                item = (float(values[local, column]), -position, int(gid))
+                if len(heaps[column]) < limit:
+                    heapq.heappush(heaps[column], item)
+                elif item > heaps[column][0]:
+                    heapq.heapreplace(heaps[column], item)
+    selected_records: dict[int, dict] = {}
+    for column, heap in enumerate(heaps):
+        ordered = sorted(heap, key=lambda item: (-item[0], -item[1]))
+        for rank, (_, negative_position, gid) in enumerate(ordered):
+            position = -negative_position
+            record = selected_records.setdefault(position, {
+                "gid": gid, "selected": [False] * len(OBJECTIVES),
+                "ranks": [-1] * len(OBJECTIVES), "best": len(ids) + 1})
+            record["selected"][column] = True
+            record["ranks"][column] = rank
+            record["best"] = min(record["best"], rank)
+    ordered_records = sorted(selected_records.items(), key=lambda item: (item[1]["best"], item[0]))
+    positions = np.asarray([position for position, _ in ordered_records], dtype=np.int64)
+    selected_ids = ids[positions]
+    arrays = {
+        "global_ids": selected_ids, "coarse_indices": positions,
+        "selected_by_objective": np.asarray(
+            [record["selected"] for _, record in ordered_records], dtype=bool),
+        "coarse_ranks": np.asarray(
+            [record["ranks"] for _, record in ordered_records], dtype=np.int64),
+        "best_coarse_rank": np.asarray(
+            [record["best"] for _, record in ordered_records], dtype=np.int64),
+        "objective_names": np.asarray(OBJECTIVES, dtype="U40"),
+    }
+    _atomic_savez(output_path, arrays)
+    manifest = {
+        "format": "aidd-streaming-gaussian-refinement-selection", "version": 1,
+        "config_hash": config_hash, "coarse_chunks": chunk_count,
+        "coarse_chunk_hashes_sha256": hashlib.sha256(
+            "".join(chunk_hashes).encode()).hexdigest(),
+        "top_n_per_objective": top_n_per_objective,
+        "selected_candidates": len(selected_ids),
+        "maximum_candidates": min(len(ids), top_n_per_objective * len(OBJECTIVES)),
+        "ids_sha256": _ids_sha256(selected_ids), "selection": output_path.name,
+        "selection_sha256": _sha256(output_path),
+        "policy": "streaming exact union of stable per-objective Top-N; compute allocation only",
+    }
+    _atomic_json(output_path.with_suffix(".manifest.json"), manifest)
+    return selected_ids, manifest
 
 
 def _select_refinement_candidates(coarse_path: Path, output_path: Path,
@@ -782,6 +887,105 @@ def run_staged_gaussian_reranking(artifact_catalog: Path, query_path: Path,
         chunk_size=chunk_size, resume=resume, progress_every=progress_every)
     run_manifest["stages"]["refine"] = refine_manifest
     run_manifest["status"] = "complete"
+    run_manifest["final_result"] = str(refine_path)
+    run_manifest["final_result_sha256"] = _sha256(refine_path)
+    _atomic_json(run_manifest_path, run_manifest)
+    return run_manifest
+
+
+def run_scaled_gaussian_reranking(artifact_catalog: Path, query_path: Path,
+                                  candidate_schedule: Path, output_dir: Path, *,
+                                  stage: str = "all", workers: int = 16,
+                                  coarse_chunk_size: int = 2000,
+                                  refine_chunk_size: int = 250,
+                                  top_n_per_objective: int = 5000,
+                                  sigma: float = 1.0,
+                                  cutoff: float | None = 4.5,
+                                  pair_tolerance: float = 2.0,
+                                  axial_samples: int = 6,
+                                  max_pair_seeds: int = 512,
+                                  resume: bool = True,
+                                  progress_every: int = 1) -> dict:
+    """Run fixed-budget Gaussian scoring with retained slim coarse shards."""
+    if stage not in {"coarse", "refine", "all"}:
+        raise ValueError("stage must be coarse, refine, or all")
+    if min(workers, coarse_chunk_size, refine_chunk_size,
+           top_n_per_objective, max_pair_seeds) <= 0:
+        raise ValueError("workers, chunk sizes, Top-N, and pair cap must be positive")
+    artifact_catalog = artifact_catalog.resolve(); query_path = query_path.resolve()
+    candidate_schedule = candidate_schedule.resolve(); output_dir = output_dir.resolve()
+    ids = load_candidate_ids(candidate_schedule)
+    config = {
+        "artifact_catalog": str(artifact_catalog),
+        "artifact_catalog_sha256": _sha256(artifact_catalog),
+        "query": str(query_path), "query_sha256": _sha256(query_path),
+        "candidate_schedule": str(candidate_schedule),
+        "candidate_schedule_sha256": _sha256(candidate_schedule),
+        "candidate_count": len(ids), "candidate_ids_sha256": _ids_sha256(ids),
+        "coarse_chunk_size": coarse_chunk_size,
+        "refine_chunk_size": refine_chunk_size,
+        "top_n_per_objective": top_n_per_objective,
+        "sigma_angstrom": sigma, "cutoff_angstrom": cutoff,
+        "pair_tolerance_angstrom": pair_tolerance,
+        "axial_samples": axial_samples, "max_pair_seeds": max_pair_seeds,
+        "coarse_storage": "slim-sharded", "objectives": list(OBJECTIVES),
+    }
+    canonical = json.dumps(config, sort_keys=True, separators=(",", ":")).encode()
+    config_hash = hashlib.sha256(canonical).hexdigest()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    run_manifest_path = output_dir / "run-manifest.json"
+    if run_manifest_path.is_file():
+        run_manifest = json.loads(run_manifest_path.read_text(encoding="utf-8"))
+        if (run_manifest.get("format") != SCALED_FORMAT
+                or run_manifest.get("config_hash") != config_hash):
+            raise ValueError("existing scaled Gaussian run has different inputs or parameters")
+    else:
+        run_manifest = {
+            "format": SCALED_FORMAT, "version": SCALED_VERSION,
+            "config_hash": config_hash, "config": config,
+            "status": "initialized", "stages": {},
+            "scale_claim": "architecture only; physical billion-scale validation pending",
+        }
+        _atomic_json(run_manifest_path, run_manifest)
+    common = {"sigma": sigma, "cutoff": cutoff,
+              "pair_tolerance": pair_tolerance, "axial_samples": axial_samples}
+    coarse_dir = output_dir / "coarse"
+    if stage in {"coarse", "all"}:
+        _, coarse_manifest = _execute_stage(
+            coarse_dir, "coarse", ids, artifact_catalog=artifact_catalog,
+            query_path=query_path, parameters=dict(common, max_pair_seeds=0),
+            config_hash=config_hash, workers=workers, chunk_size=coarse_chunk_size,
+            resume=resume, progress_every=progress_every, storage="slim", merge=False)
+        run_manifest["stages"]["coarse"] = coarse_manifest
+        run_manifest["status"] = "coarse_complete"
+        _atomic_json(run_manifest_path, run_manifest)
+    elif not (coarse_dir / "stage-manifest.json").is_file():
+        raise ValueError("refine stage requires completed slim coarse chunks")
+    if stage == "coarse":
+        return run_manifest
+    for chunk_index, start in enumerate(range(0, len(ids), coarse_chunk_size)):
+        stop = min(len(ids), start + coarse_chunk_size)
+        if _validate_chunk(
+                coarse_dir, "coarse", chunk_index, start, stop, ids[start:stop],
+                config_hash, "slim") is None:
+            raise ValueError(
+                "invalid slim coarse chunk; rerun with --stage coarse to repair it")
+    selection_path = output_dir / "refine" / "selected-candidates.npz"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selected_ids, selection_manifest = _select_refinement_candidates_streaming(
+        coarse_dir, ids, coarse_chunk_size, selection_path,
+        top_n_per_objective, config_hash)
+    run_manifest["stages"]["selection"] = selection_manifest
+    _atomic_json(run_manifest_path, run_manifest)
+    refine_path, refine_manifest = _execute_stage(
+        output_dir / "refine", "refine", selected_ids,
+        artifact_catalog=artifact_catalog, query_path=query_path,
+        parameters=dict(common, max_pair_seeds=max_pair_seeds),
+        config_hash=config_hash, workers=workers, chunk_size=refine_chunk_size,
+        resume=resume, progress_every=progress_every)
+    run_manifest["stages"]["refine"] = refine_manifest
+    run_manifest["status"] = "complete"
+    run_manifest["coarse_result"] = str(coarse_dir.resolve())
     run_manifest["final_result"] = str(refine_path)
     run_manifest["final_result_sha256"] = _sha256(refine_path)
     _atomic_json(run_manifest_path, run_manifest)

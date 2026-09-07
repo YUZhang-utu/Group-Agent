@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E023-staged-parallel-resumable-gaussian-reranking
+current_experiment: E024-billion-scale-tiered-search
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,6 +56,10 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
+  - reproduce E023 score arrays and streaming Top-N selection with E024 on real QT9
+  - benchmark ranked-shard merge and scheduler at 10M then 100M metadata scale
+  - calibrate per-shard FAISS local Top-K needed for frozen global recall targets
+  - implement native capped strict balanced loose pharmacophore shard producers
   - verify identical-command real resume reports eight reused refine chunks and zero recomputed chunks
   - analyze coarse-to-refine score monotonicity, objective Top-N overlap, and unique molecule counts
   - collapse refined conformers to molecule-level representatives without discarding pose provenance
@@ -179,6 +183,10 @@ implementation_status:
   gaussian_real_coarse: completed_299999_in_40_83_seconds_16_workers
   gaussian_real_refine: completed_7704_in_77_99_seconds_eight_chunks
   gaussian_real_staged_status: complete_rank_analysis_and_resume_check_pending
+  billion_scale_ranked_shard_merge: implemented_mmap_bounded_offline_validated
+  billion_scale_tiered_schedule: implemented_fixed_budget_baseline_preserved
+  gaussian_scaled_slim_coarse: implemented_streaming_topn_offline_validated
+  billion_scale_physical_validation: pending_10m_100m_1b_ladder
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

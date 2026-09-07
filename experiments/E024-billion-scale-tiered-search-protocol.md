@@ -1,6 +1,6 @@
 # E024 Billion-scale tiered retrieval and Gaussian execution protocol
 
-Status: protocol locked before implementation
+Status: core execution architecture implemented and offline validated
 
 ## Motivation
 
@@ -65,7 +65,8 @@ Top-N candidates receives detailed pair-seed refinement.
 ## Confirmatory acceptance criteria
 
 - K-way shard merge equals exhaustive concatenation/sort on synthetic shards,
-  including score ties, while retaining at most `K + shard_count` live rows.
+  including score ties, with memory-mapped shard arrays and at most
+  `global_K + max_local_K + shard_count` resident working rows.
 - Schedule construction preserves the complete admitted FAISS prefix, respects
   every channel budget, merges duplicates, and is deterministic across reruns.
 - Anchor/pharmacophore inputs can never remove a baseline ID.
@@ -90,4 +91,3 @@ Top-N candidates receives detailed pair-seed refinement.
   `billion_scale_validated` capability flag.
 - A physical billion-vector benchmark is required before publishing billion
   throughput, latency, or recall numbers.
-

@@ -41,8 +41,12 @@ from .pharmacophore_index import (
 )
 from .pharmacophore_validation import run_pharmacophore_validation
 from .gaussian_batch import (
-    prepare_gaussian_query, run_staged_gaussian_reranking,
+    prepare_gaussian_query, run_scaled_gaussian_reranking,
+    run_staged_gaussian_reranking,
     score_gaussian_candidates,
+)
+from .scaled_search import (
+    CandidateBudgets, build_candidate_schedule, merge_ranked_shards,
 )
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
@@ -389,6 +393,47 @@ def build_parser() -> argparse.ArgumentParser:
     gaussian_staged.add_argument("--max-pair-seeds", type=int, default=512)
     gaussian_staged.add_argument("--progress-every", type=int, default=1)
     gaussian_staged.add_argument("--no-resume", action="store_true")
+
+    shard_merge = subparsers.add_parser(
+        "merge-ranked-search-shards",
+        help="Bounded-memory exact Top-K merge of pre-ranked shard results")
+    shard_merge.add_argument("--shard-result", type=Path, action="append", required=True)
+    shard_merge.add_argument("--output", type=Path, required=True)
+    shard_merge.add_argument("--top-k", type=int, required=True)
+
+    candidate_schedule = subparsers.add_parser(
+        "build-tiered-candidate-schedule",
+        help="Build fixed-budget baseline/strict/balanced/loose Gaussian admission")
+    candidate_schedule.add_argument("--baseline", type=Path, required=True)
+    candidate_schedule.add_argument("--strict", type=Path)
+    candidate_schedule.add_argument("--balanced", type=Path)
+    candidate_schedule.add_argument("--loose", type=Path)
+    candidate_schedule.add_argument("--output", type=Path, required=True)
+    candidate_schedule.add_argument("--baseline-budget", type=int, default=100_000)
+    candidate_schedule.add_argument("--strict-budget", type=int, default=100_000)
+    candidate_schedule.add_argument("--balanced-budget", type=int, default=50_000)
+    candidate_schedule.add_argument("--loose-budget", type=int, default=10_000)
+
+    gaussian_scaled = subparsers.add_parser(
+        "run-scaled-gaussian-reranking",
+        help="Retain slim coarse shards and stream Top-N into detailed refinement")
+    gaussian_scaled.add_argument("--artifact-catalog", type=Path, required=True)
+    gaussian_scaled.add_argument("--query", type=Path, required=True)
+    gaussian_scaled.add_argument("--candidate-schedule", type=Path, required=True)
+    gaussian_scaled.add_argument("--output-dir", type=Path, required=True)
+    gaussian_scaled.add_argument("--stage", choices=("coarse", "refine", "all"),
+                                 default="all")
+    gaussian_scaled.add_argument("--workers", type=int, default=16)
+    gaussian_scaled.add_argument("--coarse-chunk-size", type=int, default=2000)
+    gaussian_scaled.add_argument("--refine-chunk-size", type=int, default=250)
+    gaussian_scaled.add_argument("--top-n-per-objective", type=int, default=5000)
+    gaussian_scaled.add_argument("--sigma", type=float, default=1.0)
+    gaussian_scaled.add_argument("--cutoff", type=float, default=4.5)
+    gaussian_scaled.add_argument("--pair-tolerance", type=float, default=2.0)
+    gaussian_scaled.add_argument("--axial-samples", type=int, default=6)
+    gaussian_scaled.add_argument("--max-pair-seeds", type=int, default=512)
+    gaussian_scaled.add_argument("--progress-every", type=int, default=1)
+    gaussian_scaled.add_argument("--no-resume", action="store_true")
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -896,6 +941,36 @@ def main(argv: list[str] | None = None) -> int:
             max_pair_seeds=args.max_pair_seeds,
             resume=not args.no_resume,
             progress_every=args.progress_every)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "merge-ranked-search-shards":
+        result = merge_ranked_shards(
+            args.shard_result, args.output, top_k=args.top_k)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "build-tiered-candidate-schedule":
+        channels = {name: getattr(args, name) for name in
+                    ("baseline", "strict", "balanced", "loose")
+                    if getattr(args, name) is not None}
+        result = build_candidate_schedule(
+            channels, args.output,
+            budgets=CandidateBudgets(
+                baseline=args.baseline_budget, strict=args.strict_budget,
+                balanced=args.balanced_budget, loose=args.loose_budget))
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "run-scaled-gaussian-reranking":
+        result = run_scaled_gaussian_reranking(
+            args.artifact_catalog, args.query, args.candidate_schedule,
+            args.output_dir, stage=args.stage, workers=args.workers,
+            coarse_chunk_size=args.coarse_chunk_size,
+            refine_chunk_size=args.refine_chunk_size,
+            top_n_per_objective=args.top_n_per_objective,
+            sigma=args.sigma, cutoff=args.cutoff,
+            pair_tolerance=args.pair_tolerance,
+            axial_samples=args.axial_samples,
+            max_pair_seeds=args.max_pair_seeds,
+            resume=not args.no_resume, progress_every=args.progress_every)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":
