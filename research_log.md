@@ -557,3 +557,17 @@
   operating documentation, and synthetic equivalence checks against E023.
 - Offline validation is confirmatory for algorithms only. No billion-scale
   latency, recall, or throughput claim is made before the physical scale ladder.
+
+## 2026-09-07 - E025 multi-cocrystal pre-docking aggregation
+
+- Locked the E025 protocol before implementation.
+- Added a versioned plan that binds every query to an exact receptor, biological
+  site, detailed Gaussian result, optional manifest and content hashes.
+- Added objective-specific conformer-to-molecule collapse with deterministic
+  ties and retained Top-M primary conformers.
+- Added site-scoped cross-query union, support counts, rank percentiles and RRF;
+  raw Gaussian scores are never averaged across query ligands.
+- Added protected per-query admission lanes followed by a consensus lane, plus
+  receptor/query-specific docking task records carrying conformer and transform.
+- Offline synthetic validation passes as part of the 102-test suite. Real WEE1
+  multi-cocrystal aggregation remains the next confirmatory workstation run.

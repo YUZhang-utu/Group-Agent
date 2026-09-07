@@ -1259,3 +1259,20 @@ Result classification: confirmatory offline architecture validation; physical
   exact streaming per-objective Top-N selection.
 - Detailed pair refinement remains a separate retained result with a smaller
   refine chunk size so worker concurrency does not collapse on short selections.
+
+## E025 - Multi-cocrystal molecule aggregation before docking
+
+Protocol: `experiments/E025-multi-cocrystal-molecule-aggregation-protocol.md`.
+
+Result classification: confirmatory offline orchestration validation; real
+multi-cocrystal workstation inputs pending.
+
+- Each co-crystal query remains an immutable, independently hashed result.
+- Conformers collapse to molecules separately for every objective; the primary
+  objective also retains configurable Top-M alternative conformers.
+- Queries are unioned only inside an explicit site, using within-query ranks
+  and RRF rather than incomparable raw-score averages.
+- Per-query protected lanes preserve query-specific chemical space before a
+  site-consensus lane fills the docking budget.
+- Every admitted site/molecule expands into supporting query/receptor-specific
+  docking tasks with the selected conformer and transform.

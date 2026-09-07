@@ -75,5 +75,7 @@ See `docs/gaussian-artifact-reranking.md` for artifact-backed Gaussian reference
 reranking and its current atom-centered feature boundary.
 See `docs/billion-scale-tiered-search.md` for the fixed-budget shard-native path
 that retains slim coarse and detailed outputs.
+See `docs/multi-cocrystal-aggregation.md` for conformer-to-molecule collapse,
+site-scoped multi-query fusion, protected query quotas, and docking task export.
 See `docs/cluster-bridge.md` for cross-platform authenticated Slurm submission.
 See `docs/desktop-deployment.md` for workstation, RDKit, PyMOL, and AlphaFold setup.

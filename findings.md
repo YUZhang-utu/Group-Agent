@@ -235,3 +235,17 @@
 - Slim coarse Gaussian chunks preserve the information needed for exact Top-N
   selection at 20 logical bytes per conformer; expensive pose detail belongs in
   the much smaller refinement product.
+
+## Multi-cocrystal pre-docking synthesis
+
+- Co-crystal queries represent complementary receptor conformations and ligand
+  chemotypes. Their correct aggregate is a site-scoped union, not an
+  intersection and not an averaged query geometry.
+- Conformer collapse must remain objective-specific: shape, unweighted color
+  and anchored color can legitimately select different poses of one molecule.
+- Cross-query raw Gaussian scores are not commensurate. Within-query molecule
+  ranks and RRF preserve ordering under monotonic score rescaling.
+- Query-protected admission lanes retain conformation-specific chemical space;
+  consensus support is an additional reversible priority signal.
+- A unique admitted molecule can require several docking tasks because every
+  supporting co-crystal receptor is a distinct experimental hypothesis.

@@ -48,6 +48,7 @@ from .gaussian_batch import (
 from .scaled_search import (
     CandidateBudgets, build_candidate_schedule, merge_ranked_shards,
 )
+from .multi_query_aggregation import aggregate_multi_cocrystal_results
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -434,6 +435,19 @@ def build_parser() -> argparse.ArgumentParser:
     gaussian_scaled.add_argument("--max-pair-seeds", type=int, default=512)
     gaussian_scaled.add_argument("--progress-every", type=int, default=1)
     gaussian_scaled.add_argument("--no-resume", action="store_true")
+
+    multi_query = subparsers.add_parser(
+        "aggregate-multi-cocrystal-search",
+        help="Collapse conformers to molecules and create site-scoped docking tasks")
+    multi_query.add_argument("--plan", type=Path, required=True)
+    multi_query.add_argument("--output-dir", type=Path, required=True)
+    multi_query.add_argument(
+        "--primary-objective", default="atomcentered_anchored_joint")
+    multi_query.add_argument("--top-conformers-per-query", type=int, default=3)
+    multi_query.add_argument("--per-query-quota", type=int, default=1000)
+    multi_query.add_argument("--consensus-quota", type=int, default=5000)
+    multi_query.add_argument("--global-limit-per-site", type=int, default=20000)
+    multi_query.add_argument("--rrf-k", type=int, default=60)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -971,6 +985,17 @@ def main(argv: list[str] | None = None) -> int:
             axial_samples=args.axial_samples,
             max_pair_seeds=args.max_pair_seeds,
             resume=not args.no_resume, progress_every=args.progress_every)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "aggregate-multi-cocrystal-search":
+        result = aggregate_multi_cocrystal_results(
+            args.plan, args.output_dir,
+            primary_objective=args.primary_objective,
+            top_conformers_per_query=args.top_conformers_per_query,
+            per_query_quota=args.per_query_quota,
+            consensus_quota=args.consensus_quota,
+            global_limit_per_site=args.global_limit_per_site,
+            rrf_k=args.rrf_k)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":

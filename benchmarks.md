@@ -122,3 +122,16 @@
   E023 on QT9; refined detailed arrays must reproduce for identical selected IDs.
 - Resume: interrupt both coarse and refine stages and require valid chunk reuse
   with no `.partial` files.
+
+## E025 multi-query aggregation gates
+
+- Conformer collapse: compare every objective-specific winner with an exhaustive
+  group-by molecule reference, including tied scores.
+- Query union: measure unique-query hits, multi-query support distribution and
+  overlap of protected-query versus consensus admissions.
+- Rank robustness: apply monotonic score rescaling independently per query and
+  require unchanged within-site consensus order.
+- Site isolation: identical molecule IDs in different pockets remain separate
+  admission keys and never contribute to cross-site RRF.
+- Docking expansion: every task references one admitted molecule, one immutable
+  query result, one exact receptor and one retained conformer/transform.

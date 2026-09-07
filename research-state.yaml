@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E024-billion-scale-tiered-search
+current_experiment: E025-multi-cocrystal-molecule-aggregation
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,6 +56,9 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
+  - create the real WEE1 multi-cocrystal query plan and run each independent E024 search
+  - aggregate real refined results and inspect protected-query versus consensus overlap
+  - export admitted receptor-specific tasks into the first docking adapter protocol
   - reproduce E023 score arrays and streaming Top-N selection with E024 on real QT9
   - benchmark ranked-shard merge and scheduler at 10M then 100M metadata scale
   - calibrate per-shard FAISS local Top-K needed for frozen global recall targets
@@ -187,6 +190,11 @@ implementation_status:
   billion_scale_tiered_schedule: implemented_fixed_budget_baseline_preserved
   gaussian_scaled_slim_coarse: implemented_streaming_topn_offline_validated
   billion_scale_physical_validation: pending_10m_100m_1b_ladder
+  multi_cocrystal_query_plan: implemented_versioned_hashed
+  conformer_to_molecule_aggregation: implemented_objective_specific_topm_retained
+  site_scoped_query_union: implemented_rank_fusion_no_raw_score_average
+  docking_admission: implemented_query_protected_plus_consensus
+  receptor_specific_docking_tasks: implemented_offline_validation_pending_real
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

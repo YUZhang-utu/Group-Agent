@@ -1,6 +1,21 @@
 # E025 Multi-cocrystal 3D-search and molecule aggregation protocol
 
-Status: protocol locked before implementation
+Status: implemented and offline validated
+
+## Offline result (2026-09-07)
+
+- Implemented site-scoped query union, independent objective-specific
+  conformer collapse, Top-M alternative conformers, within-query molecule
+  ranks, rank percentiles, RRF consensus, protected query lanes, and unique
+  molecule docking admission.
+- Implemented receptor/query-specific docking-task export carrying the selected
+  conformer and candidate-to-query transform.
+- Synthetic tests confirmed unique-query hits survive, multi-query support is
+  counted, objective-specific conformers remain independent, monotonic raw-score
+  rescaling cannot change fusion order, sites remain separate, checksums are
+  enforced, and identical reruns reproduce output hashes.
+- Result is an offline orchestration validation. Real multi-cocrystal campaign
+  aggregation and docking-engine execution remain workstation tasks.
 
 ## Motivation
 
@@ -82,4 +97,3 @@ optional manifest is hashed. Duplicate query IDs fail.
 - Repeated identical runs have identical data-file hashes.
 - Invalid, duplicate, non-finite, mismatched or non-detailed inputs fail.
 - Full dependency-light test suite remains green.
-
