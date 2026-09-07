@@ -1,6 +1,7 @@
 # E021 Gaussian overlay kernel and rigid-seed protocol
 
-Status: protocol locked -- implementation pending
+Status: mathematical kernel implementation completed -- offline confirmatory
+validation passed; real QT9 candidate integration pending
 
 ## Hypothesis
 
@@ -57,3 +58,19 @@ After offline mathematical validation, score a preregistered QT9 candidate
 subset and compare shape-only, unweighted color, anchored atom-centered color,
 and projected color. Runtime/enrichment claims require that real run and are not
 inferred from synthetic tests.
+
+## Offline results (2026-09-07)
+
+- Implemented weighted Gaussian self/cross overlap with consistent cutoff and
+  calculation order for shape and typed color.
+- Implemented explicit query/candidate Tanimoto and directed query-biased
+  Tversky primitives while retaining all raw cross/self overlaps.
+- Implemented parent-feature alternative-point weight splitting, homogeneous
+  transforms, proper weighted Kabsch alignment, and compatible pair seeds with
+  six axial rotations and deterministic transform deduplication.
+- Synthetic rigid transforms were recovered; identical shape/color scored one;
+  incompatible color types scored zero; all generated rotations had determinant
+  +1; invalid inputs failed explicitly.
+- Nine focused tests and the complete 87-test dependency-light suite passed.
+- Candidate-artifact batch orchestration, objective-specific optimization and
+  real QT9 ranking remain pending and are not claimed by this result.

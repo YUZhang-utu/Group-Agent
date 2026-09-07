@@ -476,3 +476,19 @@
   pair index, compile the query, execute all tiers, verify nesting/ranges/counts
   and prove every external L1 ID survived. It writes a machine-readable
   acceptance report and retains all intermediate inputs and outputs.
+
+## 2026-09-07 - Gaussian overlay mathematical reference
+
+- Locked E021 before implementation to prevent score definitions from changing
+  after observing real QT9 rankings.
+- Implemented deterministic weighted Gaussian shape/color primitives, raw
+  cross/self preservation, standard Tanimoto, directed query-biased Tversky,
+  parent-feature alternative-point weight conservation, candidate-to-query
+  homogeneous transforms, weighted Kabsch, and compatible pair seeds with six
+  axial rotations.
+- Confirmatory synthetic tests recovered known proper rigid geometry, enforced
+  same-type color matching and rejected invalid numerical inputs. Nine focused
+  tests and the full dependency-light suite pass: 87 tests.
+- This completes the mathematical reference kernel only. Real artifact batch
+  integration, objective-specific optimization and QT9 enrichment remain the
+  next experiment.

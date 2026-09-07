@@ -92,6 +92,11 @@ in a stored conformer. Exact feature assignment, rigid alignment, Gaussian
 shape/color, query-biased Tversky, protein exclusion volume and limited torsion
 refinement are later reranking stages over this unchanged union.
 
+The exact reference primitives for the next stage are implemented in
+`aidd_agent.gaussian_overlay`. They preserve raw self/cross overlaps, explicit
+query/candidate Tversky direction and the transform used for each score. Batch
+connection to real candidate artifacts remains a separate validation step.
+
 ## Complete QT9 workstation validation
 
 After pulling and reinstalling the package, run the checked-in wrapper with the

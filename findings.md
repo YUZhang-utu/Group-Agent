@@ -43,6 +43,11 @@
 - Loose, balanced, and strict pharmacophore evidence are nested views of one
   candidate channel. Their union with FAISS/L1 is recall-additive: anchors may
   admit additional local matches but cannot remove a baseline candidate.
+- The exact Gaussian L2 reference now has an explicit mathematical boundary:
+  identical cross/self approximation order, typed color, query-as-operand-A
+  Tversky direction, parent-level alternative-point weight conservation, and
+  candidate-to-query objective-specific transforms. Synthetic validation
+  establishes kernel correctness but says nothing yet about real enrichment.
 - Anchor assignment captures observed interactions, not proven necessities.
   Anchors, projected sites, and feature counts are therefore reversible ranking
   evidence only. Broad anchor-independent recall defines admission, while
