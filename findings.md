@@ -48,6 +48,15 @@
   Tversky direction, parent-level alternative-point weight conservation, and
   candidate-to-query objective-specific transforms. Synthetic validation
   establishes kernel correctness but says nothing yet about real enrichment.
+- Stable artifact IDs now feed that reference kernel directly through read-only
+  shard maps. Candidate order and membership are invariant, while shape-only,
+  atom-centered unweighted, and anchor-weighted objectives retain independent
+  optimal poses and full overlap primitives. Catalog relocation is tolerated by
+  resolving a missing recorded path against the catalog's local shard name.
+- Artifact schema v1 cannot support honest projected-color or terminal-torsion
+  claims: it lacks directional candidate projections and molecular topology.
+  Those require a versioned companion artifact rather than inference from
+  feature centers.
 - Anchor assignment captures observed interactions, not proven necessities.
   Anchors, projected sites, and feature counts are therefore reversible ranking
   evidence only. Broad anchor-independent recall defines admission, while

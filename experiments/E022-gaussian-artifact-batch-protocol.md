@@ -1,6 +1,6 @@
 # E022 Artifact-backed Gaussian batch reranking protocol
 
-Status: protocol locked before implementation -- confirmatory offline validation pending
+Status: offline confirmatory implementation passed; real QT9 workstation run pending
 
 ## Hypothesis
 
@@ -64,3 +64,19 @@ retain independent optimal transforms.
 Run the scorer on preregistered QT9 L1 IDs, inspect score distributions and
 poses, and measure enrichment against the locked retrieval benchmark. No real
 ranking, enrichment, or projected-color claim is made by the offline test.
+
+## Offline results (2026-09-07)
+
+- Implemented catalog-to-shard stable-ID resolution with relocation fallback,
+  read-only mmap access, offset validation, and exact schema-v1 dequantization.
+- Implemented hashed co-crystal query packaging and anchor-to-RDKit-feature
+  mapping without reading the production library.
+- Added centroid, principal-axis, and typed pharmacophore-pair seeds.
+- Added batch scoring that retains every input ID and separately selects/stores
+  shape-only, atom-centered unweighted joint, and atom-centered anchor-weighted
+  joint poses with raw cross/self values.
+- Locked synthetic geometry recovered the known rigid pose; stored scores
+  reproduced at the stored transforms; reruns were numerically deterministic.
+- Focused tests and the complete dependency-light suite passed: 90 tests.
+- RDKit/Gemmi are absent from the laptop base interpreter, so real QT9 query
+  packaging and artifact runtime/enrichment remain workstation experiments.

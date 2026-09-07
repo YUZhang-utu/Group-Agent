@@ -40,6 +40,7 @@ from .pharmacophore_index import (
     load_external_l1_ids, search_pharmacophore_index,
 )
 from .pharmacophore_validation import run_pharmacophore_validation
+from .gaussian_batch import prepare_gaussian_query, score_gaussian_candidates
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -344,6 +345,27 @@ def build_parser() -> argparse.ArgumentParser:
     pharmacophore_validate.add_argument("--nprobe", type=int, default=256)
     pharmacophore_validate.add_argument("--bin-width", type=float, default=0.5)
     pharmacophore_validate.add_argument("--max-distance", type=float, default=20.0)
+
+    gaussian_query = subparsers.add_parser(
+        "prepare-gaussian-query",
+        help="Package one locked co-crystal ligand for artifact Gaussian reranking")
+    gaussian_query.add_argument("--mmcif", type=Path, required=True)
+    gaussian_query.add_argument("--ccd", type=Path, required=True)
+    gaussian_query.add_argument("--query-manifest", type=Path, required=True)
+    gaussian_query.add_argument("--output", type=Path, required=True)
+
+    gaussian_score = subparsers.add_parser(
+        "score-gaussian-candidates",
+        help="Rerank stable artifact IDs without changing L1 admission")
+    gaussian_score.add_argument("--artifact-catalog", type=Path, required=True)
+    gaussian_score.add_argument("--query", type=Path, required=True)
+    gaussian_score.add_argument("--candidate-ids", type=Path, required=True)
+    gaussian_score.add_argument("--output", type=Path, required=True)
+    gaussian_score.add_argument("--sigma", type=float, default=1.0)
+    gaussian_score.add_argument("--cutoff", type=float, default=4.5)
+    gaussian_score.add_argument("--pair-tolerance", type=float, default=2.0)
+    gaussian_score.add_argument("--axial-samples", type=int, default=6)
+    gaussian_score.add_argument("--max-pair-seeds", type=int, default=512)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -826,6 +848,19 @@ def main(argv: list[str] | None = None) -> int:
             max_distance=args.max_distance)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0 if result["accepted"] else 2
+    if args.command == "prepare-gaussian-query":
+        result = prepare_gaussian_query(
+            args.mmcif, args.ccd, args.query_manifest, args.output)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "score-gaussian-candidates":
+        result = score_gaussian_candidates(
+            args.artifact_catalog, args.query, args.candidate_ids, args.output,
+            sigma=args.sigma, cutoff=args.cutoff,
+            pair_tolerance=args.pair_tolerance, axial_samples=args.axial_samples,
+            max_pair_seeds=args.max_pair_seeds)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
     if args.command == "campaign-ligands":
         with connect(args.db) as connection:
             result = campaign_ligand_status(connection, args.user, args.campaign)

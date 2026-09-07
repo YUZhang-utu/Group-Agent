@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E019-million-scale-faiss-gaussian-prototype
+current_experiment: E022-artifact-backed-gaussian-batch-reranking
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,6 +56,11 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
+  - run the real E020 QT9 end-to-end pharmacophore validator on the relocated local artifact and incremental FAISS index
+  - package the real 8BJU/QT9 Gaussian query and run the locked 1000-candidate runtime check
+  - score the preregistered QT9 L1 set and measure shape/unweighted/anchored ranking runtime and enrichment
+  - design artifact schema v2 companion data for atomic identity, topology, directional projection points, and terminal torsions
+  - implement pocket exclusion-volume scoring after real atom-centered Gaussian validation
   - acquire and checksum the Platinum conformer benchmark and define the symmetry-aware RMSD evaluator
   - audit the production library protonation convention and conformer counts stratified by flexibility
   - implement one-pass NFS-to-local uncompressed conformer artifact ingestion
@@ -82,6 +87,9 @@ completed_experiments:
   - E004-project-centric-optional-workflows-and-provenance
   - E005-cross-platform-slurm-bridge
   - E006-multi-structure-and-ligand-similarity
+  - E020-reusable-partial-3d-pharmacophore-retrieval-offline
+  - E021-gaussian-overlay-kernel-offline
+  - E022-artifact-backed-gaussian-batch-reranking-offline
 implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
@@ -146,7 +154,7 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 87_passed
+  tests: 90_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
   local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
   per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
@@ -156,7 +164,11 @@ implementation_status:
   gaussian_overlap_kernel: implemented_offline_mathematically_validated
   directed_query_tversky: implemented_alpha_0_95_beta_0_05
   rigid_pair_alignment_seeds: implemented_six_axial_samples
-  gaussian_candidate_batch_integration: pending
+  gaussian_candidate_batch_integration: implemented_offline_validated_real_qt9_pending
+  gaussian_query_package: implemented_hashed_cocrystal_atomcentered_v1
+  gaussian_artifact_reader: implemented_mmap_stable_ids_cross_platform_relocation
+  gaussian_objective_specific_poses: implemented_shape_unweighted_anchored
+  projected_gaussian_color: pending_artifact_schema_v2_directional_companion
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

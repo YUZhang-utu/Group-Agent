@@ -239,6 +239,44 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
     return tuple(seeds)
 
 
+def principal_axis_seeds(candidate_points: Sequence[Sequence[float]],
+                         query_points: Sequence[Sequence[float]]) -> tuple[RigidSeed, ...]:
+    """Return deterministic proper-rotation PCA seeds plus centroid translation."""
+    candidate = _points(candidate_points, "candidate_points")
+    query = _points(query_points, "query_points")
+    if not len(candidate) or not len(query):
+        raise ValueError("principal-axis seeds require non-empty point clouds")
+    candidate_center, query_center = candidate.mean(axis=0), query.mean(axis=0)
+
+    def axes(points: np.ndarray, center: np.ndarray) -> np.ndarray:
+        if len(points) < 2:
+            return np.eye(3)
+        covariance = (points - center).T @ (points - center)
+        values, vectors = np.linalg.eigh(covariance)
+        basis = vectors[:, np.argsort(values)[::-1]]
+        if np.linalg.det(basis) < 0:
+            basis[:, -1] *= -1
+        return basis
+
+    candidate_axes = axes(candidate, candidate_center)
+    query_axes = axes(query, query_center)
+    rotations = [np.eye(3)]
+    for signs in ((1, 1, 1), (1, -1, -1), (-1, 1, -1), (-1, -1, 1)):
+        rotations.append(query_axes @ np.diag(signs) @ candidate_axes.T)
+    seeds, seen = [], set()
+    for index, rotation in enumerate(rotations):
+        translation = query_center - rotation @ candidate_center
+        matrix = np.eye(4); matrix[:3, :3] = rotation; matrix[:3, 3] = translation
+        key = tuple(np.round(matrix.ravel(), 10))
+        if key in seen:
+            continue
+        seen.add(key)
+        seeds.append(RigidSeed(
+            "centroid" if index == 0 else f"pca-{index}", (-1, -1), (-1, -1),
+            -1, tuple(map(float, matrix.ravel()))))
+    return tuple(seeds)
+
+
 def score_overlay(query_shape: Sequence[Sequence[float]],
                   candidate_shape: Sequence[Sequence[float]],
                   query_features: Sequence[Sequence[float]],

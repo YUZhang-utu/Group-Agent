@@ -492,3 +492,20 @@
 - This completes the mathematical reference kernel only. Real artifact batch
   integration, objective-specific optimization and QT9 enrichment remain the
   next experiment.
+
+## 2026-09-07 - Artifact-backed Gaussian batch reranking
+
+- Locked E022 before implementation. The confirmatory hypothesis required
+  stable-ID artifact reads, lossless L1 membership, deterministic rigid seeds,
+  and independent transforms for all named objectives.
+- Added read-only catalog/shard resolution and exact coordinate dequantization;
+  stale cross-platform absolute shard paths fall back to catalog-local names.
+- Added a hashed co-crystal Gaussian query package, principal-axis fallback
+  seeds, and batch scoring for shape-only, atom-centered unweighted joint, and
+  atom-centered anchor-weighted joint objectives.
+- Synthetic artifact tests recovered a locked rigid pose, reproduced scores at
+  stored transforms, preserved candidate order, and were deterministic across
+  reruns. Full dependency-light suite: 90 tests.
+- Result is confirmatory for orchestration correctness only. Real QT9 runtime,
+  ranking and enrichment remain pending on the workstation. Projected color,
+  exclusion volume, and terminal torsion are not claimed by artifact schema v1.

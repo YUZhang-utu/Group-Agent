@@ -1208,3 +1208,23 @@ does not establish performance on real USRCAT or at billion scale.
   produced a real QT9 pocket containing 25 complete protein residues; and the
   runner preserves the hydrogenated structure, stderr/flip report, command,
   and hashes. Runtime chemical validation remains pending on Linux.
+
+## E022 — Artifact-backed Gaussian batch reranking
+
+Protocol: `experiments/E022-gaussian-artifact-batch-protocol.md`.
+
+Result classification: confirmatory offline orchestration validation; real
+QT9 ranking/runtime/enrichment pending.
+
+- Stable global IDs resolve to mmap-backed artifact records without MOL2
+  rescans; coordinates use the locked `origin + int16/100` reconstruction.
+- Query packages and result packages are hash-bearing NPZ/JSON pairs.
+- Centroid/PCA fallback and typed pair seeds recovered locked synthetic rigid
+  geometry.
+- Every input candidate survived in original order. Shape-only, unweighted
+  atom-centered joint, and anchor-weighted atom-centered joint each retained an
+  independent best transform and raw overlap primitives.
+- Stored scores reproduced at their stored poses and repeated runs were
+  numerically deterministic. Full suite: 90 passed.
+- Artifact schema v1 cannot support projected color or torsion refinement;
+  those remain a versioned companion-artifact task.

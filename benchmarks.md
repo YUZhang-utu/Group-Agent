@@ -77,6 +77,12 @@
 ## Result artifact schema
 
 - One immutable directory per query and configuration hash.
+- E022 Gaussian batch acceptance additionally requires exact input/output ID
+  equality in original order, separate transforms per named objective, raw
+  query/candidate/cross overlaps, source hashes, and deterministic numeric
+  reruns. Runtime is reported separately for query packaging, artifact reads,
+  seed generation, and scoring; synthetic correctness is not an enrichment or
+  production-throughput claim.
 - `query_manifest.json` defines the ordered anchor list using stable IDs, ligand
   atom indices, feature type, atom/projected coordinates, interaction evidence
   (distance, angle, burial), and materialized weights.
