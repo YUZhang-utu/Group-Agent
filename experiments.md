@@ -1276,3 +1276,21 @@ multi-cocrystal workstation inputs pending.
   site-consensus lane fills the docking budget.
 - Every admitted site/molecule expands into supporting query/receptor-specific
   docking tasks with the selected conformer and transform.
+
+## E026 - Real 8BJU/1X8B dual-cocrystal validation
+
+Protocol: `experiments/E026-real-8bju-1x8b-multi-cocrystal-validation-protocol.md`.
+
+Result classification: protocol and runner implementation only; confirmatory
+Linux workstation execution pending.
+
+- Query 1 reuses the accepted 8BJU/QT9 detailed result; query 2 is the WEE1A
+  1X8B/824 co-crystal at auth chain A/residue 901.
+- Both queries are assigned to `WEE1-ATP-site`, while their receptor IDs remain
+  distinct so admitted molecules expand into the correct docking hypotheses.
+- The runner downloads official coordinate/dictionary inputs, verifies the
+  deposited ligand identity, extracts query anchors, reuses the existing
+  artifact/pharmacophore/FAISS indices, performs staged Gaussian scoring, and
+  invokes E025 aggregation.
+- Upstream NPZ products are reused after acceptance rather than regenerated,
+  preserving hashes and Gaussian chunk recovery across interruption.

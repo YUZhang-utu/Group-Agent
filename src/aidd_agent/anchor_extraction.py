@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import asdict
 import json
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -168,6 +169,20 @@ def extract_query_manifest(mmcif: Path, ccd: Path, ccd_id: str,
     return QueryManifest(query_id, "direct-hbond-atomcenter-v1",
                          {"anchor": 1.5, "ordinary": 1.0, "solvent_exposed": 0.5},
                          tuple(anchors))
+
+
+def extract_and_write_query_manifest(mmcif: Path, ccd: Path, ccd_id: str,
+                                     query_id: str, output: Path,
+                                     max_distance: float = 3.5) -> dict:
+    """Extract one co-crystal query and write it to an explicit path."""
+    manifest = extract_query_manifest(
+        mmcif, ccd, ccd_id, query_id, max_distance=max_distance)
+    document = json.loads(json.dumps(asdict(manifest)))
+    output = output.resolve(); output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output.with_name(output.name + ".partial")
+    temporary.write_text(json.dumps(document, indent=2), encoding="utf-8")
+    temporary.replace(output)
+    return document
 
 
 def donor_hydrogen_angle(donor: np.ndarray, hydrogen: np.ndarray,

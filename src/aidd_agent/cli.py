@@ -34,7 +34,7 @@ from .ligand_workflow import (
     run_hierarchical_library_search, select_query_ligand,
 )
 from .chemistry_prep import build_library_indices, prepare_campaign_ligands
-from .anchor_extraction import enrich_manifest_with_reduce
+from .anchor_extraction import extract_and_write_query_manifest, enrich_manifest_with_reduce
 from .pharmacophore_index import (
     build_pharmacophore_index, compile_pharmacophore_query,
     load_external_l1_ids, search_pharmacophore_index,
@@ -314,6 +314,17 @@ def build_parser() -> argparse.ArgumentParser:
     reduce_enrich.add_argument("--ccd", type=Path, required=True)
     reduce_enrich.add_argument("--hydrogenated-pdb", type=Path, required=True)
     reduce_enrich.add_argument("--output", type=Path, required=True)
+
+    anchor_extract = subparsers.add_parser(
+        "extract-query-anchors",
+        help="Extract distance/SASA-supported polar anchors from one co-crystal ligand")
+    anchor_extract.add_argument("--mmcif", type=Path, required=True)
+    anchor_extract.add_argument("--ccd", type=Path, required=True)
+    anchor_extract.add_argument("--ccd-id", required=True)
+    anchor_extract.add_argument("--query-id", required=True,
+                                help="PDB:CCD:auth-chain:auth-residue")
+    anchor_extract.add_argument("--output", type=Path, required=True)
+    anchor_extract.add_argument("--max-distance", type=float, default=3.5)
 
     pharmacophore_build = subparsers.add_parser(
         "build-pharmacophore-index",
@@ -902,6 +913,14 @@ def main(argv: list[str] | None = None) -> int:
         result = enrich_manifest_with_reduce(args.query_manifest, args.ccd,
                                              args.hydrogenated_pdb, args.output)
         print(json.dumps({"output": str(args.output), "anchors": len(result["anchors"])}, indent=2))
+        return 0
+    if args.command == "extract-query-anchors":
+        result = extract_and_write_query_manifest(
+            args.mmcif, args.ccd, args.ccd_id, args.query_id,
+            args.output, max_distance=args.max_distance)
+        print(json.dumps({"output": str(args.output.resolve()),
+                          "query_id": result["query_id"],
+                          "anchors": len(result["anchors"])}, indent=2))
         return 0
     if args.command == "build-pharmacophore-index":
         result = build_pharmacophore_index(

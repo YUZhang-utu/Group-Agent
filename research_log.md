@@ -583,3 +583,16 @@
 - This promotes the conformer-to-molecule and docking-task data path to real
   single-query validated. Cross-query RRF and protected-lane behavior still need
   at least two independent co-crystal search results.
+
+## 2026-09-07 - E026 real 8BJU/1X8B validation prepared
+
+- Locked the protocol before implementation. The independent queries are
+  8BJU/QT9 and 1X8B/824 auth A:901, assigned to one WEE1 ATP site but retaining
+  separate receptor identities.
+- Added a CLI boundary for atomic co-crystal anchor-manifest extraction and an
+  end-to-end workstation runner that reuses the accepted QT9 result and all
+  library-scale indices.
+- The runner retains accepted retrieval/query NPZ files across invocations so
+  staged Gaussian chunk hashes remain stable and power-loss resume is real.
+- Offline suite passes 103 tests. No 1X8B retrieval, overlap, RRF, or docking-task
+  result is claimed until the Linux workstation run completes.
