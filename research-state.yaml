@@ -16,9 +16,9 @@ roadmap:
   laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
   date: 2026-09-07
-  git_commit: 1456b22
-  test_result: 92_passed
-  handoff: to_human/resume-checkpoint-2026-09-07-e023.md
+  git_commit: 9be32fe
+  test_result: 102_passed_plus_real_qt9_e025_single_query_validation
+  handoff: to_human/resume-checkpoint-2026-09-07-e025.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -195,6 +195,8 @@ implementation_status:
   site_scoped_query_union: implemented_rank_fusion_no_raw_score_average
   docking_admission: implemented_query_protected_plus_consensus
   receptor_specific_docking_tasks: implemented_offline_validation_pending_real
+  e025_real_qt9_single_query_validation: passed_all_hash_identity_transform_admission_task_checks
+  e025_real_multi_cocrystal_validation: pending_second_independent_query
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

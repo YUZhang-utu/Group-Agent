@@ -1,6 +1,6 @@
 # E025 Multi-cocrystal 3D-search and molecule aggregation protocol
 
-Status: implemented and offline validated
+Status: implemented; offline suite and real QT9 single-query data path validated
 
 ## Offline result (2026-09-07)
 
@@ -16,6 +16,16 @@ Status: implemented and offline validated
   enforced, and identical reruns reproduce output hashes.
 - Result is an offline orchestration validation. Real multi-cocrystal campaign
   aggregation and docking-engine execution remain workstation tasks.
+
+## Real workstation smoke result (2026-09-07)
+
+- The user ran the E025 validator on the real QT9 detailed refinement result.
+- Manifest status, explicit invariants, output hashes, conformer-to-molecule
+  identities, objective-specific transforms, admission references, docking-task
+  references, source-result hashes, and manifest counts all passed.
+- This confirms the real single-query data path through molecule collapse and
+  docking-task generation. It does not yet confirm cross-query RRF behavior on
+  two independent co-crystal results; that remains the next real acceptance.
 
 ## Motivation
 

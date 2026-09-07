@@ -571,3 +571,15 @@
   receptor/query-specific docking task records carrying conformer and transform.
 - Offline synthetic validation passes as part of the 102-test suite. Real WEE1
   multi-cocrystal aggregation remains the next confirmatory workstation run.
+
+## 2026-09-07 - E025 real QT9 single-query smoke accepted
+
+- User confirmed the corrected complete validator finished without error on the
+  real QT9 E025 output.
+- Accepted checks covered result/source hashes, unique query-molecule and
+  site-molecule identities, objective-specific 4x4 transforms, Top-M conformer
+  order, admission uniqueness/reasons, docking task support, and manifest counts.
+- `raw_scores_averaged=false` is an intentional invariant, not a failed check.
+- This promotes the conformer-to-molecule and docking-task data path to real
+  single-query validated. Cross-query RRF and protected-lane behavior still need
+  at least two independent co-crystal search results.
