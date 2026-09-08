@@ -116,6 +116,8 @@ def write_gaussian_query(output_path: Path, *, shape_points: Sequence[Sequence[f
                          feature_types: Sequence[int],
                          anchored_weights: Sequence[float],
                          anchor_feature_indices: Sequence[int],
+                         feature_directions: Sequence[Sequence[float]] | None = None,
+                         feature_direction_kinds: Sequence[int] | None = None,
                          source: Mapping | None = None) -> dict:
     output_path = output_path.resolve()
     if output_path.suffix.lower() != ".npz":
@@ -125,13 +127,28 @@ def write_gaussian_query(output_path: Path, *, shape_points: Sequence[Sequence[f
     types = np.asarray(feature_types, dtype=np.uint8)
     weights = np.asarray(anchored_weights, dtype=np.float64)
     anchors = np.asarray(anchor_feature_indices, dtype=np.int64)
+    directions = (np.zeros((len(points), 3), dtype=np.float64)
+                  if feature_directions is None
+                  else np.asarray(feature_directions, dtype=np.float64))
+    direction_kinds = (np.zeros(len(points), dtype=np.uint8)
+                       if feature_direction_kinds is None
+                       else np.asarray(feature_direction_kinds, dtype=np.uint8))
     if shape.ndim != 2 or shape.shape[1:] != (3,) or not len(shape):
         raise ValueError("query shape points require non-empty shape (N,3)")
     if points.ndim != 2 or points.shape[1:] != (3,) or not len(points):
         raise ValueError("query features require non-empty shape (N,3)")
     if types.shape != (len(points),) or weights.shape != (len(points),):
         raise ValueError("query feature arrays have inconsistent lengths")
-    if not np.isfinite(shape).all() or not np.isfinite(points).all():
+    if directions.shape != (len(points), 3) or direction_kinds.shape != (len(points),):
+        raise ValueError("query feature direction arrays have inconsistent shapes")
+    if not set(map(int, direction_kinds)).issubset({0, 1, 2}):
+        raise ValueError("query contains an unknown feature direction kind")
+    directional = direction_kinds != 0
+    if np.any(directional) and not np.allclose(
+            np.linalg.norm(directions[directional], axis=1), 1.0, atol=5e-3):
+        raise ValueError("valid query feature directions must be unit vectors")
+    if (not np.isfinite(shape).all() or not np.isfinite(points).all()
+            or not np.isfinite(directions).all()):
         raise ValueError("query coordinates must be finite")
     if not np.isfinite(weights).all() or np.any(weights < 0):
         raise ValueError("query weights must be finite and non-negative")
@@ -140,14 +157,17 @@ def write_gaussian_query(output_path: Path, *, shape_points: Sequence[Sequence[f
     output_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(output_path, shape_points=shape, feature_points=points,
                         feature_types=types, anchored_weights=weights,
-                        anchor_feature_indices=np.unique(anchors))
+                        anchor_feature_indices=np.unique(anchors),
+                        feature_directions=directions,
+                        feature_direction_kinds=direction_kinds)
     manifest = {
         "format": QUERY_FORMAT, "version": SCHEMA_VERSION,
         "query_npz": output_path.name, "query_npz_sha256": _sha256(output_path),
         "shape_points": len(shape), "feature_points": len(points),
         "anchor_feature_indices": np.unique(anchors).tolist(),
         "color_model": "atom-centered-feature-v1",
-        "projected_color_available": False,
+        "projected_color_available": bool(np.any(direction_kinds != 0)),
+        "directional_features": int(np.count_nonzero(direction_kinds)),
         "source": dict(source or {}),
     }
     manifest_path = output_path.with_suffix(".manifest.json")
@@ -161,6 +181,7 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
     from rdkit import RDConfig
     from rdkit.Chem import ChemicalFeatures
     from .chemistry_prep import _ccd_molecule, enumerate_ligand_instances
+    from .chemical_companion import _feature_direction
 
     document = json.loads(query_manifest.read_text(encoding="utf-8"))
     fields = str(document["query_id"]).split(":")
@@ -185,11 +206,15 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
         atom_ids = tuple(feature.GetAtomIds())
         xyz = np.asarray([[conformer.GetAtomPosition(i).x, conformer.GetAtomPosition(i).y,
                            conformer.GetAtomPosition(i).z] for i in atom_ids]).mean(axis=0)
-        feature_rows.append((xyz, type_id, atom_ids))
+        direction, direction_kind = _feature_direction(
+            molecule, feature.GetFamily(), atom_ids)
+        feature_rows.append((xyz, type_id, atom_ids, direction, direction_kind))
     if not feature_rows:
         raise ValueError("query ligand has no supported atom-centered features")
     points = np.asarray([row[0] for row in feature_rows])
     types = np.asarray([row[1] for row in feature_rows], dtype=np.uint8)
+    directions = np.asarray([row[3] for row in feature_rows], dtype=np.float64)
+    direction_kinds = np.asarray([row[4] for row in feature_rows], dtype=np.uint8)
     ordinary = float(document.get("weights", {}).get("ordinary", 1.0))
     weights = np.full(len(points), ordinary, dtype=np.float64)
     anchor_indices = []
@@ -203,10 +228,18 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
         best = min(compatible, key=lambda i: (np.linalg.norm(
             points[i] - np.asarray(anchor["atom_center"], dtype=np.float64)), i))
         weights[best] = max(weights[best], float(anchor.get("weight", ordinary)))
+        projected = anchor.get("projected_points", [])
+        if projected:
+            projected_direction = np.asarray(projected[0], dtype=np.float64) - points[best]
+            length = float(np.linalg.norm(projected_direction))
+            if length > 1e-12:
+                directions[best] = projected_direction / length
+                direction_kinds[best] = 1
         anchor_indices.append(best)
     return write_gaussian_query(
         output_path, shape_points=shape, feature_points=points, feature_types=types,
         anchored_weights=weights, anchor_feature_indices=anchor_indices,
+        feature_directions=directions, feature_direction_kinds=direction_kinds,
         source={"mmcif": str(mmcif.resolve()), "mmcif_sha256": _sha256(mmcif),
                 "ccd": str(ccd.resolve()), "ccd_sha256": _sha256(ccd),
                 "query_manifest": str(query_manifest.resolve()),

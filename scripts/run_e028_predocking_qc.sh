@@ -9,6 +9,7 @@ OUTPUT_DIR=${E028_OUTPUT_DIR:-$ROOT/data/e028_predocking_qc}
 RECEPTOR_8BJU=${E028_RECEPTOR_8BJU:-$ROOT/data/e019_query_8bju/8BJU.cif}
 RECEPTOR_1X8B=${E028_RECEPTOR_1X8B:-$ROOT/data/e026_query_1x8b/1X8B.cif}
 TOP_N=${E028_TOP_N:-100}
+CHEMICAL_COMPANION=${CHEMICAL_COMPANION:-}
 
 for path in "$QT9_REPORT" "$AGGREGATION_DIR/manifest.json" \
   "$RECEPTOR_8BJU" "$RECEPTOR_1X8B"; do
@@ -25,10 +26,19 @@ ARTIFACT_CATALOG=${ARTIFACT_CATALOG:-$($AIDD_PY -c \
   echo "Artifact catalog not found: $ARTIFACT_CATALOG" >&2; exit 66;
 }
 
+CHEMISTRY_ARGS=()
+if [[ -n "$CHEMICAL_COMPANION" ]]; then
+  [[ -f "$CHEMICAL_COMPANION" ]] || {
+    echo "Chemical companion catalog not found: $CHEMICAL_COMPANION" >&2; exit 66;
+  }
+  CHEMISTRY_ARGS=(--chemical-companion "$CHEMICAL_COMPANION")
+fi
+
 $AIDD_PY -m aidd_agent.cli run-predocking-pocket-qc \
   --artifact-catalog "$ARTIFACT_CATALOG" \
   --aggregation-dir "$AGGREGATION_DIR" \
   --output-dir "$OUTPUT_DIR" \
+  "${CHEMISTRY_ARGS[@]}" \
   --receptor "8BJU-prepared-v1=$RECEPTOR_8BJU" \
   --receptor "1X8B-prepared-v1=$RECEPTOR_1X8B" \
   --top-n-per-query "$TOP_N" \
@@ -36,7 +46,7 @@ $AIDD_PY -m aidd_agent.cli run-predocking-pocket-qc \
   --close-distance 2.0 \
   --severe-distance 1.5
 
-$AIDD_PY - "$OUTPUT_DIR" "$TOP_N" <<'PY'
+$AIDD_PY - "$OUTPUT_DIR" "$TOP_N" "$CHEMICAL_COMPANION" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -45,6 +55,7 @@ import sys
 
 root = Path(sys.argv[1])
 top_n = int(sys.argv[2])
+chemistry_expected = bool(sys.argv[3])
 manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
 rows = [json.loads(line) for line in
         (root / "pose-qc.jsonl").read_text(encoding="utf-8").splitlines() if line]
@@ -52,7 +63,7 @@ sha256 = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
 assert manifest["status"] == "complete"
 assert manifest["invariants"]["retrieval_membership_changed"] is False
 assert manifest["invariants"]["admission_order_changed"] is False
-assert manifest["invariants"]["chemical_topology_available"] is False
+assert manifest["invariants"]["chemical_topology_available"] is chemistry_expected
 assert manifest["invariants"]["point_clouds_are_docking_inputs"] is False
 assert len(rows) == manifest["counts"]["selected_tasks"]
 assert set(manifest["counts"]["selected_by_query"]) == {
@@ -63,6 +74,11 @@ for output in manifest["outputs"].values():
 assert all(Path(row["point_cloud_pdb"]).is_file() and
            sha256(Path(row["point_cloud_pdb"])) == row["point_cloud_pdb_sha256"]
            for row in rows)
+if chemistry_expected:
+    assert all(row["vdw_exclusion"] is not None and
+               Path(row["chemical_sdf"]).is_file() and
+               sha256(Path(row["chemical_sdf"])) == row["chemical_sdf_sha256"]
+               for row in rows)
 print("E028 accepted coordinate-only execution")
 print("selected_by_query=", manifest["counts"]["selected_by_query"])
 print("poses_with_close_points=", manifest["counts"]["poses_with_close_points"])

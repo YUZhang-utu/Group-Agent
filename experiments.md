@@ -1344,3 +1344,26 @@ Result classification: confirmatory offline implementation validation; real
 - Input/output hashes, receptor identity, query/receptor frame assignment,
   affine-transform validation and repeated-output determinism are enforced.
   The complete offline suite passes 108 tests.
+
+## E029 - One-time chemical/directional companion and fast refinement
+
+Protocol: `experiments/E029-chemical-directional-flexible-companion-protocol.md`.
+
+Result classification: confirmatory offline schema and mathematical-reference
+validation; real 299,999-conformer workstation build and timed batch integration
+pending.
+
+- Added an append-only per-shard companion keyed by artifact-v1 global IDs. A
+  single source pass validates every registry record hash and stores heavy-atom
+  identity/charge/aromaticity/chirality, bonds/stereo, feature memberships,
+  signed polar directions, axial aromatic normals and bounded terminal torsions.
+- Completed shards are reused and relocated source paths are explicit. Query
+  execution mmaps the companion instead of rescanning source MOL2.
+- Gaussian query packages now retain optional directional arrays; observed
+  anchor projection points override geometry-only directions when available.
+- Added validated directional Gaussian, element-aware soft vdW exclusion and
+  deterministic two-terminal-torsion beam-refinement primitives. E028 consumes
+  an optional companion to emit chemical SDF and vdW diagnostics.
+- Five new focused checks plus extended query/E028 checks pass; the complete
+  dependency-light suite is 115 passed. RDKit production construction remains
+  unclaimed until the Linux workstation run.

@@ -13,10 +13,15 @@ from .anchor_extraction import _protein_atoms
 from .chemistry_prep import enumerate_ligand_instances
 from .gaussian_batch import ArtifactCatalogReader
 from .gaussian_overlay import apply_transform
+from .chemical_companion import ChemicalCompanionReader
+from .chemical_geometry import vdw_exclusion_metrics
 
 
 RESULT_FORMAT = "aidd-predocking-pocket-qc"
 RESULT_VERSION = 1
+ELEMENTS = {5: "B", 6: "C", 7: "N", 8: "O", 9: "F", 14: "Si",
+            15: "P", 16: "S", 17: "Cl", 34: "Se", 35: "Br", 53: "I"}
+ATOMIC_NUMBERS = {value.upper(): key for key, value in ELEMENTS.items()}
 
 
 def _sha256(path: Path) -> str:
@@ -121,6 +126,33 @@ def _point_cloud_pdb(points: np.ndarray, molecule_id: str,
     return "\n".join(lines) + "\n"
 
 
+def _chemical_sdf(points: np.ndarray, chemistry, query_id: str) -> str:
+    if len(points) != len(chemistry.atomic_numbers):
+        raise ValueError("chemical companion and coordinate atom counts differ")
+    bonds = chemistry.bonds
+    lines = [chemistry.molecule_id, "  AIDD E029", "",
+             f"{len(points):3d}{len(bonds):3d}  0  0  0  0            3D V2000"]
+    for xyz, atomic_number in zip(points, chemistry.atomic_numbers):
+        symbol = ELEMENTS.get(int(atomic_number))
+        if symbol is None:
+            raise ValueError(f"unsupported SDF atomic number: {atomic_number}")
+        lines.append(f"{xyz[0]:10.4f}{xyz[1]:10.4f}{xyz[2]:10.4f} {symbol:<3s}"
+                     " 0  0  0  0  0  0  0  0  0  0  0  0")
+    for bond in bonds:
+        lines.append(f"{int(bond['begin'])+1:3d}{int(bond['end'])+1:3d}"
+                     f"{int(bond['order']):3d}  0  0  0  0")
+    charged = [(index + 1, int(charge)) for index, charge in
+               enumerate(chemistry.formal_charges) if int(charge)]
+    for start in range(0, len(charged), 8):
+        group = charged[start:start + 8]
+        lines.append(f"M  CHG{len(group):3d}" + "".join(
+            f"{index:4d}{charge:4d}" for index, charge in group))
+    lines.extend(("M  END", ">  <AIDD_GLOBAL_ID>", str(chemistry.global_id), "",
+                  ">  <AIDD_CONFORMER_ID>", chemistry.conformer_id, "",
+                  ">  <AIDD_QUERY_ID>", query_id, "", "$$$$"))
+    return "\n".join(lines) + "\n"
+
+
 def _parse_receptor_assignments(values: Sequence[str]) -> dict[str, Path]:
     result: dict[str, Path] = {}
     for value in values:
@@ -142,6 +174,7 @@ def _parse_receptor_assignments(values: Sequence[str]) -> dict[str, Path]:
 def run_predocking_pocket_qc(
         artifact_catalog: Path, aggregation_dir: Path, output_dir: Path, *,
         receptors: Mapping[str, Path] | Sequence[str],
+        chemical_companion: Path | None = None,
         top_n_per_query: int = 100,
         query_neighborhood: float = 4.0,
         close_distance: float = 2.0,
@@ -180,7 +213,10 @@ def run_predocking_pocket_qc(
         selected.extend(ordered[:top_n_per_query])
 
     reader = ArtifactCatalogReader(artifact_catalog)
-    receptor_cache: dict[tuple[str, str], tuple[np.ndarray, np.ndarray]] = {}
+    chemistry_reader = None
+    if chemical_companion is not None:
+        chemistry_reader = ChemicalCompanionReader(Path(chemical_companion))
+    receptor_cache: dict[tuple[str, str], tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
     rows: list[dict] = []
     pml_lines = [
         "reinitialize",
@@ -197,10 +233,13 @@ def run_predocking_pocket_qc(
             protein = [atom for atom in _protein_atoms(receptor_path, model, excluded)
                        if atom["chain"] == excluded[1]]
             protein_xyz = np.asarray([atom["xyz"] for atom in protein], dtype=np.float64)
+            protein_atomic_numbers = np.asarray([
+                ATOMIC_NUMBERS.get(str(atom["element"]).upper(), 6) for atom in protein],
+                dtype=np.uint8)
             if not len(protein_xyz):
                 raise ValueError(f"receptor has no protein heavy atoms: {receptor_path}")
-            receptor_cache[cache_key] = query_xyz, protein_xyz
-        query_xyz, protein_xyz = receptor_cache[cache_key]
+            receptor_cache[cache_key] = query_xyz, protein_xyz, protein_atomic_numbers
+        query_xyz, protein_xyz, protein_atomic_numbers = receptor_cache[cache_key]
 
         candidate = reader.get(int(task["global_id"]))
         if (candidate.molecule_id != str(task["molecule_id"])
@@ -215,6 +254,10 @@ def run_predocking_pocket_qc(
                 or not np.allclose(transform[3], [0, 0, 0, 1], atol=1e-7)):
             raise ValueError("candidate transform is not a finite affine 4x4 matrix")
         moved = apply_transform(candidate.shape_points, transform)
+        chemistry = chemistry_reader.get(candidate.global_id) if chemistry_reader else None
+        if chemistry is not None and (chemistry.molecule_id != candidate.molecule_id
+                                      or chemistry.conformer_id != candidate.conformer_id):
+            raise ValueError(f"chemical companion identity mismatch for {candidate.global_id}")
         query_distances = _distances(moved, query_xyz)
         protein_distances = _distances(moved, protein_xyz)
         candidate_query_nearest = query_distances.min(axis=1)
@@ -229,6 +272,13 @@ def run_predocking_pocket_qc(
         pose_path = output_dir / "poses" / f"{basename}.pdb"
         _atomic_text(pose_path, _point_cloud_pdb(
             moved, candidate.molecule_id, candidate.conformer_id, query_id))
+        sdf_path = None
+        vdw = None
+        if chemistry is not None:
+            sdf_path = output_dir / "chemical-poses" / f"{basename}.sdf"
+            _atomic_text(sdf_path, _chemical_sdf(moved, chemistry, query_id))
+            vdw = vdw_exclusion_metrics(
+                moved, chemistry.atomic_numbers, protein_xyz, protein_atomic_numbers)
         record = {
             "docking_task_id": str(task["docking_task_id"]),
             "query_id": query_id,
@@ -255,6 +305,9 @@ def run_predocking_pocket_qc(
             "severe_protein_fraction": severe_count / len(moved),
             "point_cloud_pdb": str(pose_path),
             "point_cloud_pdb_sha256": _sha256(pose_path),
+            "chemical_sdf": str(sdf_path) if sdf_path else None,
+            "chemical_sdf_sha256": _sha256(sdf_path) if sdf_path else None,
+            "vdw_exclusion": vdw,
             "representation": "artifact-v1-heavy-atom-centers-generic-element",
         }
         rows.append(record)
@@ -297,6 +350,9 @@ def run_predocking_pocket_qc(
         "status": "complete",
         "artifact_catalog": {"path": str(artifact_catalog),
                              "sha256": _sha256(artifact_catalog)},
+        "chemical_companion": ({"path": str(Path(chemical_companion).resolve()),
+                                "sha256": _sha256(Path(chemical_companion).resolve())}
+                               if chemical_companion is not None else None),
         "aggregation": {"path": str(aggregation_dir / "manifest.json"),
                         "sha256": _sha256(aggregation_dir / "manifest.json"),
                         "config_hash": aggregation.get("config_hash")},
@@ -325,7 +381,8 @@ def run_predocking_pocket_qc(
             "admission_order_changed": False,
             "coordinate_source": "immutable-artifact-v1",
             "stored_transform_applied_without_optimization": True,
-            "chemical_topology_available": False,
+            "chemical_topology_available": chemistry_reader is not None,
+            "chemical_sdf_available": chemistry_reader is not None,
             "point_clouds_are_docking_inputs": False,
         },
         "interpretation_boundary": (

@@ -652,3 +652,24 @@
   to a once-built artifact v2 companion.
 - Two focused tests and the complete 108-test suite pass. Real 8BJU/1X8B E028
   execution remains pending on the Linux workstation.
+
+## 2026-09-08 - E029 chemical companion foundation implemented offline
+
+- Locked E029 before implementation and retained artifact v1 as the immutable
+  recall source.
+- Added a multiprocessing, ordered, per-shard companion builder. It performs one
+  sequential source-MOL2 pass, checks every conformer against its registry hash
+  and artifact-v1 identity, and writes mmap-ready chemistry, topology,
+  directional-feature and terminal-torsion arrays.
+- Added explicit source relocation overrides so moving a source file does not
+  change registered identity. Completed shards are reused; partial shards are
+  never deleted automatically.
+- Added signed polar/axial aromatic directional Gaussian overlap, element-aware
+  vdW penetration, and deterministic bounded terminal-torsion beam refinement.
+  Query packages now persist directions and use observed protein projection
+  points for anchors when available.
+- E028 optionally consumes the companion to produce chemical SDF files and vdW
+  diagnostics while retaining the original generic point clouds and immutable
+  admission order.
+- The full local suite passes 115 tests. Real RDKit construction, throughput,
+  binary identity audit and query-time batch timing remain pending on Linux.

@@ -51,6 +51,7 @@ from .scaled_search import (
 from .multi_query_aggregation import aggregate_multi_cocrystal_results
 from .multi_query_analysis import analyze_multi_cocrystal_result
 from .predocking_qc import run_predocking_pocket_qc
+from .chemical_companion import build_chemical_companion_catalog
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -476,6 +477,7 @@ def build_parser() -> argparse.ArgumentParser:
     predocking_qc.add_argument("--artifact-catalog", type=Path, required=True)
     predocking_qc.add_argument("--aggregation-dir", type=Path, required=True)
     predocking_qc.add_argument("--output-dir", type=Path, required=True)
+    predocking_qc.add_argument("--chemical-companion", type=Path)
     predocking_qc.add_argument(
         "--receptor", action="append", required=True,
         help="Repeat RECEPTOR_ID=/path/structure.cif for every task receptor")
@@ -483,6 +485,19 @@ def build_parser() -> argparse.ArgumentParser:
     predocking_qc.add_argument("--query-neighborhood", type=float, default=4.0)
     predocking_qc.add_argument("--close-distance", type=float, default=2.0)
     predocking_qc.add_argument("--severe-distance", type=float, default=1.5)
+
+    chemical_companion = subparsers.add_parser(
+        "build-chemical-companion",
+        help="Build one-time topology, direction, and terminal-torsion artifacts")
+    chemical_companion.add_argument("--db", type=Path, required=True)
+    chemical_companion.add_argument("--library", required=True)
+    chemical_companion.add_argument("--artifact-catalog", type=Path, required=True)
+    chemical_companion.add_argument("--output-root", type=Path, required=True)
+    chemical_companion.add_argument("--workers", type=int, default=16)
+    chemical_companion.add_argument("--max-moving-atoms", type=int, default=12)
+    chemical_companion.add_argument(
+        "--source", action="append", default=[],
+        help="Optional repeat SHARD_NAME=/relocated/source.mol2")
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -1049,10 +1064,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run-predocking-pocket-qc":
         result = run_predocking_pocket_qc(
             args.artifact_catalog, args.aggregation_dir, args.output_dir,
-            receptors=args.receptor, top_n_per_query=args.top_n_per_query,
+            receptors=args.receptor, chemical_companion=args.chemical_companion,
+            top_n_per_query=args.top_n_per_query,
             query_neighborhood=args.query_neighborhood,
             close_distance=args.close_distance,
             severe_distance=args.severe_distance)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "build-chemical-companion":
+        source_overrides = {}
+        for value in args.source:
+            name, separator, path = value.partition("=")
+            if not separator or not name.strip() or not path.strip():
+                raise ValueError("--source must use SHARD_NAME=/path/source.mol2")
+            if name.strip() in source_overrides:
+                raise ValueError(f"duplicate --source shard: {name.strip()}")
+            source_overrides[name.strip()] = Path(path.strip())
+        result = build_chemical_companion_catalog(
+            args.db, args.library, args.artifact_catalog, args.output_root,
+            workers=args.workers, max_moving_atoms=args.max_moving_atoms,
+            source_overrides=source_overrides)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":

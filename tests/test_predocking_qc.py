@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -112,9 +113,9 @@ def _mock_structure(monkeypatch):
     monkeypatch.setattr(
         predocking_qc, "_protein_atoms",
         lambda path, model, excluded: [
-            {"chain": "A", "xyz": np.asarray([11, .5, 0], dtype=float)},
-            {"chain": "A", "xyz": np.asarray([11, 2.5, 0], dtype=float)},
-            {"chain": "B", "xyz": np.asarray([10, 0, 0], dtype=float)},
+            {"chain": "A", "element": "C", "xyz": np.asarray([11, .5, 0], dtype=float)},
+            {"chain": "A", "element": "N", "xyz": np.asarray([11, 2.5, 0], dtype=float)},
+            {"chain": "B", "element": "C", "xyz": np.asarray([10, 0, 0], dtype=float)},
         ])
 
 
@@ -162,3 +163,34 @@ def test_predocking_qc_rejects_missing_receptor_and_non_affine_transform(
     with pytest.raises(ValueError, match="affine"):
         run_predocking_pocket_qc(
             catalog, aggregation, tmp_path / "bad", receptors={"R1": receptor})
+
+
+def test_predocking_qc_uses_companion_for_vdw_and_chemical_sdf(
+        tmp_path: Path, monkeypatch):
+    _mock_structure(monkeypatch)
+    catalog = _artifact_catalog(tmp_path / "artifacts")
+    aggregation = _aggregation(tmp_path / "aggregation")
+    receptor = _receptor(tmp_path / "receptor.cif")
+    companion = tmp_path / "chemical-catalog.json"
+    companion.write_text("{}", encoding="utf-8")
+    bonds = np.asarray([(0, 1, 1)], dtype=[
+        ("begin", "<u2"), ("end", "<u2"), ("order", "u1")])
+    chemistry = SimpleNamespace(
+        global_id=0, molecule_id="M1", conformer_id="C1",
+        atomic_numbers=np.asarray([6, 8]), formal_charges=np.asarray([0, -1]),
+        bonds=bonds)
+    monkeypatch.setattr(
+        predocking_qc, "ChemicalCompanionReader",
+        lambda path: SimpleNamespace(get=lambda global_id: chemistry))
+    output = tmp_path / "qc"
+    manifest = run_predocking_pocket_qc(
+        catalog, aggregation, output, receptors={"R1": receptor},
+        chemical_companion=companion)
+    row = json.loads((output / "pose-qc.jsonl").read_text(encoding="utf-8"))
+    assert manifest["invariants"]["chemical_topology_available"] is True
+    assert row["vdw_exclusion"]["severe_candidate_atoms"] > 0
+    sdf = Path(row["chemical_sdf"])
+    assert row["chemical_sdf_sha256"] == _sha256(sdf)
+    text = sdf.read_text(encoding="utf-8")
+    assert "M  CHG  1   2  -1" in text
+    assert text.endswith("$$$$\n")

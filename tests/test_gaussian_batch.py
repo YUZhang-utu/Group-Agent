@@ -108,6 +108,22 @@ def test_candidate_ids_preserve_order_and_reject_duplicates(tmp_path: Path):
     assert load_candidate_ids(text).tolist() == [9, 2]
 
 
+def test_gaussian_query_retains_optional_directional_features(tmp_path: Path):
+    output = tmp_path / "directional-query.npz"
+    manifest = write_gaussian_query(
+        output, shape_points=[[0, 0, 0]],
+        feature_points=[[0, 0, 0], [1, 0, 0]], feature_types=[1, 6],
+        anchored_weights=[1.5, 1.0], anchor_feature_indices=[0],
+        feature_directions=[[1, 0, 0], [0, 0, 1]],
+        feature_direction_kinds=[1, 2])
+    assert manifest["projected_color_available"] is True
+    assert manifest["directional_features"] == 2
+    with np.load(output, allow_pickle=False) as archive:
+        assert archive["feature_direction_kinds"].tolist() == [1, 2]
+        assert np.allclose(archive["feature_directions"],
+                           [[1, 0, 0], [0, 0, 1]])
+
+
 def test_batch_retains_ids_and_recovers_locked_rigid_pose(tmp_path: Path):
     catalog = _artifact(tmp_path)
     candidate = ArtifactCatalogReader(catalog).get(0)

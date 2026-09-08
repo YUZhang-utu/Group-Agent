@@ -271,3 +271,16 @@
   bonds and topology. E028 therefore labels its generic-element PDBs as point
   clouds only. A once-built v2 companion is the required boundary before
   chemistry-aware export, projected color or terminal-torsion refinement.
+- E029 preserves the one-time-library boundary with a separate stable-ID
+  companion rather than changing accepted v1 shards. One sequential MOL2 pass
+  materializes elements, charges, aromatic/chiral flags, bonds, feature atom
+  membership, directional vectors and bounded terminal-torsion move sets.
+- Directional comparison must distinguish signed polar vectors from axial
+  aromatic normals: reversing a donor/acceptor direction removes agreement,
+  whereas reversing a ring normal represents the same plane. Translation is
+  never applied to directions.
+- Element-aware vdW penetration and limited torsion refinement are fixed-budget
+  post-refinement operations. Zero angle remains an eligible beam state, so
+  local flexibility cannot silently replace a better rigid baseline. These
+  components remain reversible evidence until real redocking/enrichment
+  calibrates any combined score or cutoff.
