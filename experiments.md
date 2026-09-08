@@ -1367,3 +1367,19 @@ pending.
 - Five new focused checks plus extended query/E028 checks pass; the complete
   dependency-light suite is 115 passed. RDKit production construction remains
   unclaimed until the Linux workstation run.
+
+### 2026-09-08 operational handoff
+
+- The real E029 confirmation remains pending because the Linux path of the two
+  original MOL2 shards has not yet been recovered. The E019 artifact shard
+  directories intentionally contain no raw MOL2.
+- Required sources are `split_0001.mol2` and `split_0002.mol2`; accept them only
+  after matching SHA-256 values recorded in
+  `to_human/resume-checkpoint-2026-09-08-e029.md`.
+- Use explicit `--source split_0001=...` and `--source split_0002=...`
+  relocation arguments. This preserves registry source identity while reading
+  the physical bytes from university storage or local NVMe.
+- Confirmatory measurements remain wall time, peak RSS, worker utilization,
+  exact conformer/global-ID counts, source/output hashes, restart behavior, and
+  absence of unpromoted partial shards. Directional/torsion batch ranking is a
+  subsequent experiment, not part of this source-recovery step.

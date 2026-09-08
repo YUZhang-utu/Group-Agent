@@ -15,10 +15,10 @@ roadmap:
     - H_scale_transfer_and_regulated_readiness
   laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
-  date: 2026-09-07
-  git_commit: 9be32fe
-  test_result: 102_passed_plus_real_qt9_e025_single_query_validation
-  handoff: to_human/resume-checkpoint-2026-09-07-e025.md
+  date: 2026-09-08
+  git_commit: b401393
+  test_result: 115_passed_plus_real_e026_e027_dual_cocrystal_acceptance
+  handoff: to_human/resume-checkpoint-2026-09-08-e029.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -56,10 +56,11 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - implement E029 one-time chemistry/topology/direction/torsion companion keyed by artifact v1 global IDs
-  - implement fixed-budget projected-color, vdW exclusion, and two-terminal-torsion query refinement
-  - implement and validate E028 aligned heavy-atom point-cloud export and coordinate-only pocket exclusion QC
-  - design the once-built artifact v2 companion required for chemical SDF export, projected features, and terminal torsions
+  - locate or transfer split_0001.mol2 and split_0002.mol2 to the university workstation and verify their locked SHA-256 values
+  - run and time the real 299999-conformer E029 companion build with explicit split_0001 and split_0002 source overrides
+  - run E028 on real 8BJU and 1X8B tasks with the accepted chemical companion and inspect SDF, vdW, and pocket-contact outputs
+  - integrate projected-direction and bounded two-terminal-torsion scoring into the fixed-budget final batch refinement stage
+  - benchmark the complete tiered path at 10M then 100M physical or faithful metadata scale before making production-scale latency claims
   - create the real WEE1 multi-cocrystal query plan and run each independent E024 search
   - aggregate real refined results and inspect protected-query versus consensus overlap
   - export admitted receptor-specific tasks into the first docking adapter protocol
@@ -219,6 +220,8 @@ implementation_status:
   e029_vdw_exclusion: implemented_element_aware_soft_annotation_e028_integrated
   e029_terminal_torsion_metadata: implemented_strict_nonring_smallest_side_real_build_pending
   e029_terminal_torsion_refinement: implemented_two_torsion_fixed_angle_beam_reference_batch_integration_pending
+  e029_source_relocation_override: implemented_split_name_to_physical_mol2_path
+  e029_real_workstation_build: pending_original_mol2_location_or_transfer_and_sha256_validation
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

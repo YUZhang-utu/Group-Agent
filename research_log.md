@@ -673,3 +673,41 @@
   admission order.
 - The full local suite passes 115 tests. Real RDKit construction, throughput,
   binary identity audit and query-time batch timing remain pending on Linux.
+
+## 2026-09-08 - E028/E029 continuity checkpoint
+
+- Pushed E028/E029 protocol and implementation commits through `b401393` to
+  `origin/main`; the local and remote `main` branches matched at that commit.
+- Recorded E026/E027 real dual-cocrystal acceptance as the current retrieval
+  baseline: 12,834 union molecules, 955 shared, 5,000 admitted, and 5,834
+  receptor-specific docking tasks. The low overlap continues to require a
+  protected union of independently searched co-crystals.
+- E028 is implemented offline for aligned-pose point-cloud export and
+  pocket-exclusion diagnostics. E029 is implemented offline as a one-time,
+  global-ID-keyed chemistry/topology/direction/torsion companion. The complete
+  dependency-light suite remains 115 passed; real 299,999-conformer E029
+  construction is not yet claimed.
+- Clarified the source-data boundary. E019 shard directories contain processed
+  binary coordinates/features/USRCAT/IDs, not original MOL2 records and not
+  enough authoritative topology for E029. The registered Windows sources are
+  `6aa/split_0001.mol2` and `6aa/split_0002.mol2`, with SHA-256 values
+  `bc729d337ba7065ebeccdbd7aa05f2985d4ecc778dd8b7949e1b57ada49a3b2b`
+  and `6458081fa50eb2676d818497403084775fa13fbc87cbcfbe6c7318f40141d1e7`.
+- The user remembers uploading both sources to university storage, but the
+  current path has not been recovered. If necessary, transfer them to
+  `/mnt/local/hand/yuzhang/aidd/source/6aa/`. E029 already accepts repeatable
+  `--source SHARD_NAME=/relocated/source.mol2` overrides, so relocation does not
+  require another code change or GitHub commit.
+- Locked the next confirmatory action: verify both source hashes, build the
+  companion on the Linux workstation, record time/RSS/reuse/counts/hashes, then
+  run E028 with chemical SDF and vdW diagnostics. Batch integration of
+  directional and terminal-torsion refinement follows only after this real
+  build is accepted.
+- Based on the measured 299,999-conformer writer, a 300-million-conformer
+  artifact build linearly extrapolates to about 4.6 days. The practical
+  already-3D 100-million-molecule budget is provisionally 1--2 weeks, while the
+  fixed-budget per-query target is 2--10 minutes. Both remain estimates pending
+  the prescribed 10M/100M physical scale gates.
+- AlphaFold 3 ligand-complex exploration performed in the same conversation is
+  an independent workstation task and is intentionally excluded from the
+  AIDD-agent experiment and necessity/enhancement evidence chain.

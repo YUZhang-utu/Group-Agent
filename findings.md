@@ -235,6 +235,18 @@
 - Slim coarse Gaussian chunks preserve the information needed for exact Top-N
   selection at 20 logical bytes per conformer; expensive pose detail belongs in
   the much smaller refinement product.
+- Artifact v1 is sufficient for fast coordinate/feature retrieval but is not a
+  substitute for the original chemistry source: it cannot authoritatively
+  reconstruct atomic identity, bond order, stereochemistry, projected feature
+  direction, or terminal torsions. E029 therefore consumes each original MOL2
+  shard once and persists a relocatable global-ID-keyed companion.
+- Physical MOL2 relocation must not mutate registered provenance. The E029
+  `--source SHARD_NAME=/path` override changes only where bytes are read; every
+  source record is still checked against the registry and artifact identity.
+- Existing 299,999-conformer throughput supports only an extrapolated
+  100-million-molecule build estimate. The architecture is fixed-budget at
+  query time, but 10M/100M physical scale, recall, cache, and recovery gates
+  remain mandatory before production latency is reported.
 
 ## Multi-cocrystal pre-docking synthesis
 
