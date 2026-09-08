@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E028-predocking-pocket-qc
+current_experiment: E029-chemical-directional-flexible-companion
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,6 +56,8 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
+  - implement E029 one-time chemistry/topology/direction/torsion companion keyed by artifact v1 global IDs
+  - implement fixed-budget projected-color, vdW exclusion, and two-terminal-torsion query refinement
   - implement and validate E028 aligned heavy-atom point-cloud export and coordinate-only pocket exclusion QC
   - design the once-built artifact v2 companion required for chemical SDF export, projected features, and terminal torsions
   - create the real WEE1 multi-cocrystal query plan and run each independent E024 search
