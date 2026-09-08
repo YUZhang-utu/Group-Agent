@@ -629,3 +629,26 @@
   for binding or docking accuracy.
 - Locked E027 and implemented a hash-verified Top-K/rank/pose-agreement/queue
   analysis report. Real report generation remains pending on the workstation.
+
+## 2026-09-08 - E027 real overlap analysis accepted
+
+- The real E026 analysis reproduced 12,834 union and 955 shared molecules.
+- Pairwise intersections were 0/6/28/505 at Top-100/500/1,000/5,000.
+- Shared-molecule rank Spearman was -0.0371, supporting independent protected
+  query lanes rather than intersection filtering or raw-score averaging.
+- The queue identity closed exactly: 4,166 single-query plus 834 dual-query
+  admissions generated 5,834 receptor-specific tasks.
+
+## 2026-09-08 - E028 pre-docking geometry QC implemented offline
+
+- Locked E028 before implementation.
+- Added stable-ID candidate materialization, stored-transform application,
+  query-frame coverage, receptor-chain protein distance diagnostics, generic
+  point-cloud PDB export, PyMOL review generation and hash-bearing manifests.
+- The operation reads the immutable artifact catalog and accepted aggregation;
+  it does not rescan source MOL2, rescore the library or mutate admission.
+- Artifact v1 lacks elements/bonds/topology, so exports are explicitly geometry
+  only and prohibited as docking inputs. Chemical SDF export remains assigned
+  to a once-built artifact v2 companion.
+- Two focused tests and the complete 108-test suite pass. Real 8BJU/1X8B E028
+  execution remains pending on the Linux workstation.

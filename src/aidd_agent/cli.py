@@ -50,6 +50,7 @@ from .scaled_search import (
 )
 from .multi_query_aggregation import aggregate_multi_cocrystal_results
 from .multi_query_analysis import analyze_multi_cocrystal_result
+from .predocking_qc import run_predocking_pocket_qc
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -468,6 +469,20 @@ def build_parser() -> argparse.ArgumentParser:
     multi_analysis.add_argument("--output-dir", type=Path, required=True)
     multi_analysis.add_argument("--top-k", type=int, nargs="+",
                                 default=(100, 500, 1000, 5000))
+
+    predocking_qc = subparsers.add_parser(
+        "run-predocking-pocket-qc",
+        help="Export aligned artifact point clouds and coordinate-only pocket QC")
+    predocking_qc.add_argument("--artifact-catalog", type=Path, required=True)
+    predocking_qc.add_argument("--aggregation-dir", type=Path, required=True)
+    predocking_qc.add_argument("--output-dir", type=Path, required=True)
+    predocking_qc.add_argument(
+        "--receptor", action="append", required=True,
+        help="Repeat RECEPTOR_ID=/path/structure.cif for every task receptor")
+    predocking_qc.add_argument("--top-n-per-query", type=int, default=100)
+    predocking_qc.add_argument("--query-neighborhood", type=float, default=4.0)
+    predocking_qc.add_argument("--close-distance", type=float, default=2.0)
+    predocking_qc.add_argument("--severe-distance", type=float, default=1.5)
 
     ligand_status = subparsers.add_parser(
         "campaign-ligands", help="List Campaign ligands and the immutable query lock")
@@ -1029,6 +1044,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "analyze-multi-cocrystal-search":
         result = analyze_multi_cocrystal_result(
             args.aggregation_dir, args.output_dir, top_k=args.top_k)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "run-predocking-pocket-qc":
+        result = run_predocking_pocket_qc(
+            args.artifact_catalog, args.aggregation_dir, args.output_dir,
+            receptors=args.receptor, top_n_per_query=args.top_n_per_query,
+            query_neighborhood=args.query_neighborhood,
+            close_distance=args.close_distance,
+            severe_distance=args.severe_distance)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "campaign-ligands":

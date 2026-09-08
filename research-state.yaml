@@ -102,6 +102,10 @@ completed_experiments:
   - E021-gaussian-overlay-kernel-offline
   - E022-artifact-backed-gaussian-batch-reranking-offline
   - E023-staged-parallel-resumable-gaussian-reranking-offline
+  - E024-billion-scale-tiered-search-offline
+  - E025-multi-cocrystal-molecule-aggregation
+  - E026-real-8bju-1x8b-multi-cocrystal-validation
+  - E027-dual-cocrystal-overlap-analysis
 implementation_status:
   campaign_schema: completed
   rcsb_adapter: completed
@@ -166,7 +170,7 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 106_passed
+  tests: 108_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
   local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
   per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
@@ -203,7 +207,11 @@ implementation_status:
   e026_1x8b_query_adapter: implemented_offline_validated
   e026_real_dual_cocrystal_runner: completed_accepted_12834_union_955_shared_5000_admitted_5834_tasks
   ccd_explicit_kekule_preservation: implemented_824_real_graph_validated
-  e027_dual_query_overlap_report: implemented_offline_validated_workstation_analysis_pending
+  e027_dual_query_overlap_report: completed_real_12834_union_955_shared_top100_zero_overlap_spearman_minus_0_0371
+  e028_predocking_pocket_qc: implemented_offline_validated_real_workstation_pending
+  e028_aligned_point_cloud_export: implemented_generic_element_geometry_only
+  e028_exclusion_distance_proxy: implemented_annotation_only_never_filters_retrieval
+  artifact_v2_atomic_identity_topology: pending_required_for_chemical_sdf_and_docking_input
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

@@ -258,3 +258,16 @@
   for the extra tasks in the 5,834-task queue. Shared support is a priority
   signal, but unique-query molecules remain scientifically necessary because
   the two deposited ligand/receptor conformations explore distinct regions.
+- Real E027 confirms that complementarity persists at early ranks: the two
+  queries share zero Top-100 molecules, six Top-500 and 28 Top-1,000. The rank
+  correlation across all 955 shared molecules is -0.0371, so shared-query
+  support must not be interpreted as a stronger common raw score or affinity.
+- Pre-docking geometry review can reuse artifact v1 without touching source
+  MOL2: applying the retained candidate-to-query transform yields a heavy-atom
+  point cloud in the crystal frame, where query coverage and conservative
+  protein-distance collisions can be measured. These annotations do not alter
+  retrieval membership or admission order.
+- Artifact v1 cannot produce an honest SDF because it omits atomic identity,
+  bonds and topology. E028 therefore labels its generic-element PDBs as point
+  clouds only. A once-built v2 companion is the required boundary before
+  chemistry-aware export, projected color or terminal-torsion refinement.

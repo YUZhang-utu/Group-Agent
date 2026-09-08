@@ -1320,3 +1320,27 @@ pending on the workstation.
   conformer agreement and docking-task multiplicity.
 - Emits both `analysis.json` and a human-readable `analysis.md`; no library
   rescoring or molecule reconstruction is required.
+- The real workstation report was accepted: Top-100 overlap was zero,
+  Top-500/1,000/5,000 intersections were 6/28/505, and the shared-rank
+  Spearman correlation across 955 molecules was -0.0371. The 5,000 admitted
+  molecules remained 4,166 single-query plus 834 dual-query entries, producing
+  exactly 5,834 receptor-specific tasks.
+
+## E028 - Pre-docking aligned-pose and pocket-exclusion QC
+
+Protocol: `experiments/E028-predocking-pocket-qc-protocol.md`.
+
+Result classification: confirmatory offline implementation validation; real
+8BJU/1X8B workstation geometry report pending.
+
+- Added deterministic per-query Top-N selection from the immutable E026 docking
+  tasks and stable-ID resolution from the one-time conformer artifact catalog.
+- Stored 4x4 candidate-to-query transforms are applied without optimization.
+  Query coverage, centroid displacement and coordinate-only protein proximity
+  are emitted as diagnostic annotations and never as retrieval filters.
+- Added generic-element point-cloud PDB exports and a PyMOL review script. The
+  files explicitly state that artifact v1 lacks chemistry and that they are not
+  valid docking inputs.
+- Input/output hashes, receptor identity, query/receptor frame assignment,
+  affine-transform validation and repeated-output determinism are enforced.
+  The complete offline suite passes 108 tests.
