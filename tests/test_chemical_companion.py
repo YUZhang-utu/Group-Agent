@@ -5,7 +5,8 @@ import numpy as np
 
 from aidd_agent.chemical_companion import (
     ATOM_DTYPE, BOND_DTYPE, CHEM_META_DTYPE, FEATURE_DIRECTION_DTYPE,
-    TORSION_DTYPE, ChemicalCompanionReader, build_chemical_companion_shard,
+    TORSION_DTYPE, ChemicalCompanionReader, _artifact_identity_lookup,
+    build_chemical_companion_shard,
 )
 from aidd_agent.chemical_geometry import DIRECTION_AXIAL, DIRECTION_SIGNED
 from aidd_agent.conformer_artifacts import META_DTYPE
@@ -54,6 +55,18 @@ def test_source_hash_mismatch_does_not_create_partial(tmp_path: Path):
     else:
         raise AssertionError("mismatched source was accepted")
     assert not (tmp_path / "output" / ".split_0001.partial").exists()
+
+
+def test_artifact_identity_lookup_uses_stable_row_order():
+    meta = np.zeros(2, dtype=META_DTYPE)
+    meta["global_id"] = [17, 18]
+    conformers = np.asarray([b"C17", b"C18"], dtype="S16")
+    molecules = np.asarray([b"M8", b"M8"], dtype="S16")
+
+    assert _artifact_identity_lookup(meta, conformers, molecules) == {
+        0: (17, "C17", "M8", None),
+        1: (18, "C18", "M8", None),
+    }
 
 
 def test_companion_reader_resolves_identity_features_and_torsions(tmp_path: Path):

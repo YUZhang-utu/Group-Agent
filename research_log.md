@@ -728,3 +728,16 @@
 - Wrote a recoverable workstation procedure that inventories and moves the old
   partial instead of deleting it, then rebuilds with explicit `mc_data` source
   overrides and records GNU time output. Real E029 acceptance remains pending.
+
+## 2026-09-09 - Removed Windows registry from E029 workstation execution
+
+- Workstation diagnostics showed that its active 544 KB registry has zero
+  conformers for `LIB-AFA68EE6888C`; the matching 299,999-row registry existed
+  only as a 221 MB Windows test/build artifact.
+- Corrected the deployment model instead of copying or overwriting registries.
+  E029 now uses exact relocated MOL2 whole-file hashes and artifact-v1 ordered
+  global/conformer/molecule identities, with row-shape validation during build.
+- Made `--db` optional redundant validation and removed it from the workstation
+  runner. The runner now defaults both sources to the Linux `mc_data` directory.
+- Added a stable identity-order test; E029 focused tests pass 4/4 and the full
+  dependency-light suite passes 118/118. Real build timing remains pending.

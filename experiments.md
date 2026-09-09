@@ -1404,3 +1404,20 @@ build remains confirmatory and pending.
 - The workstation recovery protocol preserves the old partial outside the
   output root, supplies both explicit source overrides, and captures GNU time
   metrics and a build log. No production build result is claimed yet.
+
+### 2026-09-09 workstation-native identity correction
+
+Result classification: confirmatory implementation correction; real build
+still pending.
+
+- The default workstation registry contained zero conformers for the E019
+  library. This established that copying the 221 MB Windows test/build registry
+  would create an unnecessary and incorrect production dependency.
+- E029 now derives stable identity from the immutable artifact-v1 meta and ID
+  arrays in source-record order. It requires the relocated Linux MOL2 to match
+  the exact whole-file SHA-256 stored in the shard and retains row-level heavy
+  atom and feature shape checks during construction.
+- Registry validation remains optional for forensic redundancy only. The
+  workstation runner no longer passes the active runtime registry and defaults
+  to `/mnt/local/hand/yuzhang/aidd/mc_data` for both source shards.
+- A new identity-order regression check passes; the full suite is 118 passed.

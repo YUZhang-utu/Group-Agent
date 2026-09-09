@@ -249,6 +249,12 @@
   whole-file SHA-256, and registry/artifact identity are now checked before
   partial creation; an old partial must be preserved outside the output root
   and the affected shard rebuilt.
+- The Windows SQLite registry used during the original E019 build is not a
+  production workstation dependency. Exact whole-file source SHA-256 proves
+  the relocated Linux MOL2 bytes are identical, while artifact v1 already
+  locks ordered global/conformer/molecule IDs and row shapes. E029 now uses
+  those immutable inputs directly; a matching registry is optional redundant
+  validation, and an unrelated active workstation registry must not be used.
 - Existing 299,999-conformer throughput supports only an extrapolated
   100-million-molecule build estimate. The architecture is fixed-budget at
   query time, but 10M/100M physical scale, recall, cache, and recovery gates

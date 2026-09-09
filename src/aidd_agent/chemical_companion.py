@@ -231,7 +231,7 @@ def _grouped_tasks(source_path: Path, lookup: dict[int, tuple]) -> Iterator[tupl
         if identity is None:
             continue
         global_id, conformer_id, molecule_id, expected_sha256 = identity
-        if record.content_sha256 != expected_sha256:
+        if expected_sha256 is not None and record.content_sha256 != expected_sha256:
             raise ValueError(
                 f"source record checksum mismatch at record {record.record_index}")
         if current is not None and molecule_id != current:
@@ -254,8 +254,18 @@ def _v1_identity(v1_shard: Path) -> tuple[dict, np.memmap, np.memmap, np.memmap]
     return manifest, meta, conformers, molecules
 
 
+def _artifact_identity_lookup(
+        meta: np.ndarray, conformers: np.ndarray,
+        molecules: np.ndarray) -> dict[int, tuple]:
+    return {
+        index: (int(row["global_id"]), _decode(conformers[index]),
+                _decode(molecules[index]), None)
+        for index, row in enumerate(meta)
+    }
+
+
 def build_chemical_companion_shard(
-        db_path: Path, library_id: str, v1_shard: Path, output_root: Path, *,
+        db_path: Path | None, library_id: str, v1_shard: Path, output_root: Path, *,
         workers: int = 16, max_moving_atoms: int = 12,
         source_path: Path | None = None) -> dict:
     if workers <= 0 or max_moving_atoms <= 0:
@@ -283,26 +293,38 @@ def build_chemical_companion_shard(
         raise ValueError(
             f"source SHA-256 mismatch for {shard_name}: expected "
             f"{expected_source_sha256}, got {actual_source_sha256}")
-    with sqlite3.connect(db_path) as connection:
-        connection.row_factory = sqlite3.Row
-        rows = connection.execute(
-            """SELECT c.id conformer_id,c.molecule_id,c.source_record_index,
-                      c.content_sha256
-               FROM conformer c JOIN molecule m ON m.id=c.molecule_id
-               WHERE m.library_id=? AND c.source_path=?
-               ORDER BY c.source_record_index""",
-            (library_id, registered_source)).fetchall()
-    if len(rows) != len(v1_meta):
-        raise ValueError("registry and artifact v1 conformer counts disagree")
-    lookup = {}
-    for index, row in enumerate(rows):
-        gid = int(v1_meta[index]["global_id"])
-        conformer_id, molecule_id = str(row["conformer_id"]), str(row["molecule_id"])
-        if (_decode(v1_conformers[index]) != conformer_id
-                or _decode(v1_molecules[index]) != molecule_id):
-            raise ValueError(f"registry/artifact identity mismatch at global ID {gid}")
-        lookup[int(row["source_record_index"])] = (
-            gid, conformer_id, molecule_id, str(row["content_sha256"]))
+    lookup = _artifact_identity_lookup(v1_meta, v1_conformers, v1_molecules)
+    source_validation = (
+        "whole-file artifact SHA-256 plus ordered artifact-v1 identity and shape matched")
+    if db_path is not None:
+        with sqlite3.connect(db_path) as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                """SELECT c.id conformer_id,c.molecule_id,c.source_record_index,
+                          c.content_sha256
+                   FROM conformer c JOIN molecule m ON m.id=c.molecule_id
+                   WHERE m.library_id=? AND c.source_path=?
+                   ORDER BY c.source_record_index""",
+                (library_id, registered_source)).fetchall()
+        if len(rows) != len(v1_meta):
+            raise ValueError(
+                f"registry/artifact conformer count mismatch for {shard_name}: "
+                f"registry={len(rows)}, artifact={len(v1_meta)}, db={db_path}, "
+                f"registered_source={registered_source!r}; omit --db to use the "
+                "immutable artifact-v1 identity on a relocated workstation")
+        lookup = {}
+        for index, row in enumerate(rows):
+            gid = int(v1_meta[index]["global_id"])
+            conformer_id = str(row["conformer_id"])
+            molecule_id = str(row["molecule_id"])
+            if (_decode(v1_conformers[index]) != conformer_id
+                    or _decode(v1_molecules[index]) != molecule_id):
+                raise ValueError(f"registry/artifact identity mismatch at global ID {gid}")
+            lookup[int(row["source_record_index"])] = (
+                gid, conformer_id, molecule_id, str(row["content_sha256"]))
+        source_validation = (
+            "whole-file artifact SHA-256, ordered artifact-v1 identity and shape, "
+            "and all per-record registry SHA-256 values matched")
 
     partial.mkdir(parents=True)
     names = ("chem-meta.bin", "atoms.bin", "bonds.bin", "feature-directions.bin",
@@ -366,8 +388,9 @@ def build_chemical_companion_shard(
         "artifact_v1_manifest_sha256": _sha256(v1_shard / "manifest.json"),
         "source_path": str(source.resolve()),
         "source_sha256": actual_source_sha256,
-        "source_validation": (
-            "whole-file artifact SHA-256 and all per-record registry SHA-256 values matched"),
+        "source_validation": source_validation,
+        "identity_source": ("artifact-v1" if db_path is None
+                            else "artifact-v1-plus-registry"),
         "global_id_start": int(v1_meta[0]["global_id"]),
         "conformers": written, "counts": offsets,
         "workers": workers, "max_moving_atoms": max_moving_atoms,
@@ -383,7 +406,7 @@ def build_chemical_companion_shard(
 
 
 def build_chemical_companion_catalog(
-        db_path: Path, library_id: str, artifact_catalog: Path,
+        db_path: Path | None, library_id: str, artifact_catalog: Path,
         output_root: Path, *, workers: int = 16,
         max_moving_atoms: int = 12,
         source_overrides: dict[str, Path] | None = None) -> dict:
@@ -391,6 +414,8 @@ def build_chemical_companion_catalog(
     source_catalog = json.loads(artifact_catalog.read_text(encoding="utf-8"))
     if source_catalog.get("format") != "aidd-conformer-artifact-catalog":
         raise ValueError("not an artifact v1 catalog")
+    if source_catalog.get("library_id") != library_id:
+        raise ValueError("artifact catalog library does not match --library")
     output_root.mkdir(parents=True, exist_ok=True)
     source_overrides = source_overrides or {}
     unknown = sorted(set(source_overrides) - {str(row["name"])

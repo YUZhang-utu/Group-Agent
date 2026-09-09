@@ -17,7 +17,7 @@ roadmap:
 last_checkpoint:
   date: 2026-09-09
   git_commit: b401393
-  test_result: 117_passed_plus_e029_partial_preflight_regression
+  test_result: 118_passed_plus_e029_workstation_native_identity
   handoff: to_human/resume-checkpoint-2026-09-09-e029-partial-recovery.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
@@ -56,7 +56,7 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - inspect and preserve the stale split_0001 partial, verify both MOL2 hashes under /mnt/local/hand/yuzhang/aidd/mc_data, then rerun E029 with explicit source overrides
+  - pull the workstation-native E029 runner, verify both MOL2 hashes under /mnt/local/hand/yuzhang/aidd/mc_data, then build without a Windows registry dependency
   - run and time the real 299999-conformer E029 companion build with explicit split_0001 and split_0002 source overrides
   - run E028 on real 8BJU and 1X8B tasks with the accepted chemical companion and inspect SDF, vdW, and pocket-contact outputs
   - integrate projected-direction and bounded two-terminal-torsion scoring into the fixed-budget final batch refinement stage
@@ -173,7 +173,7 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 117_passed
+  tests: 118_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
   local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
   per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
@@ -221,7 +221,7 @@ implementation_status:
   e029_terminal_torsion_metadata: implemented_strict_nonring_smallest_side_real_build_pending
   e029_terminal_torsion_refinement: implemented_two_torsion_fixed_angle_beam_reference_batch_integration_pending
   e029_source_relocation_override: implemented_split_name_to_physical_mol2_path
-  e029_real_workstation_build: pending_stale_partial_recovery_sources_present_in_mc_data
+  e029_real_workstation_build: pending_pull_and_registry_independent_rerun_sources_verified_in_mc_data
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

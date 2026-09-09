@@ -489,7 +489,9 @@ def build_parser() -> argparse.ArgumentParser:
     chemical_companion = subparsers.add_parser(
         "build-chemical-companion",
         help="Build one-time topology, direction, and terminal-torsion artifacts")
-    chemical_companion.add_argument("--db", type=Path, required=True)
+    chemical_companion.add_argument(
+        "--db", type=Path,
+        help="Optional matching build registry for redundant per-record hash validation")
     chemical_companion.add_argument("--library", required=True)
     chemical_companion.add_argument("--artifact-catalog", type=Path, required=True)
     chemical_companion.add_argument("--output-root", type=Path, required=True)

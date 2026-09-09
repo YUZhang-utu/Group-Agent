@@ -11,7 +11,6 @@ pharmacophore membership.
 
 ```bash
 python -m aidd_agent.cli build-chemical-companion \
-  --db /mnt/medchem_taltio/wrk/yu_agent/runtime/registry/aidd.sqlite3 \
   --library LIB-AFA68EE6888C \
   --artifact-catalog /path/e019_artifacts/catalog.json \
   --output-root /mnt/local/hand/yuzhang/aidd/chemical-companion-v1 \
@@ -33,6 +32,13 @@ implemented: after preserving any diagnostics, move the partial directory out
 of the output root and rerun. Missing sources, source SHA-256 mismatches, and
 registry/artifact identity mismatches are validated before a partial directory
 is created.
+
+The immutable artifact-v1 catalog supplies global, conformer, and molecule
+identity in source-record order. Exact whole-file source SHA-256 plus per-row
+artifact shape checks make a Windows build registry unnecessary on the Linux
+workstation. `--db` remains optional only as redundant validation when the
+exact registry used to create artifact v1 is deliberately available; never
+point it at an unrelated active workstation registry.
 
 The implemented query-time primitives are:
 

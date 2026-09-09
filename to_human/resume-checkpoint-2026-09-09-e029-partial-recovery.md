@@ -14,6 +14,11 @@ missing relocated source. This is fixed locally: source existence, whole-file
 SHA-256, and registry/artifact identity are now preflight checks. The recovery
 commands below are also safe with the earlier implementation.
 
+The Linux workstation does not need the Windows E019 build registry. Exact
+whole-file source hashes plus artifact-v1 ordered IDs and shape checks are the
+production identity boundary. Do not copy the Windows registry over the active
+workstation registry.
+
 ## 1. Inspect without deleting
 
 ```bash
@@ -65,10 +70,12 @@ set -o pipefail
 
 /usr/bin/time -v bash scripts/build_e029_chemical_companion.sh \
   /mnt/medchem_taltio/wrk/yu_agent/Group-Agent \
-  --source split_0001="$SOURCE_ROOT/split_0001.mol2" \
-  --source split_0002="$SOURCE_ROOT/split_0002.mol2" \
   2>&1 | tee /mnt/local/hand/yuzhang/aidd/e029-build-20260909.log
 ```
+
+The workstation runner defaults `E029_SOURCE_ROOT` to
+`/mnt/local/hand/yuzhang/aidd/mc_data`. Set that environment variable only if
+the physical Linux source directory changes.
 
 Because the calling shell enables `pipefail`, a build error remains visible
 through the `tee` pipeline when the command is run exactly as shown.
