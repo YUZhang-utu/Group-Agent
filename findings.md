@@ -323,6 +323,14 @@
   accepted two-minute search path. The fast general boundary is one directional
   evaluation under each already selected rigid pose; receptor vdW is a capped
   docking-handoff annotation, while torsion/rigid relaxation belongs downstream.
+- The desired last retrieval layer is a single explainable, query-centric key
+  interaction coverage score on an already selected rigid pose. It assigns
+  compatible candidate features one-to-one to co-crystal interaction anchors
+  and averages typed spatial/directional match over anchor evidence weights.
+  Shape and ordinary color remain earlier lanes rather than entering an
+  arbitrary mixture. Current anchor-weighted atom-centered color is only an
+  approximation; protein-projected directions are stored but not batch-scored,
+  and non-hydrogen-bond interaction extractors remain incomplete.
 - Directional comparison must distinguish signed polar vectors from axial
   aromatic normals: reversing a donor/acceptor direction removes agreement,
   whereas reversing a ring normal represents the same plane. Translation is

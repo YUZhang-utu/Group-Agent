@@ -816,3 +816,17 @@
 - Locked E031: one directional evaluation on each existing rigid pose, <=10%
   latency-overhead target, single-pose vdW only at capped docking handoff, and
   no torsion/rigid micro-search in the general retrieval lane.
+
+## 2026-09-09 - Clarified the final 3D retrieval match degree
+
+- The user specified that layered retrieval should culminate in one score for
+  reproduction of co-crystal ligand key interactions, not pose optimization.
+- Defined `interaction_match_score` as weighted query-anchor coverage from a
+  deterministic one-to-one typed spatial/directional feature assignment under
+  each already retained rigid pose, with per-anchor assignments retained.
+- Kept shape and ordinary color as earlier evidence lanes rather than choosing
+  arbitrary combined weights. Current anchor-weighted atom-centered Gaussian is
+  an approximation, not the requested complete interaction score.
+- Recorded the generality gap: direct hydrogen-bond anchors exist; salt bridge,
+  aromatic, cation-pi, hydrophobic, and metal interaction extractors still need
+  explicit target-independent validation.
