@@ -19,6 +19,12 @@ whole-file source hashes plus artifact-v1 ordered IDs and shape checks are the
 production identity boundary. Do not copy the Windows registry over the active
 workstation registry.
 
+The initial registry-free run at commit `12f7cf7` exposed a final count-check
+regression after shard processing: it referenced the absent optional registry
+variable `rows`. The corrected implementation compares against the immutable
+artifact-v1 row count and includes a full registry-free shard completion test.
+Preserve and move the partial produced by that failed run before retrying.
+
 ## 1. Inspect without deleting
 
 ```bash

@@ -1,7 +1,10 @@
 import json
+import hashlib
 from pathlib import Path
 
 import numpy as np
+
+import aidd_agent.chemical_companion as companion_module
 
 from aidd_agent.chemical_companion import (
     ATOM_DTYPE, BOND_DTYPE, CHEM_META_DTYPE, FEATURE_DIRECTION_DTYPE,
@@ -67,6 +70,54 @@ def test_artifact_identity_lookup_uses_stable_row_order():
         0: (17, "C17", "M8", None),
         1: (18, "C18", "M8", None),
     }
+
+
+def test_registry_free_shard_build_checks_artifact_row_count(
+        tmp_path: Path, monkeypatch):
+    source = tmp_path / "split_0001.mol2"
+    source.write_text("locked source bytes", encoding="utf-8")
+    source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+    shard = tmp_path / "split_0001"
+    _write_v1_shard(shard, source, source_sha256)
+    meta = np.memmap(shard / "meta.bin", dtype=META_DTYPE, mode="r+")
+    meta[0]["global_id"] = 7
+    meta.flush()
+
+    record = {
+        "global_id": 7, "conformer_id": "C1", "molecule_id": "M1",
+        "atoms": np.empty(0, dtype=ATOM_DTYPE),
+        "bonds": np.empty(0, dtype=BOND_DTYPE),
+        "features": np.empty(0, dtype=FEATURE_DIRECTION_DTYPE),
+        "feature_members": np.empty(0, dtype="<u2"),
+        "torsions": np.empty(0, dtype=TORSION_DTYPE),
+        "torsion_members": np.empty(0, dtype="<u2"),
+    }
+
+    class FakePool:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def imap(self, _function, _tasks, chunksize):
+            assert chunksize == 8
+            return iter(((record,),))
+
+    class FakeContext:
+        def Pool(self, *_args, **_kwargs):
+            return FakePool()
+
+    monkeypatch.setattr(companion_module.mp, "get_context", lambda _name: FakeContext())
+    monkeypatch.setattr(companion_module, "_grouped_tasks", lambda *_args: iter((object(),)))
+
+    manifest = build_chemical_companion_shard(
+        None, "LIB", shard, tmp_path / "output", workers=1)
+
+    assert manifest["conformers"] == 1
+    assert manifest["identity_source"] == "artifact-v1"
+    assert (tmp_path / "output" / "split_0001" / "manifest.json").is_file()
+    assert not (tmp_path / "output" / ".split_0001.partial").exists()
 
 
 def test_companion_reader_resolves_identity_features_and_torsions(tmp_path: Path):

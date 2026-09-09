@@ -1421,3 +1421,18 @@ still pending.
   workstation runner no longer passes the active runtime registry and defaults
   to `/mnt/local/hand/yuzhang/aidd/mc_data` for both source shards.
 - A new identity-order regression check passes; the full suite is 118 passed.
+
+### 2026-09-09 registry-free completion-count regression
+
+Result classification: exploratory implementation failure; real build remains
+pending.
+
+- The first registry-free workstation execution reached the final shard count
+  check but raised `UnboundLocalError` because that check still referenced the
+  optional registry variable `rows`.
+- Replaced the residual reference with the authoritative artifact-v1 row count.
+- Added a full registry-free shard regression that exercises binary writing,
+  count acceptance, manifest creation, and atomic partial promotion without
+  RDKit or SQLite. E029 focused tests pass 5/5; the full suite passes 119/119.
+- The failed workstation partial is preserved as diagnostic evidence and must
+  be moved outside the output root before the corrected rebuild.

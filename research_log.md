@@ -741,3 +741,13 @@
   runner. The runner now defaults both sources to the Linux `mc_data` directory.
 - Added a stable identity-order test; E029 focused tests pass 4/4 and the full
   dependency-light suite passes 118/118. Real build timing remains pending.
+
+## 2026-09-09 - Fixed registry-free final count regression
+
+- The first workstation-native build exposed one residual reference to the
+  optional SQLite `rows` variable at final count acceptance.
+- Changed the invariant to compare written rows against `len(v1_meta)`, the
+  authoritative count in both registry-backed and registry-free modes.
+- Added an end-to-end mocked shard build covering output files, final count,
+  manifest generation and atomic promotion. Focused tests pass 5/5 and the full
+  suite passes 119/119.

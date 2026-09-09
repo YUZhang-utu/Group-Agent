@@ -377,8 +377,9 @@ def build_chemical_companion_shard(
     finally:
         for stream in streams.values():
             stream.close()
-    if written != len(rows):
-        raise ValueError(f"expected {len(rows)} companion rows, wrote {written}")
+    expected_rows = len(v1_meta)
+    if written != expected_rows:
+        raise ValueError(f"expected {expected_rows} companion rows, wrote {written}")
     files = {name: {"bytes": (partial / name).stat().st_size,
                     "sha256": _sha256(partial / name)} for name in names}
     manifest = {
