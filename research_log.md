@@ -801,3 +801,18 @@
 - Chemical geometry tests pass 5/5 and the full suite passes 120/120. This is a
   reusable primitive only; directional/vdW/torsion Top-N variant integration is
   still pending and no production rank has changed.
+
+## 2026-09-09 - Pivoted from WEE1 pose repair to general fast E031
+
+- The user correctly identified that the project requires a general fast 3D
+  search followed by later stages, not WEE1-specific pose optimization inside
+  retrieval.
+- Quantified the risk: 13 rigid seeds times a bounded two-torsion beam can reach
+  about 403 evaluations per pose, or over three million states for the real
+  7,704-member refinement set.
+- Stopped E030 before any batch caller was added; current production latency and
+  rankings are unchanged. Retained the tested seed primitive only for a future
+  docking adapter.
+- Locked E031: one directional evaluation on each existing rigid pose, <=10%
+  latency-overhead target, single-pose vdW only at capped docking handoff, and
+  no torsion/rigid micro-search in the general retrieval lane.

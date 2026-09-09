@@ -317,6 +317,12 @@
   clashes, while the highest-penalty minimum center distances are 0.432 and
   0.212 angstrom. Visual classification is required before deciding whether
   terminal torsions are sufficient or full rigid/local docking is necessary.
+- General 3D retrieval must not absorb receptor-specific pose repair. Applying
+  13 rigid seeds and a two-torsion beam can expand work to roughly 403 states
+  per pose (>3 million states for 7,704 refined conformers), undermining the
+  accepted two-minute search path. The fast general boundary is one directional
+  evaluation under each already selected rigid pose; receptor vdW is a capped
+  docking-handoff annotation, while torsion/rigid relaxation belongs downstream.
 - Directional comparison must distinguish signed polar vectors from axial
   aromatic normals: reversing a donor/acceptor direction removes agreement,
   whereas reversing a ring normal represents the same plane. Translation is

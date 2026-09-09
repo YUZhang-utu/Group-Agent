@@ -1,6 +1,18 @@
 # E030 Fixed-budget chemical pose refinement integration protocol
 
-Status: protocol locked before implementation
+Status: pivoted before batch integration; rigid micro-seed primitive retained
+for downstream docking pose preparation only
+
+## 2026-09-09 scope correction
+
+This protocol must not be integrated into the general pre-docking 3D search.
+Thirteen rigid seeds times the bounded two-torsion beam can require roughly 403
+state evaluations per pose, over three million for the accepted 7,704-member
+rigid-refinement set. That violates the fast-search objective and overfits a
+WEE1 pose-QC observation. The implemented seed generator has no production
+caller and therefore has introduced zero search latency. E031 supersedes the
+batch-integration portion and reserves this primitive for a later docking
+adapter operating on already admitted tasks.
 
 ## Motivation and human evidence
 

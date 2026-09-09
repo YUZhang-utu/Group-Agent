@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E030-fixed-budget-chemical-pose-refinement
+current_experiment: E031-general-fast-chemical-reranking
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,8 +56,8 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - inspect the six real E028 low median high vdW representative SDF poses against 1X8B and 8BJU and classify local terminal versus scaffold versus frame collisions
-  - integrate projected-direction and bounded two-terminal-torsion scoring into the fixed-budget final batch refinement stage
+  - integrate one-pass projected-direction annotation on existing rigid-refined poses with no new pose seeds and benchmark a maximum 10 percent latency overhead
+  - keep receptor vdW single-pose annotation in the small docking handoff and reserve torsion or rigid micro-relaxation for downstream docking pose preparation
   - integrate projected-direction and bounded two-terminal-torsion scoring into the fixed-budget final batch refinement stage
   - benchmark the complete tiered path at 10M then 100M physical or faithful metadata scale before making production-scale latency claims
   - create the real WEE1 multi-cocrystal query plan and run each independent E024 search
@@ -222,7 +222,8 @@ implementation_status:
   e029_source_relocation_override: implemented_split_name_to_physical_mol2_path
   e029_real_workstation_build: completed_299999_conformers_471_03_seconds_hash_and_reuse_accepted
   e030_rigid_micro_seeds: implemented_13_identity_translation_rotation_deterministic
-  e030_batch_variant_integration: pending_fixed_topn_direction_vdw_torsion_wiring
+  e030_batch_variant_integration: stopped_before_integration_to_protect_general_search_latency
+  e031_general_directional_reranking: protocol_locked_single_pose_no_seed_expansion
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

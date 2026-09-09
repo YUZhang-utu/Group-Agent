@@ -1483,3 +1483,20 @@ Status: protocol locked before implementation.
   and six centroid rotations. Tests confirm deterministic order, exact identity,
   centroid preservation for rotations, and invariant intramolecular distances.
   Batch variant integration remains pending; no accepted ranking changed.
+
+Outcome: pivoted before batch integration. A 13-seed times two-torsion search
+can reach about 403 evaluations per pose and is inappropriate for the general
+fast retrieval lane. The tested primitive remains unused by production code and
+is reserved for downstream docking pose preparation.
+
+## E031 - General fast chemical reranking and docking handoff
+
+Protocol: `experiments/E031-general-fast-chemical-reranking-protocol.md`.
+
+Status: protocol locked before implementation.
+
+- Reuse existing rigid poses and calculate directions once, without new seeds.
+- Target <=10% incremental rigid-refinement latency on identical IDs/hardware.
+- Calculate receptor vdW only for a small capped docking handoff.
+- Keep torsion, micro-rigid relaxation, and local minimization downstream.
+- Require multi-query/target held-out evidence before direction changes rank.
