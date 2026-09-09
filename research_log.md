@@ -791,3 +791,13 @@
 - Locked E030 to integrate bounded terminal torsions and 13 small rigid seeds on
   a fixed final Top-N. Baseline/min-vdW/max-directional/balanced variants remain
   separately auditable, and no collision metric alters protected admission.
+
+## 2026-09-09 - Implemented E030 deterministic rigid micro-seeds
+
+- Added identity, +/-0.25 angstrom Cartesian translations, and +/-5 degree
+  Cartesian rotations about the candidate centroid: 13 fixed seeds total.
+- Verified exact identity retention, deterministic matrices/order, centroid
+  preservation under rotations, and invariant pairwise atom distances.
+- Chemical geometry tests pass 5/5 and the full suite passes 120/120. This is a
+  reusable primitive only; directional/vdW/torsion Top-N variant integration is
+  still pending and no production rank has changed.

@@ -1479,3 +1479,7 @@ Status: protocol locked before implementation.
   bounded rigid micro-relaxation in addition to terminal torsions.
 - Numeric penalty and visual MEDIAN/HIGH preference did not perfectly agree,
   so named reversible pose variants replace any vdW-only final ranking.
+- Implemented the locked 13 rigid micro-seeds: identity, six axis translations,
+  and six centroid rotations. Tests confirm deterministic order, exact identity,
+  centroid preservation for rotations, and invariant intramolecular distances.
+  Batch variant integration remains pending; no accepted ranking changed.

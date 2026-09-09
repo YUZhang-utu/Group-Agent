@@ -147,6 +147,51 @@ class TerminalTorsion:
     moving_atoms: tuple[int, ...]
 
 
+@dataclass(frozen=True)
+class RigidMicroSeed:
+    seed_id: str
+    transform_matrix: np.ndarray
+
+
+def rigid_micro_seeds(
+        points: Sequence[Sequence[float]], *,
+        translation_angstrom: float = 0.25,
+        rotation_degrees: float = 5.0) -> tuple[RigidMicroSeed, ...]:
+    """Return identity plus locked +/- axis translations and centroid rotations."""
+    coordinates = _points(points, "points")
+    if not len(coordinates):
+        raise ValueError("points must not be empty")
+    if (translation_angstrom <= 0 or not math.isfinite(translation_angstrom)
+            or rotation_degrees <= 0 or not math.isfinite(rotation_degrees)):
+        raise ValueError("micro-seed translation and rotation must be positive")
+    seeds = [RigidMicroSeed("identity", np.eye(4, dtype=np.float64))]
+    axes = (("x", np.asarray([1.0, 0.0, 0.0])),
+            ("y", np.asarray([0.0, 1.0, 0.0])),
+            ("z", np.asarray([0.0, 0.0, 1.0])))
+    for name, axis in axes:
+        for label, sign in (("minus", -1.0), ("plus", 1.0)):
+            matrix = np.eye(4, dtype=np.float64)
+            matrix[:3, 3] = sign * translation_angstrom * axis
+            seeds.append(RigidMicroSeed(f"translate_{name}_{label}", matrix))
+    center = coordinates.mean(axis=0)
+    for name, axis in axes:
+        cross = np.asarray([
+            [0.0, -axis[2], axis[1]],
+            [axis[2], 0.0, -axis[0]],
+            [-axis[1], axis[0], 0.0],
+        ])
+        for label, sign in (("minus", -1.0), ("plus", 1.0)):
+            angle = math.radians(sign * rotation_degrees)
+            rotation = (np.eye(3) * math.cos(angle)
+                        + (1.0 - math.cos(angle)) * np.outer(axis, axis)
+                        + math.sin(angle) * cross)
+            matrix = np.eye(4, dtype=np.float64)
+            matrix[:3, :3] = rotation
+            matrix[:3, 3] = center - rotation @ center
+            seeds.append(RigidMicroSeed(f"rotate_{name}_{label}", matrix))
+    return tuple(seeds)
+
+
 def rotate_terminal_torsion(points: Sequence[Sequence[float]],
                             torsion: TerminalTorsion,
                             angle_degrees: float) -> np.ndarray:
