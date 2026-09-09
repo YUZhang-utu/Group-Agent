@@ -830,3 +830,17 @@
 - Recorded the generality gap: direct hydrogen-bond anchors exist; salt bridge,
   aromatic, cation-pi, hydrophobic, and metal interaction extractors still need
   explicit target-independent validation.
+
+## 2026-09-09 - Implemented E031 key-interaction matching sidecar
+
+- Implemented deterministic maximum-weight one-to-one assignment of typed,
+  spatial, and signed/axial directional matches under each existing rigid pose.
+- Preserved the Gaussian result byte-for-byte and wrote scores, assignments,
+  per-anchor contributions, input hashes, timing, rank correlation, and Top-K
+  overlap only to a separate NPZ/JSON sidecar.
+- Added a Linux runner for the accepted 8BJU/QT9 and 1X8B/824 refinement sets,
+  including `/usr/bin/time -v` resource reports and top-hit explanations.
+- Offline suite passed 123/123. An exploratory in-memory kernel loop completed
+  23,112 assignments (7,704 candidates x three poses) in 3.72 seconds on the
+  local Windows environment. Real companion mmap latency and the <=10% gate
+  remain to be measured on the workstation.

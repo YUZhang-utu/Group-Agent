@@ -329,8 +329,14 @@
   and averages typed spatial/directional match over anchor evidence weights.
   Shape and ordinary color remain earlier lanes rather than entering an
   arbitrary mixture. Current anchor-weighted atom-centered color is only an
-  approximation; protein-projected directions are stored but not batch-scored,
-  and non-hydrogen-bond interaction extractors remain incomplete.
+  approximation; protein-projected directions were stored but not batch-scored
+  before E031, and non-hydrogen-bond interaction extractors remain incomplete.
+- E031 now implements that layer as an immutable sidecar: deterministic
+  one-to-one assignment prevents one candidate feature from satisfying several
+  query anchors, while per-anchor scores make every total reversible. It adds
+  no pose seeds and does not rewrite any accepted rank. Offline kernel timing
+  suggests the intended budget is plausible, but only the real Linux mmap run
+  can accept the <=10% latency gate or establish biological usefulness.
 - Directional comparison must distinguish signed polar vectors from axial
   aromatic normals: reversing a donor/acceptor direction removes agreement,
   whereas reversing a ring normal represents the same plane. Translation is

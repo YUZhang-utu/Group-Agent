@@ -52,6 +52,7 @@ from .multi_query_aggregation import aggregate_multi_cocrystal_results
 from .multi_query_analysis import analyze_multi_cocrystal_result
 from .predocking_qc import run_predocking_pocket_qc
 from .chemical_companion import build_chemical_companion_catalog
+from .interaction_matching import score_interaction_matches
 from .reduce_pocket import (
     build_reduce_het_dictionary, export_query_pocket_pdb, run_reduce, validate_reduce_run,
 )
@@ -388,6 +389,18 @@ def build_parser() -> argparse.ArgumentParser:
     gaussian_score.add_argument("--pair-tolerance", type=float, default=2.0)
     gaussian_score.add_argument("--axial-samples", type=int, default=6)
     gaussian_score.add_argument("--max-pair-seeds", type=int, default=512)
+
+    interaction_score = subparsers.add_parser(
+        "score-key-interaction-matches",
+        help="Score co-crystal key-interaction coverage under stored rigid poses")
+    interaction_score.add_argument("--artifact-catalog", type=Path, required=True)
+    interaction_score.add_argument("--chemical-companion", type=Path, required=True)
+    interaction_score.add_argument("--query", type=Path, required=True)
+    interaction_score.add_argument("--rigid-result", type=Path, required=True)
+    interaction_score.add_argument("--output", type=Path, required=True)
+    interaction_score.add_argument("--sigma", type=float, default=1.0)
+    interaction_score.add_argument("--cutoff", type=float, default=4.5)
+    interaction_score.add_argument("--angular-power", type=float, default=2.0)
 
     gaussian_staged = subparsers.add_parser(
         "run-staged-gaussian-reranking",
@@ -1001,6 +1014,13 @@ def main(argv: list[str] | None = None) -> int:
             sigma=args.sigma, cutoff=args.cutoff,
             pair_tolerance=args.pair_tolerance, axial_samples=args.axial_samples,
             max_pair_seeds=args.max_pair_seeds)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    if args.command == "score-key-interaction-matches":
+        result = score_interaction_matches(
+            args.artifact_catalog, args.chemical_companion, args.query,
+            args.rigid_result, args.output, sigma=args.sigma,
+            cutoff=args.cutoff, angular_power=args.angular_power)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     if args.command == "run-staged-gaussian-reranking":

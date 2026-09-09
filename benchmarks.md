@@ -135,3 +135,19 @@
   admission keys and never contribute to cross-site RRF.
 - Docking expansion: every task references one admitted molecule, one immutable
   query result, one exact receptor and one retained conformer/transform.
+
+## E031 key-interaction sidecar gates
+
+- Correctness: compare deterministic assignment with known non-greedy optima;
+  reject type, direction-kind, unit-vector, identity, and input-hash mismatch.
+- Immutability: hash the rigid result before and after scoring and require exact
+  equality; retain sidecar IDs in identical order.
+- Speed: measure both WEE1 queries with `/usr/bin/time -v`; compare directional
+  wall time with the accepted 77.99-second QT9 rigid-refine baseline only on
+  identical hardware/IDs. Target <=10%, with absolute time and page faults.
+- Exploratory kernel measurement: 23,112 three-anchor/twelve-feature
+  assignments took 3.72 seconds locally (6,217/s), excluding artifact and
+  companion mmap reads. This is not a production acceptance measurement.
+- Effect: report score min/median/max, median matched-anchor count, Spearman rho
+  versus each Gaussian objective, and Top-100/500/1000 overlap. Do not activate
+  reranking without held-out multi-target enrichment or redocking evidence.

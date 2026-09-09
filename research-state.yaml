@@ -56,9 +56,9 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - implement one-pass explainable interaction_match_score using typed spatial directional anchor assignment on existing rigid-refined poses with no new pose seeds
+  - run E031 key-interaction sidecar on real 8BJU/QT9 and 1X8B/824 refined poses and accept or reject the <=10% latency gate
   - keep receptor vdW single-pose annotation in the small docking handoff and reserve torsion or rigid micro-relaxation for downstream docking pose preparation
-  - integrate projected-direction and bounded two-terminal-torsion scoring into the fixed-budget final batch refinement stage
+  - extend interaction anchors beyond direct hydrogen bonds only after target-independent extraction tests; keep torsion refinement in docking pose preparation
   - benchmark the complete tiered path at 10M then 100M physical or faithful metadata scale before making production-scale latency claims
   - create the real WEE1 multi-cocrystal query plan and run each independent E024 search
   - aggregate real refined results and inspect protected-query versus consensus overlap
@@ -172,7 +172,7 @@ implementation_status:
   l2_score_record_schema: implemented_query_manifest_named_poses_raw_anchor_cross_self
   qt9_anchor_evidence: completed_heavy_distance_and_atomic_sasa_three_contacts
   reduce_hydrogen_validation: linux_workstation_passed_qt9_34_hydrogens
-  tests: 120_passed
+  tests: 123_passed
   reduce_anchor_angle_projection: implemented_linux_enrichment_execution_pending
   local_pharmacophore_pair_index: implemented_offline_validated_workstation_pending
   per_cocrystal_pharmacophore_query: implemented_hashed_library_independent
@@ -223,7 +223,7 @@ implementation_status:
   e029_real_workstation_build: completed_299999_conformers_471_03_seconds_hash_and_reuse_accepted
   e030_rigid_micro_seeds: implemented_13_identity_translation_rotation_deterministic
   e030_batch_variant_integration: stopped_before_integration_to_protect_general_search_latency
-  e031_general_directional_reranking: protocol_locked_query_coverage_score_single_pose_no_seed_expansion
+  e031_general_directional_reranking: implemented_offline_123_tests_real_dual_query_timing_pending
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending

@@ -1493,10 +1493,27 @@ is reserved for downstream docking pose preparation.
 
 Protocol: `experiments/E031-general-fast-chemical-reranking-protocol.md`.
 
-Status: protocol locked before implementation.
+Status: implementation offline validated; real dual-query timing pending.
 
 - Reuse existing rigid poses and calculate directions once, without new seeds.
 - Target <=10% incremental rigid-refinement latency on identical IDs/hardware.
 - Calculate receptor vdW only for a small capped docking handoff.
 - Keep torsion, micro-rigid relaxation, and local minimization downstream.
 - Require multi-query/target held-out evidence before direction changes rank.
+
+Implementation result (exploratory, not the real workstation acceptance):
+
+- Added an immutable sidecar scorer over all stored rigid objective poses. It
+  records normalized interaction coverage, candidate-feature assignment, and
+  every per-anchor contribution without rewriting Gaussian artifacts.
+- Exact type matching, signed/axial direction semantics, finite/unit-vector
+  validation, catalog/query/result hashes, stable IDs, and a deterministic
+  rectangular Hungarian assignment are enforced.
+- The sidecar manifest reports score distribution, median matched-anchor count,
+  Spearman association with each original objective, and Top-100/500/1000
+  overlap. It does not activate a new ranking.
+- Offline suite: 123/123 tests passed. A direct three-anchor/twelve-feature
+  kernel loop for 7,704 candidates x three objective poses took 3.72 seconds
+  on the local Windows environment (23,112 assignments, 6,217/s). This excludes
+  real mmap reads and is exploratory; the Linux runner records `/usr/bin/time
+  -v` separately for both accepted co-crystal queries.

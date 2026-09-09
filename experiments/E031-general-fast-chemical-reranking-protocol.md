@@ -2,6 +2,9 @@
 
 Status: protocol locked before implementation
 
+Implementation status: deterministic sidecar and workstation runner completed;
+offline correctness accepted, real dual-query timing pending.
+
 ## Clarification before implementation: final retrieval output
 
 The final pre-docking layer answers one query-centric question: how well does
