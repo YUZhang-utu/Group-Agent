@@ -779,3 +779,15 @@
   decision distinguishes terminal-group conflicts, pervasive scaffold
   penetration, and frame errors before choosing torsion-only versus full local
   docking relaxation.
+
+## 2026-09-09 - Locked E030 after human pose review
+
+- Human inspection confirmed all representatives occupy the correct pocket and
+  ruled out a gross coordinate-frame error.
+- 8BJU collisions were primarily terminal without visible macrocycle
+  penetration. 1X8B LOW was terminal dominated, while MEDIAN/HIGH cores sat too
+  close; HIGH appeared visually better than MEDIAN despite its larger scalar
+  vdW penalty.
+- Locked E030 to integrate bounded terminal torsions and 13 small rigid seeds on
+  a fixed final Top-N. Baseline/min-vdW/max-directional/balanced variants remain
+  separately auditable, and no collision metric alters protected admission.

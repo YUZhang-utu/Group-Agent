@@ -1466,3 +1466,16 @@ Result classification: confirmatory real workstation validation.
   collision poses reached implausible 0.432 and 0.212 angstrom minimum center
   distances. LOW/MEDIAN/HIGH representatives are locked for visual review;
   this analysis remains annotation-only.
+
+## E030 - Fixed-budget chemical pose refinement integration
+
+Protocol: `experiments/E030-fixed-budget-chemical-pose-refinement-protocol.md`.
+
+Status: protocol locked before implementation.
+
+- Human review confirmed correct pocket/frame placement for both queries.
+- 8BJU conflicts were mainly terminal with no observed macrocycle penetration.
+- 1X8B LOW was terminal dominated; MEDIAN/HIGH cores were too close, supporting
+  bounded rigid micro-relaxation in addition to terminal torsions.
+- Numeric penalty and visual MEDIAN/HIGH preference did not perfectly agree,
+  so named reversible pose variants replace any vdW-only final ranking.

@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E029-chemical-directional-flexible-companion
+current_experiment: E030-fixed-budget-chemical-pose-refinement
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
