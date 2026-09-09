@@ -16,9 +16,9 @@ roadmap:
   laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
   date: 2026-09-09
-  git_commit: c7392e7
-  test_result: 119_passed_plus_registry_free_full_shard_regression
-  handoff: to_human/resume-checkpoint-2026-09-09-e029-accepted-e028-chemical.md
+  git_commit: f6cd02d
+  test_result: 123_passed_e031_sidecar_offline_real_timing_pending
+  handoff: to_human/resume-checkpoint-2026-09-09-e031-implemented.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -210,7 +210,7 @@ implementation_status:
   e026_real_dual_cocrystal_runner: completed_accepted_12834_union_955_shared_5000_admitted_5834_tasks
   ccd_explicit_kekule_preservation: implemented_824_real_graph_validated
   e027_dual_query_overlap_report: completed_real_12834_union_955_shared_top100_zero_overlap_spearman_minus_0_0371
-  e028_predocking_pocket_qc: real_workstation_chemical_execution_complete_200_poses_visual_review_pending
+  e028_predocking_pocket_qc: real_workstation_chemical_execution_complete_200_poses_visual_review_complete_correct_pockets_local_and_scaffold_clashes
   e028_aligned_point_cloud_export: implemented_generic_element_geometry_only
   e028_exclusion_distance_proxy: implemented_annotation_only_never_filters_retrieval
   artifact_v2_atomic_identity_topology: completed_e029_companion_real_299999_build_accepted

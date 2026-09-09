@@ -844,3 +844,13 @@
   23,112 assignments (7,704 candidates x three poses) in 3.72 seconds on the
   local Windows environment. Real companion mmap latency and the <=10% gate
   remain to be measured on the workstation.
+
+## 2026-09-09 - Recorded E031 workstation continuation checkpoint
+
+- Added `to_human/resume-checkpoint-2026-09-09-e031-implemented.md` as the
+  authoritative continuation handoff after code commit `f6cd02d`.
+- Consolidated accepted E029/E028 evidence, human pose observations, the E030
+  speed-protection pivot, E031 implementation semantics, real input/output
+  paths, exact workstation command, and the locked 7.799-second QT9 gate.
+- Marked E031 real dual-query timing and effectiveness analysis as pending; no
+  exploratory timing or two-query WEE1 evidence was promoted to production.
