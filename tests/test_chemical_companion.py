@@ -5,9 +5,55 @@ import numpy as np
 
 from aidd_agent.chemical_companion import (
     ATOM_DTYPE, BOND_DTYPE, CHEM_META_DTYPE, FEATURE_DIRECTION_DTYPE,
-    TORSION_DTYPE, ChemicalCompanionReader,
+    TORSION_DTYPE, ChemicalCompanionReader, build_chemical_companion_shard,
 )
 from aidd_agent.chemical_geometry import DIRECTION_AXIAL, DIRECTION_SIGNED
+from aidd_agent.conformer_artifacts import META_DTYPE
+
+
+def _write_v1_shard(path: Path, source_path: Path, source_sha256: str) -> None:
+    path.mkdir()
+    np.zeros(1, dtype=META_DTYPE).tofile(path / "meta.bin")
+    np.asarray([b"C1"], dtype="S16").tofile(path / "conformer_ids.bin")
+    np.asarray([b"M1"], dtype="S16").tofile(path / "molecule_ids.bin")
+    (path / "manifest.json").write_text(json.dumps({
+        "format": "aidd-conformer-artifact-shard",
+        "source_path": str(source_path),
+        "source_sha256": source_sha256,
+        "conformers": 1,
+    }), encoding="utf-8")
+
+
+def test_missing_relocated_source_does_not_create_partial(tmp_path: Path):
+    shard = tmp_path / "split_0001"
+    missing = tmp_path / "missing.mol2"
+    _write_v1_shard(shard, missing, "0" * 64)
+
+    try:
+        build_chemical_companion_shard(
+            tmp_path / "registry.sqlite3", "LIB", shard, tmp_path / "output",
+            source_path=missing)
+    except FileNotFoundError as error:
+        assert str(missing) in str(error)
+    else:
+        raise AssertionError("missing source was accepted")
+    assert not (tmp_path / "output" / ".split_0001.partial").exists()
+
+
+def test_source_hash_mismatch_does_not_create_partial(tmp_path: Path):
+    shard = tmp_path / "split_0001"
+    source = tmp_path / "split_0001.mol2"
+    source.write_text("not the registered source", encoding="utf-8")
+    _write_v1_shard(shard, source, "0" * 64)
+
+    try:
+        build_chemical_companion_shard(
+            tmp_path / "registry.sqlite3", "LIB", shard, tmp_path / "output")
+    except ValueError as error:
+        assert "source SHA-256 mismatch" in str(error)
+    else:
+        raise AssertionError("mismatched source was accepted")
+    assert not (tmp_path / "output" / ".split_0001.partial").exists()
 
 
 def test_companion_reader_resolves_identity_features_and_torsions(tmp_path: Path):

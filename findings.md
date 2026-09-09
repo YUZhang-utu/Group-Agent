@@ -243,6 +243,12 @@
 - Physical MOL2 relocation must not mutate registered provenance. The E029
   `--source SHARD_NAME=/path` override changes only where bytes are read; every
   source record is still checked against the registry and artifact identity.
+- E029 shard partials are atomic-build diagnostics, not resumable checkpoints.
+  The first workstation retry exposed that source preflight previously created
+  an empty partial before rejecting a missing relocated path. Source existence,
+  whole-file SHA-256, and registry/artifact identity are now checked before
+  partial creation; an old partial must be preserved outside the output root
+  and the affected shard rebuilt.
 - Existing 299,999-conformer throughput supports only an extrapolated
   100-million-molecule build estimate. The architecture is fixed-budget at
   query time, but 10M/100M physical scale, recall, cache, and recovery gates

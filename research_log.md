@@ -711,3 +711,20 @@
 - AlphaFold 3 ligand-complex exploration performed in the same conversation is
   an independent workstation task and is intentionally excluded from the
   AIDD-agent experiment and necessity/enhancement evidence chain.
+
+## 2026-09-09 - E029 stale-partial failure diagnosed and preflight hardened
+
+- The user located both original MOL2 shards at
+  `/mnt/local/hand/yuzhang/aidd/mc_data` and reported that the companion build
+  was blocked by `.split_0001.partial`.
+- Determined that companion shards are atomic all-or-nothing builds; their
+  partial directories are diagnostic remnants rather than resumable state.
+- Found and fixed a preflight ordering defect: the builder created the partial
+  directory before validating the relocated source path. It now checks source
+  existence, exact whole-file SHA-256, and registry/artifact identity before
+  creating output state.
+- Added regression tests for missing and hash-mismatched sources. Focused E029
+  checks pass 3/3 and the complete dependency-light suite passes 117/117.
+- Wrote a recoverable workstation procedure that inventories and moves the old
+  partial instead of deleting it, then rebuilds with explicit `mc_data` source
+  overrides and records GNU time output. Real E029 acceptance remains pending.

@@ -28,7 +28,11 @@ source explicitly without changing registry identity:
 
 Repeat `--source` for each relocated shard. Completed shards are reused. An
 existing `.SHARD.partial` is never deleted automatically; inspect it after an
-interruption before deciding whether to resume or rebuild.
+interruption before deciding whether to rebuild. Shard-internal resume is not
+implemented: after preserving any diagnostics, move the partial directory out
+of the output root and rerun. Missing sources, source SHA-256 mismatches, and
+registry/artifact identity mismatches are validated before a partial directory
+is created.
 
 The implemented query-time primitives are:
 

@@ -269,15 +269,20 @@ def build_chemical_companion_shard(
         if manifest.get("format") != SHARD_FORMAT:
             raise ValueError(f"existing output is not a chemical companion: {final}")
         return manifest
-    partial = output_root / f".{shard_name}.partial"
-    if partial.exists():
-        raise ValueError(f"incomplete companion exists; inspect before retry: {partial}")
-    partial.mkdir(parents=True)
     registered_source = str(v1_manifest["source_path"])
     source = (Path(source_path).resolve() if source_path is not None
               else Path(registered_source))
     if not source.is_file():
         raise FileNotFoundError(source)
+    partial = output_root / f".{shard_name}.partial"
+    if partial.exists():
+        raise ValueError(f"incomplete companion exists; inspect before retry: {partial}")
+    expected_source_sha256 = str(v1_manifest["source_sha256"])
+    actual_source_sha256 = _sha256(source)
+    if actual_source_sha256 != expected_source_sha256:
+        raise ValueError(
+            f"source SHA-256 mismatch for {shard_name}: expected "
+            f"{expected_source_sha256}, got {actual_source_sha256}")
     with sqlite3.connect(db_path) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute(
@@ -299,6 +304,7 @@ def build_chemical_companion_shard(
         lookup[int(row["source_record_index"])] = (
             gid, conformer_id, molecule_id, str(row["content_sha256"]))
 
+    partial.mkdir(parents=True)
     names = ("chem-meta.bin", "atoms.bin", "bonds.bin", "feature-directions.bin",
              "feature-members.bin", "torsions.bin", "torsion-members.bin",
              "conformer_ids.bin", "molecule_ids.bin")
@@ -359,8 +365,9 @@ def build_chemical_companion_shard(
         "artifact_v1_shard": str(v1_shard),
         "artifact_v1_manifest_sha256": _sha256(v1_shard / "manifest.json"),
         "source_path": str(source.resolve()),
-        "source_sha256": str(v1_manifest["source_sha256"]),
-        "source_validation": "all per-record registry SHA-256 values matched in one pass",
+        "source_sha256": actual_source_sha256,
+        "source_validation": (
+            "whole-file artifact SHA-256 and all per-record registry SHA-256 values matched"),
         "global_id_start": int(v1_meta[0]["global_id"]),
         "conformers": written, "counts": offsets,
         "workers": workers, "max_moving_atoms": max_moving_atoms,

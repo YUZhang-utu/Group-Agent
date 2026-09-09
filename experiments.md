@@ -1383,3 +1383,24 @@ pending.
   exact conformer/global-ID counts, source/output hashes, restart behavior, and
   absence of unpromoted partial shards. Directional/torsion batch ranking is a
   subsequent experiment, not part of this source-recovery step.
+
+### 2026-09-09 workstation partial-recovery diagnosis
+
+Result classification: exploratory operational failure analysis; the real E029
+build remains confirmatory and pending.
+
+- The two source MOL2 shards are now present under
+  `/mnt/local/hand/yuzhang/aidd/mc_data`.
+- The workstation build stopped because
+  `chemical-companion-v1/.split_0001.partial` already existed. The companion
+  format does not implement shard-internal resume, so this directory cannot be
+  promoted or appended to without rebuilding the shard.
+- Code inspection found that a missing or omitted relocated source path could
+  create an empty partial before failing. Preflight now verifies source
+  existence, whole-file artifact SHA-256, and registry/artifact identity before
+  creating the partial.
+- Two regression checks cover missing and hash-mismatched sources without
+  partial creation. The complete dependency-light suite passes 117 tests.
+- The workstation recovery protocol preserves the old partial outside the
+  output root, supplies both explicit source overrides, and captures GNU time
+  metrics and a build log. No production build result is claimed yet.
