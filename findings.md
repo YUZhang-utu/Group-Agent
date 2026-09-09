@@ -299,6 +299,17 @@
   companion rather than changing accepted v1 shards. One sequential MOL2 pass
   materializes elements, charges, aromatic/chiral flags, bonds, feature atom
   membership, directional vectors and bounded terminal-torsion move sets.
+- The real registry-free E029 workstation build is accepted: 299,999 conformers
+  completed in 471.03 summed shard-seconds (636.9 conformers/s), with exact
+  source/output hashes, contiguous global IDs, boundary record reads, and no
+  partial state. An identical command reused both shards in 1.49 seconds at
+  43,008 KB peak RSS and reproduced catalog/shard manifest hashes exactly.
+- Chemistry-aware E028 emitted 200/200 valid SDFs without changing retrieval
+  membership or admission order. All 200 poses contain protein-close points and
+  195 contain severe center-distance collisions, establishing that retained
+  rigid overlays are retrieval hypotheses rather than docking-ready poses.
+  Element-aware vdW distribution review and local relaxation are required
+  before docking; these annotations must not retroactively filter retrieval.
 - Directional comparison must distinguish signed polar vectors from axial
   aromatic normals: reversing a donor/acceptor direction removes agreement,
   whereas reversing a ring normal represents the same plane. Translation is

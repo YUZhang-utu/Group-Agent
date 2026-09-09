@@ -1436,3 +1436,26 @@ pending.
   RDKit or SQLite. E029 focused tests pass 5/5; the full suite passes 119/119.
 - The failed workstation partial is preserved as diagnostic evidence and must
   be moved outside the output root before the corrected rebuild.
+
+### 2026-09-09 real E029 acceptance and chemical E028 execution
+
+Result classification: confirmatory real workstation validation.
+
+- E029 completed 149,999 and 150,000 conformers in 226.737 and 244.290 seconds:
+  299,999 conformers in 471.027 summed shard-seconds, or 636.9 conformers/s.
+  Global IDs were contiguous over `[0, 299999)`, four boundary records resolved,
+  every manifest file size and SHA-256 matched, and no partial remained.
+- Total companion content is 17,174,338 heavy atoms, 18,352,936 bonds,
+  12,801,478 features, 18,082,517 feature memberships, 2,334,097 bounded
+  terminal torsions, and 14,858,132 torsion moving-atom memberships.
+- Identical-command reuse completed in 1.49 seconds with 43,008 KB peak RSS,
+  zero filesystem input, and unchanged catalog plus shard manifest hashes. The
+  first build's peak RSS and aggregate CPU utilization were not captured.
+- Chemistry-aware E028 completed 200 tasks: 100 each for 1X8B/824 and 8BJU/QT9.
+  It emitted and hash-validated 200 SDFs, preserved retrieval/admission order,
+  and reported chemical topology and vdW annotations as available.
+- All 200 poses had points within 2.0 angstrom of receptor atoms and 195 had
+  points within 1.5 angstrom. Median candidate/query centroid displacement was
+  1.001 angstrom. These are QC annotations, not grounds to delete candidates;
+  the prevalence requires distribution analysis, visual review, and local pose
+  relaxation during docking/refinement.

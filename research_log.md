@@ -751,3 +751,18 @@
 - Added an end-to-end mocked shard build covering output files, final count,
   manifest generation and atomic promotion. Focused tests pass 5/5 and the full
   suite passes 119/119.
+
+## 2026-09-09 - Accepted real E029 and executed chemistry-aware E028
+
+- Accepted the real 299,999-conformer companion after source/output hashes,
+  contiguous global IDs, four boundary reads, and absence of partials passed.
+  Shards required 226.737 and 244.290 seconds, totaling 471.027 seconds (636.9
+  conformers/s).
+- The identical command reused both completed shards in 1.49 seconds with
+  43,008 KB peak RSS and byte-identical catalog/shard manifest hashes.
+- E028 produced 200/200 chemical SDFs and vdW annotations across equal 1X8B and
+  8BJU lanes while preserving retrieval membership and admission order.
+- Geometry QC found close receptor points in 200/200 and severe center-distance
+  points in 195/200. Interpreted this as evidence that rigid retrieval overlays
+  are not docking poses. Locked vdW distribution and representative chemical
+  pose review before directional/torsion final-ranking integration.
