@@ -310,6 +310,13 @@
   rigid overlays are retrieval hypotheses rather than docking-ready poses.
   Element-aware vdW distribution review and local relaxation are required
   before docking; these annotations must not retroactively filter retrieval.
+- Collision severity is receptor/query dependent: 1X8B/824 has median soft
+  exclusion 50.20, median clashing-atom fraction 0.582, and median 25.5 severe
+  atoms, versus 17.34, 0.389, and 15.0 for 8BJU/QT9. The 1X8B median penalty is
+  2.90 times the 8BJU value. Even the lowest-penalty representatives retain
+  clashes, while the highest-penalty minimum center distances are 0.432 and
+  0.212 angstrom. Visual classification is required before deciding whether
+  terminal torsions are sufficient or full rigid/local docking is necessary.
 - Directional comparison must distinguish signed polar vectors from axial
   aromatic normals: reversing a donor/acceptor direction removes agreement,
   whereas reversing a ring normal represents the same plane. Translation is

@@ -65,3 +65,14 @@ Record whether collisions are local terminal-group conflicts, rigid-body frame
 errors, or pervasive scaffold penetration. Only then integrate projected
 direction and bounded terminal-torsion scoring into the fixed-budget final
 refinement stage.
+
+## Observed vdW distribution
+
+- 1X8B/824: penalty min/median/max 13.942/50.197/83.300; median clashing atom
+  fraction 0.582; median severe atoms 25.5.
+- 8BJU/QT9: penalty min/median/max 6.900/17.337/49.025; median clashing atom
+  fraction 0.389; median severe atoms 15.0.
+- The high representatives have minimum center distances of 0.432 and 0.212
+  angstrom, so at least those poses contain indisputable physical penetration.
+- Six representative global IDs for visual review are 205388, 178819, 162174,
+  269904, 297144, and 65851.

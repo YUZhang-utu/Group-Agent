@@ -766,3 +766,16 @@
   points in 195/200. Interpreted this as evidence that rigid retrieval overlays
   are not docking poses. Locked vdW distribution and representative chemical
   pose review before directional/torsion final-ranking integration.
+
+## 2026-09-09 - Analyzed real E028 vdW distributions by query
+
+- 1X8B/824 was systematically more collision-prone than 8BJU/QT9: median soft
+  penalties 50.197 versus 17.337, median clashing fractions 0.582 versus 0.389,
+  and median severe-atom counts 25.5 versus 15.0.
+- Even the lowest-penalty representatives retained substantial clashes. The
+  highest-penalty poses had 0.432 and 0.212 angstrom minimum protein/candidate
+  center distances, proving physical overlap rather than marginal vdW contact.
+- Locked six LOW/MEDIAN/HIGH chemical SDFs for human pose inspection. The next
+  decision distinguishes terminal-group conflicts, pervasive scaffold
+  penetration, and frame errors before choosing torsion-only versus full local
+  docking relaxation.

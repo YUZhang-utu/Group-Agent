@@ -1459,3 +1459,10 @@ Result classification: confirmatory real workstation validation.
   1.001 angstrom. These are QC annotations, not grounds to delete candidates;
   the prevalence requires distribution analysis, visual review, and local pose
   relaxation during docking/refinement.
+- Per-query vdW analysis showed substantially worse rigid-overlay collisions
+  for 1X8B/824 than 8BJU/QT9. Median soft penalty/clashing fraction/severe atoms
+  were 50.197/0.582/25.5 for 1X8B and 17.337/0.389/15.0 for 8BJU. Soft-penalty
+  ranges were 13.942--83.300 and 6.900--49.025, respectively. The highest
+  collision poses reached implausible 0.432 and 0.212 angstrom minimum center
+  distances. LOW/MEDIAN/HIGH representatives are locked for visual review;
+  this analysis remains annotation-only.
