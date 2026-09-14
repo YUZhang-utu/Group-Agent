@@ -1,6 +1,7 @@
 # E032 Linux run — expanded MOL2 library
 
-Prepared 2026-09-11. **Not yet run on the real Linux library.**
+Prepared 2026-09-11; updated 2026-09-14. The one-new-file Linux pilot passed;
+the complete frozen-library run is pending.
 User inventory: 365 MOL2, 277.08 GiB, 24 CPUs, approximately 58 GiB available RAM.
 
 ## Update the Linux checkout
@@ -73,6 +74,10 @@ Send the `Preserved incomplete output`, `Ready ...`, and `Pilot complete` lines,
 plus both manifest-count lines. A completed pilot is not full-scale acceptance.
 
 ## Full run after a successful pilot
+
+The pilot succeeded for `N5_0.mol2`: 5,744 inserted, zero duplicates, with
+4,485 strict and 1,259 controlled non-Kekule aromatic parses in both manifests.
+Proceed with the full command below.
 
 The same input inventory/output directory must be used. Omit `--max-new-files`.
 This is the exact long-running command; `pipefail` preserves failure status.

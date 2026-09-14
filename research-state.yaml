@@ -4,19 +4,25 @@ stage: ligand_comparison_and_similarity_search
 current_experiment: E032-library-bulk-precompute
 bulk_precompute:
   requested_at: '2026-09-11'
-  status: kekulization_fallback_validated_locally_linux_retry_pending
+  status: linux_pilot_confirmed_full_batch_ready
   source_root: /mnt/local/hand/yuzhang/aidd/mc_data
   source_files_user_reported: 365
   source_gib_user_reported: 277.08
   available_cpus_user_reported: 24
   proposed_workers: 20
-  linux_head_user_reported: fb26c18
+  linux_head_before_fix: fb26c18
   output_root: /mnt/local/hand/yuzhang/aidd/library-precompute-20260911
   driver: scripts/precompute_library_batch.py
   handoff: to_human/E032_LINUX_RUN.md
   offline_suite: 132_passed_1_rdkit_module_skipped
   local_rdkit_validation: 2025.09.2_real_failing_sample_passed_both_workers
-  rdkit_faiss_real_driver_validation: linux_N5_0_retry_pending
+  linux_runtime: Python_3.11.16_RDKit_2026.03.5_FAISS_1.14.3
+  rdkit_real_driver_validation: N5_0_confirmed_5744_of_5744
+  N5_0_sanitization_counts:
+    strict: 4485
+    aromatic_no_kekulize: 1259
+  N5_0_seconds: 6.7
+  faiss_full_library_validation: pending_full_batch
   pushed_to_github: true
   fix_commit: bdcb912
   previous_e031_real_timing: still_pending
@@ -74,7 +80,8 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - pull the E032b fix on Linux and repeat the one-new-file pilot from its recoverable N5_0 partial
+  - run the frozen E032 full batch without max-new-files and monitor per-shard completion
+  - verify COMPLETE.json and all artifact/chemical/pharmacophore/FAISS catalog counts and hashes
   - after successful pilot run the same frozen batch without the pilot cap and collect completion and timing evidence
   - calibrate expanded-library FAISS recall and query latency before claiming production-scale retrieval performance
   - run E031 key-interaction sidecar on real 8BJU/QT9 and 1X8B/824 refined poses and accept or reject the <=10% latency gate

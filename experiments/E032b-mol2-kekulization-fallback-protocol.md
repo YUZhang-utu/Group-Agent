@@ -48,3 +48,13 @@ Accept the change only if targeted parser/artifact/companion tests pass and the
 representative real record passes every non-kekulization sanitization operation
 and downstream descriptor smoke checks. Linux pilot on `N5_0.mol2` remains the
 required workstation confirmation before resuming the full frozen batch.
+
+## Confirmatory result — 2026-09-14
+
+The Linux pilot passed under Python 3.11.16, RDKit 2026.03.5 and FAISS 1.14.3.
+The driver preserved the failed partial, rebuilt `N5_0.mol2`, and completed all
+5,744 inserted conformers with zero duplicates in 6.7 seconds. Artifact-v1 and
+chemical-companion manifests independently reported identical sanitization
+counts: 4,485 strict and 1,259 `aromatic_no_kekulize`. Both sums equal 5,744;
+there was no record loss or cross-stage disagreement. E032b is confirmed for
+this shard. The frozen full-library E032 run is now the next action.

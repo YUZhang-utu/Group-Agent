@@ -2,6 +2,11 @@
 
 ## Current understanding
 
+- E032b is confirmed on Linux with RDKit 2026.03.5: `N5_0.mol2` completed
+  5,744/5,744 conformers in both artifact and chemical stages. Both manifests
+  reported 4,485 strict parses and 1,259 controlled non-Kekule aromatic parses,
+  with zero duplicates and no cross-stage count disagreement.
+
 - Automatic ligand preparation must preserve crystal instance identity while
   sourcing connectivity separately from authoritative CCD definitions; mmCIF
   coordinates alone are not a safe bond-order source.

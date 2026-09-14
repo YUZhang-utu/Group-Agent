@@ -893,3 +893,16 @@
   work and full-scale timing remain confirmatory work.
 - Pushed the protocol and implementation through `bdcb912` to `origin/main` for
   workstation pull and retry.
+
+## 2026-09-14 — E032b Linux pilot confirmed
+
+- User ran the patched pilot with Python 3.11.16, RDKit 2026.03.5 and FAISS
+  1.14.3. Recovery preserved the previous `.N5_0.partial` before rebuilding.
+- `N5_0.mol2` completed 5,744 inserted conformers, zero duplicates, in 6.7
+  seconds. Both artifact-v1 and chemical-companion manifests reported exactly
+  4,485 strict plus 1,259 controlled aromatic-no-kekulize records.
+- The equality of both stage totals confirms no silent record loss and no
+  chemistry/artifact disagreement. E032b is confirmatory for this real shard.
+- Direction: continue the frozen full E032 batch. Full-library catalogs, shared
+  FAISS training/merge, integrity checks, COMPLETE marker, recall calibration
+  and total timing remain pending.
