@@ -3,7 +3,8 @@ import sqlite3
 
 from aidd_agent.importer import import_library
 from aidd_agent.mol2 import iter_mol2_records, split_conformer_name
-from aidd_agent.registry import connect, library_summary
+from aidd_agent import registry
+from aidd_agent.registry import connect, initialize, library_summary, register_record
 
 
 def block(name: str, offset: float = 0.0) -> str:
@@ -61,3 +62,43 @@ def test_conflicting_same_index_is_reported(tmp_path: Path) -> None:
     assert report.inserted == 1
     assert report.invalid == 1
     assert "Conformer index conflict" in report.issues[0].error
+
+
+def test_random_primary_id_collisions_are_retried(tmp_path: Path, monkeypatch) -> None:
+    database = tmp_path / "aidd.sqlite3"
+    source = tmp_path / "batch.mol2"
+    source.write_text(block("macro_A_conf0"), encoding="utf-8")
+    record = next(iter_mol2_records(source))
+    initialize(database)
+
+    generated = iter([
+        "MOL-AAAAAAAAAAAA", "MOL-BBBBBBBBBBBB",
+        "CNF-AAAAAAAAAAAA", "CNF-BBBBBBBBBBBB",
+    ])
+    monkeypatch.setattr(registry, "stable_id", lambda _prefix: next(generated))
+
+    with connect(database) as connection:
+        connection.execute(
+            "INSERT INTO library(id, name, created_at) VALUES (?, ?, ?)",
+            ("LIB-TEST", "test", "2026-09-14"),
+        )
+        connection.execute(
+            "INSERT INTO molecule(id, library_id, source_name, created_at) VALUES (?, ?, ?, ?)",
+            ("MOL-AAAAAAAAAAAA", "LIB-TEST", "existing", "2026-09-14"),
+        )
+        connection.execute(
+            "INSERT INTO conformer VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("CNF-AAAAAAAAAAAA", "MOL-AAAAAAAAAAAA", 0, "existing_conf0", 1, 0,
+             "old-content", "old-topology", "old.mol2", 0, "[]", "2026-09-14"),
+        )
+
+        assert register_record(connection, "LIB-TEST", record) == "inserted"
+        molecule = connection.execute(
+            "SELECT id FROM molecule WHERE source_name = ?", ("macro_A",)
+        ).fetchone()
+        conformer = connection.execute(
+            "SELECT id FROM conformer WHERE molecule_id = ?", (molecule["id"],)
+        ).fetchone()
+
+    assert molecule["id"] == "MOL-BBBBBBBBBBBB"
+    assert conformer["id"] == "CNF-BBBBBBBBBBBB"

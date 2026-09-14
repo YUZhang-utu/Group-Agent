@@ -426,6 +426,21 @@ def stable_id(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:12].upper()}"
 
 
+def _insert_with_generated_id(prefix: str, table: str, insert) -> str:
+    """Insert with the compact on-disk ID, retrying only random PK collisions."""
+    constraint = f"UNIQUE constraint failed: {table}.id"
+    for _ in range(16):
+        candidate = stable_id(prefix)
+        try:
+            insert(candidate)
+        except sqlite3.IntegrityError as exc:
+            if constraint not in str(exc):
+                raise
+        else:
+            return candidate
+    raise RuntimeError(f"Could not allocate a unique {table} id after 16 attempts")
+
+
 @contextmanager
 def connect(db_path: Path) -> Iterator[sqlite3.Connection]:
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -481,10 +496,12 @@ def register_record(connection: sqlite3.Connection, library_id: str, record: Mol
     if row:
         molecule_id = str(row["id"])
     else:
-        molecule_id = stable_id("MOL")
-        connection.execute(
-            "INSERT INTO molecule(id, library_id, source_name, created_at) VALUES (?, ?, ?, ?)",
-            (molecule_id, library_id, record.molecule_name, utc_now()),
+        molecule_id = _insert_with_generated_id(
+            "MOL", "molecule",
+            lambda candidate: connection.execute(
+                "INSERT INTO molecule(id, library_id, source_name, created_at) VALUES (?, ?, ?, ?)",
+                (candidate, library_id, record.molecule_name, utc_now()),
+            ),
         )
 
     duplicate = connection.execute(
@@ -504,19 +521,22 @@ def register_record(connection: sqlite3.Connection, library_id: str, record: Mol
             "rename the source records or provide a corrected library"
         )
 
-    connection.execute(
-        """
-        INSERT INTO conformer(
-            id, molecule_id, conformer_index, source_record_name, atom_count,
-            bond_count, content_sha256, topology_sha256, source_path,
-            source_record_index, warnings_json, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            stable_id("CNF"), molecule_id, record.conformer_index, record.name,
-            record.atom_count, record.bond_count, record.content_sha256,
-            record.topology_sha256, str(record.source_path), record.record_index,
-            json.dumps(record.warnings), utc_now(),
+    _insert_with_generated_id(
+        "CNF", "conformer",
+        lambda candidate: connection.execute(
+            """
+            INSERT INTO conformer(
+                id, molecule_id, conformer_index, source_record_name, atom_count,
+                bond_count, content_sha256, topology_sha256, source_path,
+                source_record_index, warnings_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                candidate, molecule_id, record.conformer_index, record.name,
+                record.atom_count, record.bond_count, record.content_sha256,
+                record.topology_sha256, str(record.source_path), record.record_index,
+                json.dumps(record.warnings), utc_now(),
+            ),
         ),
     )
     return "inserted"
