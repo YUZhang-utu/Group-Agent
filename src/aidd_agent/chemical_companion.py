@@ -16,7 +16,7 @@ from .chemical_geometry import (
     DIRECTION_AXIAL, DIRECTION_NONE, DIRECTION_SIGNED, TerminalTorsion, unit_vector,
 )
 from .conformer_artifacts import FEATURE_TYPES, META_DTYPE
-from .mol2 import iter_mol2_records
+from .mol2 import iter_mol2_records, load_rdkit_mol2
 
 
 FORMAT = "aidd-chemical-companion-catalog"
@@ -169,12 +169,9 @@ def _terminal_torsions(mol, heavy_map: dict[int, int]) -> list[tuple]:
 
 
 def _process_group(task):
-    from rdkit import Chem
     output = []
     for global_id, conformer_id, molecule_id, raw_text in task:
-        mol = Chem.MolFromMol2Block(raw_text, sanitize=True, removeHs=False)
-        if mol is None:
-            raise ValueError(f"RDKit rejected {conformer_id}")
+        mol, sanitization = load_rdkit_mol2(raw_text, conformer_id)
         heavy = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetAtomicNum() > 1]
         heavy_map = {original: local for local, original in enumerate(heavy)}
         atoms = np.empty(len(heavy), dtype=ATOM_DTYPE)
@@ -219,6 +216,7 @@ def _process_group(task):
             "feature_members": np.asarray(members, dtype="<u2"),
             "torsions": np.asarray(torsion_rows, dtype=TORSION_DTYPE),
             "torsion_members": np.asarray(torsion_members, dtype="<u2"),
+            "sanitization": sanitization,
         })
     return output
 
@@ -334,6 +332,7 @@ def build_chemical_companion_shard(
     offsets = {"atom": 0, "bond": 0, "feature": 0, "member": 0,
                "torsion": 0, "torsion_member": 0}
     written = 0; started = time.perf_counter()
+    sanitization_counts = {"strict": 0, "aromatic_no_kekulize": 0}
     context = mp.get_context("spawn")
     try:
         with context.Pool(workers, initializer=_worker_init,
@@ -353,6 +352,7 @@ def build_chemical_companion_shard(
                     record["feature_members"].tofile(streams["feature-members.bin"])
                     record["torsions"].tofile(streams["torsions.bin"])
                     record["torsion_members"].tofile(streams["torsion-members.bin"])
+                    sanitization_counts[record["sanitization"]] += 1
                     meta = np.asarray([(
                         record["global_id"], offsets["atom"], offsets["bond"],
                         offsets["feature"], offsets["member"], offsets["torsion"],
@@ -395,6 +395,7 @@ def build_chemical_companion_shard(
         "global_id_start": int(v1_meta[0]["global_id"]),
         "conformers": written, "counts": offsets,
         "workers": workers, "max_moving_atoms": max_moving_atoms,
+        "rdkit_sanitization_counts": sanitization_counts,
         "wall_seconds": time.perf_counter() - started,
         "direction_model": "explicit-H-or-local-heavy-geometry-v1",
         "torsion_model": "rdkit-strict-nonring-smallest-side-v1",

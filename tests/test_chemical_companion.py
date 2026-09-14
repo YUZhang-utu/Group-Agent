@@ -91,6 +91,7 @@ def test_registry_free_shard_build_checks_artifact_row_count(
         "feature_members": np.empty(0, dtype="<u2"),
         "torsions": np.empty(0, dtype=TORSION_DTYPE),
         "torsion_members": np.empty(0, dtype="<u2"),
+        "sanitization": "strict",
     }
 
     class FakePool:

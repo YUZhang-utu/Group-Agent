@@ -15,6 +15,45 @@ class Mol2Error(ValueError):
     """Raised when a MOL2 record cannot be safely registered."""
 
 
+RDKIT_SANITIZATION_STRICT = "strict"
+RDKIT_SANITIZATION_AROMATIC = "aromatic_no_kekulize"
+
+
+def load_rdkit_mol2(raw_text: str, identifier: str):
+    """Load MOL2 while preserving valid non-Kekule aromatic graphs.
+
+    The fallback still runs every RDKit sanitization operation except Kekule
+    assignment; it is not a general acceptance path for malformed chemistry.
+    Returns ``(molecule, mode)`` for downstream manifest auditing.
+    """
+    from rdkit import Chem, rdBase
+
+    # Expected strict failures otherwise emit several lines per conformer from
+    # every worker. The returned mode and contextual exceptions remain visible.
+    blocker = rdBase.BlockLogs()
+    try:
+        molecule = Chem.MolFromMol2Block(
+            raw_text, sanitize=True, removeHs=False)
+        if molecule is not None:
+            return molecule, RDKIT_SANITIZATION_STRICT
+        molecule = Chem.MolFromMol2Block(
+            raw_text, sanitize=False, removeHs=False)
+        if molecule is None:
+            raise Mol2Error(f"RDKit could not parse MOL2 record {identifier}")
+        reduced = (Chem.SanitizeFlags.SANITIZE_ALL
+                   ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
+        failed = Chem.SanitizeMol(
+            molecule, sanitizeOps=reduced, catchErrors=True)
+    finally:
+        del blocker
+
+    if failed != Chem.SanitizeFlags.SANITIZE_NONE:
+        raise Mol2Error(
+            f"RDKit rejected MOL2 record {identifier}; non-kekulization "
+            f"sanitization failed at {failed}")
+    return molecule, RDKIT_SANITIZATION_AROMATIC
+
+
 @dataclass(frozen=True)
 class Mol2Record:
     source_path: Path

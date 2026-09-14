@@ -109,6 +109,12 @@
 
 ## Constraints
 
+- RDKit full MOL2 sanitization can reject a Tripos aromatic graph solely because
+  no Kekule single/double-bond assignment is available. Descriptor and topology
+  preprocessing may preserve that graph only after every non-kekulization
+  sanitization operation passes; fallback counts must remain visible in shard
+  manifests.
+
 - Physical laboratory automation requires a stricter authority boundary than
   computational orchestration. An LLM may propose an experiment but cannot
   issue free-form robot or instrument commands. Hardware execution requires a

@@ -854,3 +854,40 @@
   paths, exact workstation command, and the locked 7.799-second QT9 gate.
 - Marked E031 real dual-query timing and effectiveness analysis as pending; no
   exploratory timing or two-query WEE1 evidence was promoted to production.
+
+## 2026-09-11 — Expanded library preprocessing requested (E032)
+
+- User reported 365 MOL2 files / 277.08 GiB in Linux `mc_data`, 24 CPUs,
+  approximately 58 GiB available RAM and 6255.46 GiB free disk. Old two-shard
+  v1 and chemistry catalogs remain available. Linux HEAD reported as fb26c18.
+- Added a separate batch driver and written E032 protocol. Preserve old IDs
+  and data, use transactional per-file registration, immutable input inventory,
+  hash-checked reuse and recoverable partial directories. No production DB is
+  modified. Use bounded FAISS batches, shared all-shard training and independent
+  index shards followed by one merge rather than cumulative full snapshots.
+- Offline suite passed 132 tests, including 9 new safety/identity tests. The
+  local test interpreter lacks RDKit/FAISS: Linux pilot, real chemistry parsing,
+  index training/merge and full-scale timing remain unvalidated.
+- Added `to_human/E032_LINUX_RUN.md` with explicit file transfer, pilot and
+  full-run instructions. No remote execution, Git push or full-run completion.
+- E031 real dual-query timing remains pending; E032 does not run query scoring,
+  docking, relaxation or target-specific model prediction.
+
+## 2026-09-14 — Diagnosed E032 MOL2 kekulization failure (E032b)
+
+- The Linux pilot reached new source `N5_0.mol2` and aborted because strict
+  `MolFromMol2Block(..., sanitize=True)` returned `None` for multiple aromatic
+  macrocycles; multiprocessing only propagated the first rejected conformer and
+  was not the root cause.
+- Locked E032b before implementation. Added a shared loader that keeps strict
+  parsing primary and permits an aromatic-graph fallback only when all RDKit
+  sanitization operations other than `SANITIZE_KEKULIZE` pass.
+- Applied the loader to artifact-v1 and chemical-companion workers and added
+  strict/fallback counts to both manifests. Other sanitization failures remain
+  fatal.
+- Offline suite passed 132 tests with one RDKit-only module skipped. Separate
+  RDKit 2025.09.2 checks passed strict/fallback/invalid rejection. The supplied
+  representative failing macrocycle passed five conformers through both workers
+  with 60 USRCAT values, 37 heavy atoms and 25 features per conformer.
+- Linux retry on actual `N5_0.mol2`, multiprocessing, recovery behavior, FAISS
+  work and full-scale timing remain confirmatory work.

@@ -1,7 +1,24 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E031-general-fast-chemical-reranking
+current_experiment: E032-library-bulk-precompute
+bulk_precompute:
+  requested_at: '2026-09-11'
+  status: kekulization_fallback_validated_locally_linux_retry_pending
+  source_root: /mnt/local/hand/yuzhang/aidd/mc_data
+  source_files_user_reported: 365
+  source_gib_user_reported: 277.08
+  available_cpus_user_reported: 24
+  proposed_workers: 20
+  linux_head_user_reported: fb26c18
+  output_root: /mnt/local/hand/yuzhang/aidd/library-precompute-20260911
+  driver: scripts/precompute_library_batch.py
+  handoff: to_human/E032_LINUX_RUN.md
+  offline_suite: 132_passed_1_rdkit_module_skipped
+  local_rdkit_validation: 2025.09.2_real_failing_sample_passed_both_workers
+  rdkit_faiss_real_driver_validation: linux_N5_0_retry_pending
+  pushed_to_github: false
+  previous_e031_real_timing: still_pending
 roadmap:
   document: docs/end-to-end-roadmap.md
   current_phase: A_retrieval_foundation
@@ -56,6 +73,9 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
+  - pull the E032b fix on Linux and repeat the one-new-file pilot from its recoverable N5_0 partial
+  - after successful pilot run the same frozen batch without the pilot cap and collect completion and timing evidence
+  - calibrate expanded-library FAISS recall and query latency before claiming production-scale retrieval performance
   - run E031 key-interaction sidecar on real 8BJU/QT9 and 1X8B/824 refined poses and accept or reject the <=10% latency gate
   - keep receptor vdW single-pose annotation in the small docking handoff and reserve torsion or rigid micro-relaxation for downstream docking pose preparation
   - extend interaction anchors beyond direct hydrogen bonds only after target-independent extraction tests; keep torsion refinement in docking pose preparation

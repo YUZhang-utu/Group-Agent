@@ -10,7 +10,7 @@ import time
 
 import numpy as np
 
-from .mol2 import iter_mol2_records
+from .mol2 import iter_mol2_records, load_rdkit_mol2
 
 
 SCHEMA_VERSION = 1
@@ -81,13 +81,11 @@ def _quantize(points: np.ndarray, origin: np.ndarray) -> np.ndarray:
 
 
 def _process_group(task):
-    from rdkit import Chem
     from rdkit.Chem import Descriptors3D, rdMolDescriptors
     molecule_id, records = task
     template = None; output = []
     for conformer_id, raw_text in records:
-        mol = Chem.MolFromMol2Block(raw_text, sanitize=True, removeHs=False)
-        if mol is None: raise ValueError(f"RDKit rejected {conformer_id}")
+        mol, sanitization = load_rdkit_mol2(raw_text, conformer_id)
         if template is None: template = _feature_template(mol, _WORKER_FACTORY)
         xyz, _ = _heavy_coordinates(mol); origin = xyz.min(axis=0)
         feature_xyz, feature_types, counts = _features_from_template(mol, template)
@@ -99,7 +97,8 @@ def _process_group(task):
                           Descriptors3D.PMI3(mol)], dtype=np.float32)
         output.append((conformer_id, molecule_id, _quantize(xyz, origin), feature_records,
                        origin, xyz.max(axis=0)-origin, pmi, counts,
-                       np.asarray(rdMolDescriptors.GetUSRCAT(mol), dtype="<f4")))
+                       np.asarray(rdMolDescriptors.GetUSRCAT(mol), dtype="<f4"),
+                       sanitization))
     return output
 
 
@@ -132,6 +131,7 @@ def build_shard_parallel(db_path: Path, library_id: str, source_path: Path,
           (library_id,str(source_path))).fetchall()
     lookup={r["source_record_index"]:r for r in rows}; started=time.perf_counter()
     coord_offset=feature_offset=valid=0
+    sanitization_counts = {"strict": 0, "aromatic_no_kekulize": 0}
     context=mp.get_context("spawn")
     paths={name:partial_dir/name for name in ("coords.bin","feats.bin","meta.bin",
            "conformer_ids.bin","molecule_ids.bin","usrcat.f32.bin")}
@@ -139,7 +139,8 @@ def build_shard_parallel(db_path: Path, library_id: str, source_path: Path,
     try:
         with context.Pool(workers,initializer=_worker_init) as pool:
             for molecule_results in pool.imap(_process_group,_grouped_tasks(source_path,lookup),chunksize=8):
-                for conformer_id,molecule_id,qxyz,features,origin,extent,pmi,counts,usr in molecule_results:
+                for (conformer_id,molecule_id,qxyz,features,origin,extent,pmi,
+                     counts,usr,sanitization) in molecule_results:
                     qxyz.tofile(streams["coords.bin"]);features.tofile(streams["feats.bin"])
                     meta=np.asarray([(global_id_start+valid,coord_offset,feature_offset,len(qxyz),len(features),
                                      origin,extent,pmi,counts,(0,0))],dtype=META_DTYPE)
@@ -147,6 +148,7 @@ def build_shard_parallel(db_path: Path, library_id: str, source_path: Path,
                     np.asarray([conformer_id.encode()],dtype="S16").tofile(streams["conformer_ids.bin"])
                     np.asarray([molecule_id.encode()],dtype="S16").tofile(streams["molecule_ids.bin"])
                     usr.tofile(streams["usrcat.f32.bin"])
+                    sanitization_counts[sanitization] += 1
                     coord_offset+=len(qxyz);feature_offset+=len(features);valid+=1
     finally:
         for stream in streams.values(): stream.close()
@@ -157,6 +159,7 @@ def build_shard_parallel(db_path: Path, library_id: str, source_path: Path,
       "global_id_start":global_id_start,"conformers":valid,"heavy_atoms":coord_offset,
       "features":feature_offset,"coordinate_scale":COORD_SCALE,"coordinates":"heavy_atoms_only",
       "feature_types":FEATURE_TYPES,"workers":workers,"rdkit_version":rdBase.rdkitVersion,
+      "rdkit_sanitization_counts":sanitization_counts,
       "seconds":time.perf_counter()-started,"files":files}
     (partial_dir/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     partial_dir.replace(final_dir);return manifest
@@ -164,7 +167,7 @@ def build_shard_parallel(db_path: Path, library_id: str, source_path: Path,
 
 def build_shard(db_path: Path, library_id: str, source_path: Path,
                 output_root: Path, global_id_start: int) -> dict:
-    from rdkit import Chem, RDLogger, rdBase
+    from rdkit import RDLogger, rdBase
     from rdkit.Chem import Descriptors3D, rdMolDescriptors
     RDLogger.DisableLog("rdApp.warning")
     source_path = source_path.resolve()
@@ -183,14 +186,15 @@ def build_shard(db_path: Path, library_id: str, source_path: Path,
     lookup = {r["source_record_index"]: r for r in rows}
     factory = _feature_factory(); meta_rows=[]; conf_ids=[]; mol_ids=[]; usrcat=[]
     coord_offset=feature_offset=valid=0; started=time.perf_counter()
+    sanitization_counts = {"strict": 0, "aromatic_no_kekulize": 0}
     previous_molecule_id = None; template = None
     with (partial_dir/"coords.bin").open("wb") as coord_file, \
          (partial_dir/"feats.bin").open("wb") as feat_file:
         for record in iter_mol2_records(source_path):
             row=lookup.get(record.record_index)
             if row is None: continue
-            mol=Chem.MolFromMol2Block(record.raw_text,sanitize=True,removeHs=False)
-            if mol is None: raise ValueError(f"RDKit rejected {row['conformer_id']}")
+            mol,sanitization=load_rdkit_mol2(record.raw_text,row["conformer_id"])
+            sanitization_counts[sanitization] += 1
             if row["molecule_id"] != previous_molecule_id:
                 template = _feature_template(mol, factory)
                 previous_molecule_id = row["molecule_id"]
@@ -218,6 +222,7 @@ def build_shard(db_path: Path, library_id: str, source_path: Path,
               "library_id":library_id,"source_path":str(source_path),"source_sha256":_sha256(source_path),
               "global_id_start":global_id_start,"conformers":valid,"coordinate_scale":COORD_SCALE,
               "coordinates": "heavy_atoms_only", "feature_types":FEATURE_TYPES,
+              "rdkit_sanitization_counts":sanitization_counts,
               "rdkit_version":rdBase.rdkitVersion,"seconds":time.perf_counter()-started,"files":files}
     (partial_dir/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     partial_dir.replace(final_dir); return manifest
