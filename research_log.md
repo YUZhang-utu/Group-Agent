@@ -891,3 +891,5 @@
   with 60 USRCAT values, 37 heavy atoms and 25 features per conformer.
 - Linux retry on actual `N5_0.mol2`, multiprocessing, recovery behavior, FAISS
   work and full-scale timing remain confirmatory work.
+- Pushed the protocol and implementation through `bdcb912` to `origin/main` for
+  workstation pull and retry.

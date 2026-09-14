@@ -17,7 +17,8 @@ bulk_precompute:
   offline_suite: 132_passed_1_rdkit_module_skipped
   local_rdkit_validation: 2025.09.2_real_failing_sample_passed_both_workers
   rdkit_faiss_real_driver_validation: linux_N5_0_retry_pending
-  pushed_to_github: false
+  pushed_to_github: true
+  fix_commit: bdcb912
   previous_e031_real_timing: still_pending
 roadmap:
   document: docs/end-to-end-roadmap.md
