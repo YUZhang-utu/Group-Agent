@@ -94,6 +94,45 @@ def test_ordered_topology_change_is_not_silently_template_cached(tmp_path):
         bulk.register_source(db, 'L', p.resolve(), bulk.digest(p))
 
 
+def test_preserve_index_conflicts_retains_source_identity_and_resume(tmp_path):
+    db = tmp_path/'db'; bulk.private_registry(db, 'L')
+    old = tmp_path/'old.mol2'; old.write_text(block('A_conf1'))
+    bulk.register_source(db, 'L', old.resolve(), bulk.digest(old))
+    with sqlite3.connect(db) as c:
+        old_id = c.execute('SELECT id FROM conformer').fetchone()[0]
+    source = tmp_path/'new.mol2'
+    source.write_text(block('A_conf1', 2)+block('A_conf1', 3)+block('A_conf2', 4)
+                      +block('A_conf1', 2))
+    report = bulk.register_source(db, 'L', source.resolve(), bulk.digest(source),
+                                  preserve_index_conflicts=True)
+    assert report['inserted'] == 3
+    assert report['duplicates'] == 1
+    assert report['preserved_index_conflicts'] == 2
+    with sqlite3.connect(db) as c:
+        rows = c.execute('SELECT id,conformer_index,source_record_index,source_record_name,warnings_json '
+                         'FROM conformer WHERE source_path=? ORDER BY source_record_index',
+                         (str(source.resolve()),)).fetchall()
+        assert [r[1] for r in rows] == [-1, -2, 2]
+        assert [r[2] for r in rows] == [0, 1, 2]
+        assert [r[3] for r in rows] == ['A_conf1', 'A_conf1', 'A_conf2']
+        assert len({r[0] for r in rows} | {old_id}) == 4
+        assert 'original=1' in rows[0][4] and old_id in rows[0][4]
+        assert c.execute('SELECT id FROM conformer WHERE conformer_index=1').fetchone()[0] == old_id
+    assert bulk.register_source(db, 'L', source.resolve(), bulk.digest(source),
+                                preserve_index_conflicts=True) == report
+
+
+def test_preserve_conflicts_does_not_bypass_topology_or_commit_partial_source(tmp_path):
+    db = tmp_path/'db'; bulk.private_registry(db, 'L')
+    p = tmp_path/'bad.mol2'
+    p.write_text(block('A_conf1')+block('A_conf1', 2)+block('A_conf1', atom_type='O.3'))
+    with pytest.raises(ValueError, match='topology conflict'):
+        bulk.register_source(db, 'L', p.resolve(), bulk.digest(p), preserve_index_conflicts=True)
+    with sqlite3.connect(db) as c:
+        assert c.execute('SELECT COUNT(*) FROM conformer').fetchone()[0] == 0
+        assert c.execute('SELECT COUNT(*) FROM batch_source').fetchone()[0] == 0
+
+
 def test_exact_duplicate_record_retains_original_source_mapping(tmp_path):
     db = tmp_path/'db'; bulk.private_registry(db, 'L')
     a = tmp_path/'a.mol2'; b = tmp_path/'b.mol2'

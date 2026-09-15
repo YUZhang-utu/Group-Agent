@@ -4,7 +4,13 @@ stage: ligand_comparison_and_similarity_search
 current_experiment: E032-library-bulk-precompute
 bulk_precompute:
   requested_at: '2026-09-11'
-  status: linux_pilot_confirmed_full_batch_ready
+  status: linux_full_batch_source_label_conflict_preservation_fix_ready
+  latest_fix_date: '2026-09-15'
+  conflict_source: split_0119.mol2
+  conflict_record_indices_zero_based: [131568, 131625]
+  conflict_recovery_option: --preserve-index-conflicts
+  conflict_handoff: to_human/E032_CONFORMER_CONFLICT.md
+  conflict_fix_validation: 136_passed_1_rdkit_module_skipped_real_linux_resume_pending
   source_root: /mnt/local/hand/yuzhang/aidd/mc_data
   source_files_user_reported: 365
   source_gib_user_reported: 277.08

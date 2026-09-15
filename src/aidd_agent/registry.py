@@ -488,7 +488,8 @@ def ensure_library(connection: sqlite3.Connection, name: str) -> str:
     return library_id
 
 
-def register_record(connection: sqlite3.Connection, library_id: str, record: Mol2Record) -> str:
+def register_record(connection: sqlite3.Connection, library_id: str, record: Mol2Record,
+                    *, preserve_index_conflicts: bool = False) -> str:
     row = connection.execute(
         "SELECT id FROM molecule WHERE library_id = ? AND source_name = ?",
         (library_id, record.molecule_name),
@@ -516,7 +517,28 @@ def register_record(connection: sqlite3.Connection, library_id: str, record: Mol
         "WHERE molecule_id = ? AND conformer_index = ?",
         (molecule_id, record.conformer_index),
     ).fetchone()
-    if occupied:
+    stored_index = record.conformer_index
+    warnings = list(record.warnings)
+    if occupied and preserve_index_conflicts:
+        # Negative indices are reserved for imported label collisions. The MOL2
+        # name parser only emits nonnegative indices, so later native labels
+        # cannot consume these slots. Keep original names, hashes and locations.
+        topology = connection.execute(
+            "SELECT topology_sha256 FROM conformer WHERE id = ?", (occupied['id'],)
+        ).fetchone()[0]
+        if topology != record.topology_sha256:
+            raise ValueError(f"Ordered topology conflict: {record.name}")
+        smallest = connection.execute(
+            "SELECT MIN(conformer_index) FROM conformer WHERE molecule_id = ?",
+            (molecule_id,),
+        ).fetchone()[0]
+        stored_index = min(0, smallest) - 1
+        warnings.append(
+            f"source_conformer_index_conflict: original={record.conformer_index}; "
+            f"internal={stored_index}; conflicting_id={occupied['id']}; "
+            "source-name grouping only; chemical/stereochemical equivalence not established"
+        )
+    elif occupied:
         raise ValueError(
             f"Conformer index conflict for {record.molecule_name} conf{record.conformer_index}; "
             f"existing={occupied['source_path']} record_index={occupied['source_record_index']} "
@@ -538,10 +560,10 @@ def register_record(connection: sqlite3.Connection, library_id: str, record: Mol
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                candidate, molecule_id, record.conformer_index, record.name,
+                candidate, molecule_id, stored_index, record.name,
                 record.atom_count, record.bond_count, record.content_sha256,
                 record.topology_sha256, str(record.source_path), record.record_index,
-                json.dumps(record.warnings), utc_now(),
+                json.dumps(warnings), utc_now(),
             ),
         ),
     )

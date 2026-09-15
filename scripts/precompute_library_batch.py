@@ -119,7 +119,8 @@ def private_registry(path, library_id):
         db.execute('CREATE INDEX IF NOT EXISTS idx_batch_molecule ON conformer(molecule_id)')
 
 
-def register_source(dbpath, library_id, source, sha, old_shard=None):
+def register_source(dbpath, library_id, source, sha, old_shard=None,
+                    *, preserve_index_conflicts=False):
     import numpy as np
     from aidd_agent.mol2 import iter_mol2_records
     from aidd_agent.registry import register_record
@@ -130,7 +131,11 @@ def register_source(dbpath, library_id, source, sha, old_shard=None):
         if done:
             if done['sha'] != sha:
                 raise ValueError('Registered source hash changed')
-            return dict(done)
+            report = dict(done)
+            report['preserved_index_conflicts'] = db.execute(
+                'SELECT COUNT(*) FROM conformer WHERE source_path=? AND conformer_index<0',
+                (str(source),)).fetchone()[0]
+            return report
         old_mol = old_conf = None
         if old_shard:
             old_mol = np.memmap(old_shard / 'molecule_ids.bin', dtype='S16', mode='r')
@@ -160,7 +165,8 @@ def register_source(dbpath, library_id, source, sha, old_shard=None):
                             str(source), record.record_index, json.dumps(record.warnings), '2026-09-11'))
                 inserted += 1
             else:
-                outcome = register_record(db, library_id, record)
+                outcome = register_record(db, library_id, record,
+                                          preserve_index_conflicts=preserve_index_conflicts)
                 inserted += outcome == 'inserted'
                 duplicates += outcome == 'duplicate'
             n += 1
@@ -169,7 +175,11 @@ def register_source(dbpath, library_id, source, sha, old_shard=None):
         if not n or (old_shard and n != len(old_conf)):
             raise ValueError('Empty source or old source/artifact count mismatch')
         db.execute('INSERT INTO batch_source VALUES (?,?,?,?,?)', (str(source), sha, n, inserted, duplicates))
-        return dict(path=str(source), sha=sha, records=n, inserted=inserted, duplicates=duplicates)
+        conflicts = db.execute(
+            'SELECT COUNT(*) FROM conformer WHERE source_path=? AND conformer_index<0',
+            (str(source),)).fetchone()[0]
+        return dict(path=str(source), sha=sha, records=n, inserted=inserted,
+                    duplicates=duplicates, preserved_index_conflicts=conflicts)
 
 
 def artifact_row(directory):
@@ -374,6 +384,9 @@ def execute(args):
     import fcntl
     with (output / 'run.lock').open('a') as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        log('Conformer label policy: ' + (
+            'preserve distinct records with audited internal indices'
+            if args.preserve_index_conflicts else 'stop on conflicting indices'))
         old = resolve_shards(args.old_artifacts)
         oldchem = read(args.old_chemical)
         if oldchem['library_id'] != old['library_id']:
@@ -410,7 +423,8 @@ def execute(args):
                 raise ValueError('Stopped safely: less than 32 GiB free')
             log('Start ' + p.name)
             t = time.monotonic(); sha = digest(p)
-            report = register_source(dbpath, old['library_id'], p, sha)
+            report = register_source(dbpath, old['library_id'], p, sha,
+                                     preserve_index_conflicts=args.preserve_index_conflicts)
             check_source(item)
             if report['inserted']:
                 if report['inserted'] > 1000000:
@@ -436,7 +450,7 @@ def execute(args):
             completed_new += 1
             report['elapsed_this_run_seconds'] = time.monotonic()-t
             write(output/'progress'/f'{p.stem}.json', report)
-            log(f'Ready {p.name}: inserted={report["inserted"]:,}, duplicates={report["duplicates"]:,}, seconds={report["elapsed_this_run_seconds"]:.1f}')
+            log(f'Ready {p.name}: inserted={report["inserted"]:,}, duplicates={report["duplicates"]:,}, preserved_index_conflicts={report["preserved_index_conflicts"]:,}, seconds={report["elapsed_this_run_seconds"]:.1f}')
         # Only publish expanded catalogs after EVERY frozen source is complete.
         catalog = dict(format='aidd-conformer-artifact-catalog', version=1, library_id=old['library_id'],
                        conformers=sum(int(r['conformers']) for r in rows),
@@ -475,6 +489,9 @@ def main():
     p.add_argument('--workers', type=int, default=20)
     p.add_argument('--max-new-files', type=int, default=0)
     p.add_argument('--run', action='store_true')
+    p.add_argument('--preserve-index-conflicts', action='store_true',
+                   help='Keep distinct same-label records using audited negative internal indices; '
+                        'original names and files remain unchanged. Does not certify chemical identity.')
     args = p.parse_args()
     if args.workers < 1 or args.max_new_files < 0:
         p.error('workers must be positive; max-new-files must be nonnegative')
