@@ -151,3 +151,6 @@
 - Effect: report score min/median/max, median matched-anchor count, Spearman rho
   versus each Gaussian objective, and Top-100/500/1000 overlap. Do not activate
   reranking without held-out multi-target enrichment or redocking evidence.
+
+## E033 expanded-library acceptance
+Protocol: experiments/E033-library-retrieval-acceptance-protocol.md. Full generated payload checks, registry/artifact/chemical IDs, source accounting and frozen index lineage precede retrieval evaluation. Eight deterministic distinct-molecule queries exclude all same-molecule conformers. Full-corpus streaming exact USRCAT L2 truth; nprobe 64/128/256 and candidate budgets 1k/10k/100k; strict and boundary-tie coverage of top100/top1000; first-call and warm search latency, fetch/rerank cost, peak RSS, retained conformers and unique molecule IDs. Explicit molecule-cap scenarios retain one descriptor-ranked representative and report reference-molecule coverage. Proposed .95 minimum per-query recall gate is engineering calibration only, not biological or Gaussian pose quality. Report actual budget-induced reduction distributions; no assumed typical rejection percentage.

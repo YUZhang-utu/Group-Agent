@@ -1,7 +1,16 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E032-library-bulk-precompute
+current_experiment: E033-library-retrieval-acceptance
+library_acceptance:
+  requested_at: '2026-09-15'
+  status: implementation_local_tested_workstation_measurement_pending
+  registration_status: user_reports_complete_COMPLETE_marker_not_yet_verified
+  protocol: experiments/E033-library-retrieval-acceptance-protocol.md
+  handoff: to_human/E033_LIBRARY_ACCEPTANCE.md
+  runner: scripts/run_e033_library_acceptance.sh
+  target_metrics: [integrity, query_latency, exact_descriptor_recall, conformer_reduction, molecule_reduction]
+  biology_and_pose_quality: separate_target_specific_validation_pending
 bulk_precompute:
   requested_at: '2026-09-11'
   status: linux_full_batch_source_label_conflict_preservation_fix_ready

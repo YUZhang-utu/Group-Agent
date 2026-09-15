@@ -9,3 +9,6 @@
   groups and Asn/Gln/His side-chain orientations. Project relevance: query-only
   pocket hydrogen/flip validation before reporting hydrogen-bond angles; never
   a library recall filter. https://github.com/rlabduke/reduce
+
+## E033 engineering references — 2026-09-15
+FAISS official wiki: https://github.com/facebookresearch/faiss/wiki/How-to-make-Faiss-run-faster and https://github.com/facebookresearch/faiss/wiki/FAQ . Used to ground search effort, candidate budget and timing distinctions; our .95 gate and panel are project protocol choices, not source guarantees. No biological filtering rate is inferred from these sources.

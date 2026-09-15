@@ -357,3 +357,6 @@
   local flexibility cannot silently replace a better rigid baseline. These
   components remain reversible evidence until real redocking/enrichment
   calibrates any combined score or cutoff.
+
+## E033 next measurement — 2026-09-15
+Registration completion alone does not establish a finished or reliable retrieval index. The next checkpoint requires E032 COMPLETE plus byte/identity/count acceptance, then measures full-corpus exact-USRCAT recall against approximate candidate budgets and actual unique-molecule reduction. Budget truncation is not evidence of chemical rejection; molecular activity and pose-quality validation remain separate. Local evaluation tooling passes regression checks; real corpus results are not yet available.

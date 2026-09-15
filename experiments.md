@@ -1517,3 +1517,6 @@ Implementation result (exploratory, not the real workstation acceptance):
   on the local Windows environment (23,112 assignments, 6,217/s). This excludes
   real mmap reads and is exploratory; the Linux runner records `/usr/bin/time
   -v` separately for both accepted co-crystal queries.
+
+## E033 — Expanded-library acceptance and retrieval calibration
+Protocol committed as 1e94c8c before local implementation validation. User reports registration complete; E032 COMPLETE marker remains unverified remotely. Implemented read-only acceptance, full-corpus bounded-memory exact truth and reproducible FAISS budget/nprobe calibration with report.json/report.md/metrics.csv and candidate exports. Local regression: 147 passed, 2 dependency-related skips. Real Linux library timing, recall and reduction measurements pending. Follow to_human/E033_LIBRARY_ACCEPTANCE.md.
