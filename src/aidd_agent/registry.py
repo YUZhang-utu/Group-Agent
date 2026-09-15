@@ -512,13 +512,19 @@ def register_record(connection: sqlite3.Connection, library_id: str, record: Mol
         return "duplicate"
 
     occupied = connection.execute(
-        "SELECT id FROM conformer WHERE molecule_id = ? AND conformer_index = ?",
+        "SELECT id, source_path, source_record_index, content_sha256 FROM conformer "
+        "WHERE molecule_id = ? AND conformer_index = ?",
         (molecule_id, record.conformer_index),
     ).fetchone()
     if occupied:
         raise ValueError(
             f"Conformer index conflict for {record.molecule_name} conf{record.conformer_index}; "
-            "rename the source records or provide a corrected library"
+            f"existing={occupied['source_path']} record_index={occupied['source_record_index']} "
+            f"sha256={occupied['content_sha256']}; "
+            f"incoming={record.source_path} record_index={record.record_index} "
+            f"sha256={record.content_sha256}. "
+            "Record indices are zero-based. Compare both records before correcting the library; "
+            "no record was overwritten."
         )
 
     _insert_with_generated_id(

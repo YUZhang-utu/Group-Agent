@@ -54,12 +54,37 @@ def test_old_ids_restored_and_new_ids_do_not_replace_them(tmp_path):
 def test_conflicting_names_rollback_entire_new_source(tmp_path):
     db = tmp_path/'db'; bulk.private_registry(db, 'L')
     p = tmp_path/'bad.mol2'; p.write_text(block('A_conf0')+block('A_conf0', 3))
-    with pytest.raises(ValueError, match='Conformer index conflict'):
+    with pytest.raises(ValueError, match='Conformer index conflict') as error:
         bulk.register_source(db, 'L', p.resolve(), bulk.digest(p))
+    assert 'record_index=0' in str(error.value)
+    assert 'record_index=1' in str(error.value)
     with sqlite3.connect(db) as c:
         assert c.execute('SELECT COUNT(*) FROM conformer').fetchone()[0] == 0
         assert c.execute('SELECT COUNT(*) FROM molecule').fetchone()[0] == 0
         assert c.execute('SELECT COUNT(*) FROM batch_source').fetchone()[0] == 0
+
+
+def test_diagnose_conflict_after_rollback_and_against_committed_source(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        'diagnose', Path(__file__).resolve().parents[1] / 'scripts' / 'diagnose_conformer_conflict.py')
+    diagnostic = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(diagnostic)
+    db = tmp_path/'db'; bulk.private_registry(db, 'L')
+    p = tmp_path/'bad.mol2'; p.write_text(block('A_conf1')+block('A_conf1', 3))
+    before = db.read_bytes()
+    result = diagnostic.diagnose(db, p, 'A', 1)
+    assert result['registered'] == []
+    assert len(result['incoming']) == 2
+    assert result['comparisons'][0]['same_ordered_topology_hash']
+    assert not result['comparisons'][0]['same_whitespace_tokens']
+    assert db.read_bytes() == before
+    old = tmp_path/'old.mol2'; old.write_text(block('A_conf1'))
+    bulk.register_source(db, 'L', old.resolve(), bulk.digest(old))
+    before = db.read_bytes()
+    result = diagnostic.diagnose(db, p, 'A', 1)
+    assert result['registered'][0]['source_matches_registered_hash']
+    assert any(c['same_raw_text'] for c in result['comparisons'])
+    assert db.read_bytes() == before
 
 
 def test_ordered_topology_change_is_not_silently_template_cached(tmp_path):

@@ -906,3 +906,6 @@
 - Direction: continue the frozen full E032 batch. Full-library catalogs, shared
   FAISS training/merge, integrity checks, COMPLETE marker, recall calibration
   and total timing remain pending.
+
+## 2026-09-15 — E032 conformer-name/index conflict triage
+User reports split_0119.mol2 fails after 100,000 records with a ValueError for c--L-dA-Lnme-Wnme-dL-VNMe-c conf1. This is distinct from the compact primary ID collision fixed in bab0643: same name/index has different raw content hash. Real record differences remain unknown. Added explicit existing/incoming source, zero-based record index and hash diagnostics, plus a read-only comparison script covering committed peers and same-file peers after rollback. Targeted tests: 15 passed (PYTHONPATH=src); initial collection without PYTHONPATH failed, then corrected. No automatic renumbering/skipping, source mutation, database migration or remote deployment. User confirms previous source/output paths. Standalone Linux diagnostic command: D:\agent\to_human\AIDD_split_0119_diagnostic.sh. Await real output before choosing identity-policy repair; full batch remains incomplete.
