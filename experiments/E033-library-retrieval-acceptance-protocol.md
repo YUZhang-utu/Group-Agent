@@ -18,7 +18,8 @@ This is a directed calibration, not an unconstrained parameter sweep.
 - Check source-registration coverage, records=inserted+duplicates, registry and
   artifact counts, contiguous global ranges, artifact/chemical identity arrays,
   manifest lineage, vector shape/finiteness and FAISS dimension/count.
-- Seed 20260915; eight uniformly sampled distinct library molecules as queries,
+- Seed 20260915; sample uniform global conformer IDs until eight distinct
+  molecules are represented (molecule sampling is conformer-count-weighted),
   excluding ALL conformers of the query molecule in both truth and candidates.
   Optional external raw 60D query vectors can replace this calibration panel.
 - Reuse frozen mean/std from E032; no training or library rewriting.
