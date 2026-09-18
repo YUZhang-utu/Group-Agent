@@ -190,7 +190,8 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
                          candidate_types: Sequence[int],
                          query_points: Sequence[Sequence[float]],
                          query_types: Sequence[int], *, tolerance: float = 2.0,
-                         axial_samples: int = 6) -> tuple[RigidSeed, ...]:
+                         axial_samples: int = 6,
+                         max_seeds: int | None = None) -> tuple[RigidSeed, ...]:
     """Generate deterministic proper rotations from compatible invariant pairs."""
     candidate = _points(candidate_points, "candidate_points")
     query = _points(query_points, "query_points")
@@ -199,6 +200,10 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
         raise ValueError("feature types require one value per point")
     if tolerance < 0 or axial_samples <= 0:
         raise ValueError("tolerance must be non-negative and axial_samples positive")
+    if max_seeds is not None and (isinstance(max_seeds, bool) or not isinstance(max_seeds, (int, np.integer)) or max_seeds < 0):
+        raise ValueError("max_seeds must be a non-negative integer or None")
+    if max_seeds == 0:
+        return ()
     seeds, seen = [], set()
     for qi in range(len(query)):
         for qj in range(qi + 1, len(query)):
@@ -236,6 +241,8 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
                                 f"pair-q{qi}-{qj}-c{first}-{second}-r{sample}",
                                 (first, second), (qi, qj), sample,
                                 tuple(map(float, matrix.ravel()))))
+                            if max_seeds is not None and len(seeds) >= max_seeds:
+                                return tuple(seeds)
     return tuple(seeds)
 
 

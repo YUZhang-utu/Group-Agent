@@ -62,9 +62,11 @@ def test_gaussian_small_parallel_chunks_preserve_all_arrays(tmp_path):
     root, batch, query, candidates = real_pose_fixture(tmp_path)
     args = (batch / "artifacts/catalog.json", query / "gaussian-query.npz", candidates)
     serial = run_scaled_gaussian_reranking(*args, root / "serial", workers=1, coarse_chunk_size=3, refine_chunk_size=3)
-    parallel = run_scaled_gaussian_reranking(*args, root / "parallel", workers=2, coarse_chunk_size=1, refine_chunk_size=1)
+    parallel = run_scaled_gaussian_reranking(*args, root / "parallel", workers=2, coarse_chunk_size=1, refine_chunk_size=1,
+                                             bounded_pair_seeds=True, profile_first_chunk=True)
     assert compare_archives(Path(serial["final_result"]), Path(parallel["final_result"]))["passed"]
     assert parallel["stages"]["refine"]["chunks_computed"] == 3
+    assert (root / "parallel/refine/worker-first-chunk-profile.txt").is_file()
 
 
 def test_indexed_candidates_fetches_only_found_ids_and_reranks(tmp_path):

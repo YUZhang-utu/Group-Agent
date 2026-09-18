@@ -95,3 +95,8 @@ See [workstation instructions](to_human/E036_FAST_3D_RUN.md) for bounded paralle
 validation chunks and whole-index WEE1 search with finer Gaussian scheduling.
 The completed E035 million-conformer evidence is summarized in
 [to_human/E035_WORKSTATION_1M_RESULT.json](to_human/E035_WORKSTATION_1M_RESULT.json).
+
+## E037 one-shot workstation validation
+Run `bash scripts/run_e037_workstation_suite.sh` to compare original/finer chunks
+and exact bounded seed generation in reverse-order repeats, with separate worker
+profiling. See [one-shot instructions](to_human/E037_ONE_SHOT_VALIDATION.md).

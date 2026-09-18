@@ -1,7 +1,22 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E036-parallel-chunks-and-fast-3d
+current_experiment: E037-bounded-seeds-and-workstation-suite
+bounded_seeds_and_workstation_suite:
+  status: implemented_205_tests_passed_2_dependency_skips_workstation_pending
+  protocol: experiments/E037-bounded-seed-generation-protocol.md
+  protocol_commit: 1a46816
+  runner: scripts/run_e037_workstation_suite.sh
+  handoff: to_human/E037_ONE_SHOT_VALIDATION.md
+  local_benchmark: to_human/E037_LOCAL_SEED_BENCHMARK.json
+  local_synthetic_cases: 12
+  exact_seed_prefix_and_full_gaussian_arrays: passed
+  workstation_scenarios: [old-reference, fine-reference, fine-bounded, old-bounded]
+  workstation_repeats: 2
+  reverse_second_repeat: true
+  profiling_separate_from_latency: true
+  scoring_seed_budget_and_ranking_unchanged: true
+  end_to_end_speedup: unmeasured
 parallel_chunks_and_fast_3d:
   status: implemented_194_tests_passed_2_dependency_skips_workstation_timing_pending
   protocol: experiments/E036-parallel-chunks-protocol.md

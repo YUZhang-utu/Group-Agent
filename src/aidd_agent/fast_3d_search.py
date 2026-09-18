@@ -50,6 +50,8 @@ def indexed_candidates(index, corpus, raw_query, mean, std, output):
 
 def run(args):
     import fcntl
+    bounded_seeds = getattr(args, "bounded_pair_seeds", False)
+    profile = getattr(args, "profile_first_chunk", False)
     batch, source, output = (p.resolve() for p in (args.batch, args.e034, args.output))
     for protected in (batch, source):
         ev.require(not output.is_relative_to(protected) and not protected.is_relative_to(output),
@@ -96,7 +98,8 @@ def run(args):
                         code=fingerprint(sorted(Path(__file__).parent.glob("*.py"))),
                         versions=runtime_versions(), host=platform.node(), cpu_count=os.cpu_count(),
                         workers=args.workers, coarse_chunk=args.coarse_chunk, refine_chunk=args.refine_chunk,
-                        fresh_retrieval=args.fresh_retrieval,
+                        fresh_retrieval=args.fresh_retrieval, bounded_pair_seeds=bounded_seeds,
+                        profile_first_chunk=profile,
                         threads={k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")})
         if output.exists():
             ev.require((output / "protocol.json").is_file()
@@ -128,7 +131,8 @@ def run(args):
                         refine_chunk_size=args.refine_chunk, top_n_per_objective=cfg["top_n_per_objective"],
                         sigma=cfg["sigma_angstrom"], cutoff=cfg["cutoff_angstrom"],
                         pair_tolerance=cfg["pair_tolerance_angstrom"], axial_samples=cfg["axial_samples"],
-                        max_pair_seeds=cfg["max_pair_seeds"], resume=True)
+                        max_pair_seeds=cfg["max_pair_seeds"], resume=True,
+                        bounded_pair_seeds=bounded_seeds, profile_first_chunk=profile)
                     gaussian_seconds = time.perf_counter()-gaussian_start
                     rigid = Path(g["final_result"])
                     side = root / "interaction-matches.npz"
@@ -143,7 +147,8 @@ def run(args):
                     fresh = all(g["stages"][s]["chunks_reused"] == 0 for s in ("coarse", "refine"))
                     row = dict(query_id=qid, retrieval=retrieval, gaussian_seconds=gaussian_seconds,
                                annotation_seconds=annotation_seconds, execution_seconds=execution_seconds,
-                               fresh_compute=fresh, gaussian_equivalence=check, annotation_equivalence=annotation_check,
+                               fresh_compute=fresh, latency_eligible=fresh and not profile,
+                               profiling_enabled=profile, gaussian_equivalence=check, annotation_equivalence=annotation_check,
                                gaussian=g, timing_scope="query execution incl serialization and candidate check; excludes preflight and final equivalence checks",
                                service_latency_claim=False)
                     return row, sorted(p for p in root.rglob("*") if p.is_file())
@@ -174,6 +179,8 @@ def main():
     p.add_argument("--refine-chunk", type=int, default=64)
     p.add_argument("--fresh-retrieval", action="store_true")
     p.add_argument("--resume", action="store_true")
+    p.add_argument("--bounded-pair-seeds", action="store_true")
+    p.add_argument("--profile-first-chunk", action="store_true")
     run(p.parse_args())
 
 

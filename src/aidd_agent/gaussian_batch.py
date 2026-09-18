@@ -330,7 +330,7 @@ def _query_self_overlaps(query: Mapping[str, np.ndarray], sigma: float,
 def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
                ids: np.ndarray, *, sigma: float, cutoff: float | None,
                pair_tolerance: float, axial_samples: int,
-               max_pair_seeds: int) -> dict[str, np.ndarray]:
+               max_pair_seeds: int, bounded_pair_seeds: bool = False) -> dict[str, np.ndarray]:
     """Score a locked ID slice while caching every rigid-invariant self overlap."""
     query_shape = query["shape_points"]
     query_features = query["feature_points"]
@@ -356,7 +356,8 @@ def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
             pair_seeds = pair_alignment_seeds(
                 candidate.feature_points, candidate.feature_types,
                 query_features[anchor_indices], query_types[anchor_indices],
-                tolerance=pair_tolerance, axial_samples=axial_samples)
+                tolerance=pair_tolerance, axial_samples=axial_samples,
+                max_seeds=max_pair_seeds if bounded_pair_seeds else None)
             pair_seeds = pair_seeds[:max_pair_seeds]
             pair_count = len(pair_seeds)
             seeds.extend(pair_seeds)
@@ -583,8 +584,18 @@ def _worker_run_chunk(task: tuple) -> dict:
         raise RuntimeError("Gaussian worker was not initialized")
     stage_directory, stage, chunk_index, start, stop, ids, config_hash, storage = task
     started = time.perf_counter()
-    arrays = _score_ids(
-        _WORKER_READER, _WORKER_QUERY, ids, **_WORKER_PARAMETERS)
+    parameters = dict(_WORKER_PARAMETERS)
+    profile = parameters.pop("profile_first_chunk", False) and chunk_index == 0
+    if profile:
+        import cProfile
+        import pstats
+        profiler = cProfile.Profile()
+        arrays = profiler.runcall(_score_ids, _WORKER_READER, _WORKER_QUERY, ids, **parameters)
+        profiler.dump_stats(str(Path(stage_directory) / "worker-first-chunk.pstats"))
+        with (Path(stage_directory) / "worker-first-chunk-profile.txt").open("w", encoding="utf-8") as stream:
+            pstats.Stats(profiler, stream=stream).sort_stats("cumulative").print_stats(60)
+    else:
+        arrays = _score_ids(_WORKER_READER, _WORKER_QUERY, ids, **parameters)
     if storage == "slim":
         arrays = {
             "global_ids": arrays["global_ids"],
@@ -938,7 +949,9 @@ def run_scaled_gaussian_reranking(artifact_catalog: Path, query_path: Path,
                                   axial_samples: int = 6,
                                   max_pair_seeds: int = 512,
                                   resume: bool = True,
-                                  progress_every: int = 1) -> dict:
+                                  progress_every: int = 1,
+                                  bounded_pair_seeds: bool = False,
+                                  profile_first_chunk: bool = False) -> dict:
     """Run fixed-budget Gaussian scoring with retained slim coarse shards."""
     if stage not in {"coarse", "refine", "all"}:
         raise ValueError("stage must be coarse, refine, or all")
@@ -962,6 +975,7 @@ def run_scaled_gaussian_reranking(artifact_catalog: Path, query_path: Path,
         "pair_tolerance_angstrom": pair_tolerance,
         "axial_samples": axial_samples, "max_pair_seeds": max_pair_seeds,
         "coarse_storage": "slim-sharded", "objectives": list(OBJECTIVES),
+        "bounded_pair_seeds": bounded_pair_seeds, "profile_first_chunk": profile_first_chunk,
     }
     canonical = json.dumps(config, sort_keys=True, separators=(",", ":")).encode()
     config_hash = hashlib.sha256(canonical).hexdigest()
@@ -981,7 +995,8 @@ def run_scaled_gaussian_reranking(artifact_catalog: Path, query_path: Path,
         }
         _atomic_json(run_manifest_path, run_manifest)
     common = {"sigma": sigma, "cutoff": cutoff,
-              "pair_tolerance": pair_tolerance, "axial_samples": axial_samples}
+              "pair_tolerance": pair_tolerance, "axial_samples": axial_samples,
+              "bounded_pair_seeds": bounded_pair_seeds, "profile_first_chunk": profile_first_chunk}
     coarse_dir = output_dir / "coarse"
     if stage in {"coarse", "all"}:
         _, coarse_manifest = _execute_stage(
