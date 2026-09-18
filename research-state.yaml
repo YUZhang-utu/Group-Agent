@@ -1,10 +1,25 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E035-molecule-review-and-equivalent-e031
+current_experiment: E036-parallel-chunks-and-fast-3d
+parallel_chunks_and_fast_3d:
+  status: implemented_194_tests_passed_2_dependency_skips_workstation_timing_pending
+  protocol: experiments/E036-parallel-chunks-protocol.md
+  protocol_commit: 70beeff
+  handoff: to_human/E036_FAST_3D_RUN.md
+  runner: scripts/run_e036_fast_3d.sh
+  validation_workers: 8
+  gaussian_workers: 16
+  gaussian_coarse_chunk: 500
+  gaussian_refine_chunk: 64
+  scoring_and_candidate_budgets_unchanged: true
+  full_library_index_search: two_calibrated_WEE1_queries
+  real_speedup: not_yet_measured
 interaction_review_and_scale:
   requested_at: '2026-09-18'
-  status: implemented_local_100k_synthetic_validated_real_library_pending
+  status: user_reported_real_1m_equivalence_and_historical_latency_gates_passed
+  workstation_result: to_human/E035_WORKSTATION_1M_RESULT.json
+  evidence_provenance: user_pasted_report_not_independent_remote_artifact_audit
   protocol: experiments/E035-molecule-review-and-equivalent-e031-protocol.md
   protocol_commit: 1674d11
   handoff: to_human/E035_WORKSTATION_RUN.md
@@ -25,7 +40,7 @@ interaction_review_and_scale:
   regression_tests: 189_passed_2_dependency_skips
   original_engine_default: reference
   e031_changes_ranking: false
-  workstation_timing_and_real_scale_validated: false
+  workstation_timing_and_real_scale_validated: user_reported_passed
 expanded_wee1_refinement:
   requested_at: '2026-09-18'
   status: workstation_complete_user_report_retrieval_passed_latency_partial

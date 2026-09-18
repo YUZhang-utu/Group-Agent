@@ -11,6 +11,8 @@ import platform
 import pstats
 import sys
 import time
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 from types import SimpleNamespace
 
 import numpy as np
@@ -24,6 +26,7 @@ from .chemical_geometry import transform_directions
 from .interaction_matching import interaction_match, score_interaction_matches
 from .interaction_fast import InteractionFeatureReader, match_batch
 from .interaction_review import write_review
+from .chunk_execution import bounded_results
 
 
 def molecule_winners(ids, molecules, scores):
@@ -207,7 +210,31 @@ def stress_chunk(reader, ids, queries, output, *, reference_readers):
                 feature_count_max=max(len(c.feature_points) for c in records))
 
 
-def scale_validation(batch, e034, output, count, protocol_path):
+_STRESS_WORKER = None
+
+
+def _stress_initialize(artifact, chemical, queries):
+    global _STRESS_WORKER
+    if os.name != "nt":
+        ensure_file_descriptor_limit(len(ev.read(artifact)["shards"]))
+    _STRESS_WORKER = (InteractionFeatureReader(artifact, chemical), queries,
+                      (ArtifactCatalogReader(artifact), ChemicalCompanionReader(chemical)))
+
+
+def _stress_task(task):
+    output, number, ids, protocol_path, sample = task
+    reader, queries, reference_readers = _STRESS_WORKER
+    path = output / f"chunk-{number:06d}.npz"
+    reused = (output / f"chunk-{number:06d}.stage.json").exists()
+    def operation():
+        return stress_chunk(reader, ids, queries, path, reference_readers=reference_readers), [path]
+    result = checked_stage(output, f"chunk-{number:06d}", [protocol_path, sample], operation)
+    return result, reused
+
+
+def scale_validation(batch, e034, output, count, protocol_path, workers=1, chunk_size=512):
+    ev.require(workers > 0 and chunk_size > 0, "Scale workers and chunk size must be positive")
+    started = time.perf_counter()
     output.mkdir(parents=True, exist_ok=True)
     artifact, chemical = batch / "artifacts/catalog.json", batch / "chemical/catalog.json"
     ids, coverage = stratified_ids(ev.read(artifact), count, 20260918)
@@ -220,18 +247,48 @@ def scale_validation(batch, e034, output, count, protocol_path):
     sample = output / "sampled-global-ids.npy"
     if sample.exists(): ev.require(np.array_equal(np.load(sample, allow_pickle=False), ids), "Changed scale sample")
     else: np.save(sample, ids)
-    results, paths = [], []
-    reader = InteractionFeatureReader(artifact, chemical)
-    reference_readers = (ArtifactCatalogReader(artifact), ChemicalCompanionReader(chemical))
-    try:
-        for start in range(0, len(ids), 512):
-            number = start // 512; path = output / f"chunk-{number:06d}.npz"
-            def operation(start=start, path=path):
-                return stress_chunk(reader, ids[start:start+512], queries, path, reference_readers=reference_readers), [path]
-            result = checked_stage(output, f"chunk-{number:06d}", [protocol_path, sample], operation)
-            results.append(result); paths.append(path)
-    finally:
-        reader.close()
+    total = (len(ids) + chunk_size - 1) // chunk_size
+    results = [None] * total
+    paths = [output / f"chunk-{i:06d}.npz" for i in range(total)]
+    tasks = ((output, i, ids[start:start+chunk_size], protocol_path, sample)
+             for i, start in enumerate(range(0, len(ids), chunk_size)))
+    completed = reused_count = 0
+    checkpoint_reused = sum((output / f"chunk-{i:06d}.stage.json").exists() for i in range(total))
+    compute_started = time.perf_counter()
+    def record(index, value):
+        nonlocal completed, reused_count
+        result, reused = value
+        results[index] = result
+        completed += 1
+        reused_count += int(reused)
+        elapsed = time.perf_counter() - compute_started
+        computed = completed - reused_count
+        remaining = max(0, total - checkpoint_reused - computed)
+        eta = elapsed / computed * remaining if computed else None
+        progress = dict(completed_chunks=completed, total_chunks=total, reused_chunks=reused_count,
+                        workers=workers, elapsed_seconds=elapsed, eta_seconds=eta,
+                        eta_scope="chunk execution only; excludes final global rank checks")
+        _atomic_json(output / "progress.json", progress)
+        if completed == 1 or completed % 10 == 0 or completed == total:
+            estimate = "pending" if eta is None else f"{eta / 60:.1f} min"
+            ev.log(f"Scale {completed}/{total} ({100*completed/total:.1f}%); workers={workers}; "
+                   f"reused={reused_count}; elapsed={elapsed/60:.1f} min; ETA={estimate}")
+    if workers == 1:
+        _stress_initialize(artifact, chemical, queries)
+        try:
+            for index, task in enumerate(tasks):
+                record(index, _stress_task(task))
+        finally:
+            _STRESS_WORKER[0].close()
+    else:
+        for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+            os.environ[key] = "1"
+        with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("spawn"),
+                                 initializer=_stress_initialize, initargs=(artifact, chemical, queries)) as pool:
+            for index, value in bounded_results(pool, _stress_task, tasks, workers * 2):
+                record(index, value)
+    chunk_wall = time.perf_counter() - compute_started
+    ev.log("Scale chunks complete; checking global conformer and molecule rankings")
     all_arrays = {}
     for path in paths:
         with np.load(path, allow_pickle=False) as a:
@@ -245,6 +302,11 @@ def scale_validation(batch, e034, output, count, protocol_path):
                                                 all_arrays[prefix + "_reference"], all_arrays[prefix + "_batched"])
     ev.require(all(r["passed"] for r in ranks.values()), "Scale global score/rank equivalence failed")
     return dict(status="passed", unique_conformers=count, unique_molecules=len(np.unique(all_arrays["molecule_ids"])),
+                execution=dict(workers=workers, chunk_size=chunk_size, chunks=total,
+                               reused_chunks=reused_count, computed_chunks=total-reused_count,
+                               chunk_wall_seconds_this_invocation=chunk_wall,
+                               scale_wall_seconds_this_invocation=time.perf_counter()-started,
+                               scoring_seconds_scope="sum of per-chunk compute; includes historical reused chunks; not elapsed wall time"),
                 comparisons=sum(r["comparisons"] for r in results), sampled_ids_sha256=ev.sha(sample),
                 shard_coverage=coverage, max_absolute_error=max(r["max_absolute_error"] for r in results),
                 assignment_mismatches=sum(r["assignment_mismatches"] for r in results), global_rank_checks=ranks,
@@ -278,6 +340,9 @@ def run(args):
     for source in (batch, e034):
         ev.require(not output.is_relative_to(source) and not source.is_relative_to(output), "Output overlaps protected inputs")
     ev.require(args.repeats >= 3, "Need at least three alternating timing repeats")
+    workers = getattr(args, "scale_workers", 1)
+    chunk_size = getattr(args, "scale_chunk_size", 512)
+    ev.require(workers > 0 and chunk_size > 0, "Scale workers and chunk size must be positive")
     ev.require(not output.exists() or args.resume, "Output exists; use --resume or a fresh directory")
     resume = args.resume and output.exists()
     if args.resume and not resume: ev.log("No E035 output yet; starting a fresh run")
@@ -289,6 +354,7 @@ def run(args):
                         code=fingerprint(sorted(Path(__file__).parent.glob("*.py"))), numpy=np.__version__,
                         python=sys.version, platform=platform.platform(),
                         host=platform.node(), cpu_count=os.cpu_count(), repeats=args.repeats, scale=args.scale,
+                        scale_workers=workers, scale_chunk_size=chunk_size,
                         threads={key: os.environ.get(key) for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")})
         if resume:
             ev.require((output / "protocol.json").is_file(), "E035 resume requires its protocol.json")
@@ -303,7 +369,7 @@ def run(args):
                     result = benchmark_query(batch, e034, output / label, label, query_id, report, args.repeats)
                     return result, sorted(p for p in (output / label).rglob("*") if p.is_file())
                 results.append(checked_stage(output, label, [output / "protocol.json"], operation))
-            scale = scale_validation(batch, e034, output / "scale", args.scale, output / "protocol.json")
+            scale = scale_validation(batch, e034, output / "scale", args.scale, output / "protocol.json", workers, chunk_size)
             ev.require(protocol["sources"] == fingerprint(inputs), "E035 source mutation detected")
             result = dict(status="complete", queries=results, scale=scale, e031_changes_ranking=False,
                           biological_quality="not_evaluated", pose_review="exported_pending_human_review")
@@ -322,6 +388,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--scale", type=int, default=100000)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--scale-workers", type=int, default=1)
+    parser.add_argument("--scale-chunk-size", type=int, default=512)
     parser.add_argument("--resume", action="store_true")
     run(parser.parse_args())
 

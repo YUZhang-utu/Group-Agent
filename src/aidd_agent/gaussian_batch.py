@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
+from .chunk_execution import bounded_results
 import hashlib
 import heapq
 import json
@@ -679,9 +680,8 @@ def _execute_stage(stage_directory: Path, stage: str, ids: np.ndarray, *,
         with ProcessPoolExecutor(
                 max_workers=workers, initializer=_worker_initialize,
                 initargs=initializer_args) as executor:
-            futures = [executor.submit(_worker_run_chunk, task) for task in chunks]
-            for future in as_completed(futures):
-                report(future.result())
+            for _, manifest in bounded_results(executor, _worker_run_chunk, chunks, workers * 2):
+                report(manifest)
     for chunk_index, start in enumerate(range(0, len(ids), chunk_size)):
         stop = min(len(ids), start + chunk_size)
         if _validate_chunk(stage_directory, stage, chunk_index, start, stop,

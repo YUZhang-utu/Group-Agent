@@ -1,0 +1,31 @@
+{
+  "provenance": "condensed user-pasted report; remote files not independently inspected",
+  "output": "/mnt/local/hand/yuzhang/aidd/e035-review-and-scale/run-1m-v1",
+  "status": "complete",
+  "unique_conformers": 1000000,
+  "source_grouped_molecules": 952402,
+  "comparisons": 6000000,
+  "sampled_ids_sha256": "315c8473ca64be3bc089555882fd70f70bde772b8974780ea847be778c6cebd0",
+  "max_absolute_error": 0.0,
+  "assignment_mismatches": 0,
+  "all_six_global_ranking_checks_passed": true,
+  "reference_feature_reads_independent": true,
+  "reference_compute_seconds": 1033.351587338373,
+  "batched_compute_seconds": 505.41377228149213,
+  "queries": [
+    {"id": "8BJU:QT9:A:601", "reference_median_seconds": 3.6184360599145293,
+     "optimized_median_seconds": 1.4475854949560016, "speedup": 2.4996354775056027,
+     "historical_overhead_fraction": 0.04633452217419153, "historical_gate": true,
+     "molecules": 2212, "spearman": 0.40823842012309003, "top100_shared": 6,
+     "different_representatives": 592, "exported_poses": 39},
+    {"id": "1X8B:824:A:901", "reference_median_seconds": 4.288542992202565,
+     "optimized_median_seconds": 1.909238173859194, "speedup": 2.2462063931678147,
+     "historical_overhead_fraction": 0.0272927204512069, "historical_gate": true,
+     "molecules": 2961, "spearman": 0.22367625584040599, "top100_shared": 9,
+     "different_representatives": 780, "exported_poses": 41}
+  ],
+  "e031_changes_ranking": false,
+  "pose_review": "exported_pending_human_review",
+  "biological_quality": "not_evaluated",
+  "scope": "real features, constructed stress orientations; historical Gaussian latency denominator"
+}

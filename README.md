@@ -89,3 +89,9 @@ See `docs/multi-cocrystal-aggregation.md` for conformer-to-molecule collapse,
 site-scoped multi-query fusion, protected query quotas, and docking task export.
 See `docs/cluster-bridge.md` for cross-platform authenticated Slurm submission.
 See `docs/desktop-deployment.md` for workstation, RDKit, PyMOL, and AlphaFold setup.
+
+## E036 fast 3D execution
+See [workstation instructions](to_human/E036_FAST_3D_RUN.md) for bounded parallel
+validation chunks and whole-index WEE1 search with finer Gaussian scheduling.
+The completed E035 million-conformer evidence is summarized in
+[to_human/E035_WORKSTATION_1M_RESULT.json](to_human/E035_WORKSTATION_1M_RESULT.json).
