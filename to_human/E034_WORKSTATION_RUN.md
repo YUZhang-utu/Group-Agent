@@ -94,6 +94,23 @@ bash scripts/run_e034_expanded_wee1.sh
 
 ## 返回哪些内容
 
+### 缺少 E033 完成标记时
+
+`report.md` 在完成标记之前写出；单独存在不能证明整轮正常结束。
+错误路径、不完整拷贝或末尾中断均可能导致标记缺失，需检查目录才能区分。
+不要手动补写 `EVALUATION_COMPLETE.json`。如果完整结果在别处，设置
+`E033_OUTPUT` 为那个目录即可；否则可一次执行重新验收与 E034：
+
+```bash
+bash scripts/run_e034_with_fresh_acceptance.sh
+```
+
+此命令创建带时间戳和进程号的新 E033/E034 目录，先完整重新验收和校准，
+再运行 E034；不重建库、不改旧报告。E033 失败则不启动 E034。
+终端打印新路径，后续续跑需将 E033_OUTPUT/E034_OUTPUT 明确设为这些路径。
+
+### 结果文件
+
 优先返回输出目录中的 `report.md`、`report.json`。
 完整候选和精确距离保存在 `retrieval/`；每条查询下有输入副本、
 `gaussian/refine/merged-scores.npz`、`interaction-matches.npz` 及 manifest。

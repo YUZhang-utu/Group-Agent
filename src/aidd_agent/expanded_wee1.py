@@ -68,8 +68,25 @@ def checked_stage(root, name, inputs, operation):
     return result
 
 
+class IncompleteE033Error(ValueError):
+    pass
+
+
+def check_e033_files(evaluation):
+    required = ("report.json", "acceptance.json", "protocol.json", "queries.npz", "EVALUATION_COMPLETE.json")
+    missing = [name for name in required if not (evaluation / name).is_file()]
+    if missing:
+        raise IncompleteE033Error(
+            f"Incomplete E033 evidence directory: {evaluation}\n"
+            f"Missing: {', '.join(missing)}\n"
+            "report.md alone is insufficient; it is written before the final completion marker.\n"
+            "Set E033_OUTPUT to the actual complete evaluation directory, or rerun E033 into a NEW directory.\n"
+            "Do not create the marker by hand. The library and existing reports have not been changed.")
+
+
 def verify_acceptance(batch, evaluation):
     """Bind a completed E033 full acceptance to the current immutable batch."""
+    check_e033_files(evaluation)
     marker = ev.read(evaluation / "EVALUATION_COMPLETE.json")
     report_path = evaluation / "report.json"
     ev.require(marker["report_sha256"] == ev.sha(report_path), "E033 report checksum mismatch")
@@ -368,7 +385,11 @@ def main():
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--threads", type=int, default=20)
     parser.add_argument("--resume", action="store_true")
-    return run(parser.parse_args())
+    try:
+        return run(parser.parse_args())
+    except IncompleteE033Error as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

@@ -33,6 +33,27 @@ def make_e033(batch, root):
     return root
 
 
+def test_report_only_is_not_complete_e033_and_lists_all_missing(tmp_path):
+    (tmp_path / "report.md").write_text("Acceptance: passed")
+    before = list(tmp_path.iterdir())
+    with pytest.raises(e.IncompleteE033Error) as error:
+        e.check_e033_files(tmp_path)
+    for name in ("report.json", "acceptance.json", "protocol.json", "queries.npz", "EVALUATION_COMPLETE.json"):
+        assert name in str(error.value)
+    assert list(tmp_path.iterdir()) == before
+
+
+def test_missing_final_marker_does_not_override_valid_report(library, tmp_path):
+    batch, _, _ = library
+    evaluation = make_e033(batch, tmp_path / "e033")
+    marker = evaluation / "EVALUATION_COMPLETE.json"
+    marker.rename(evaluation / "saved-marker.json")
+    before = e.fingerprint(evaluation.iterdir())
+    with pytest.raises(e.IncompleteE033Error, match="EVALUATION_COMPLETE.json"):
+        e.verify_acceptance(batch, evaluation)
+    assert e.fingerprint(evaluation.iterdir()) == before
+
+
 def test_acceptance_binds_current_library_and_rejects_corrupt_index(library, tmp_path):
     batch, _, _ = library
     evaluation = make_e033(batch, tmp_path / "e033")
