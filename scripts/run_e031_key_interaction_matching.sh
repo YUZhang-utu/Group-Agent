@@ -54,11 +54,7 @@ with np.load(rigid_path, allow_pickle=False) as rigid, np.load(match_path, allow
     print("query:", label)
     print("candidates:", len(scores), "anchors:", manifest["anchors"])
     print("wall_seconds:", manifest["wall_seconds"])
-    if label == "8BJU_QT9_A_601":
-        reference = 77.99
-        overhead_percent = 100.0 * manifest["wall_seconds"] / reference
-        print("vs_accepted_77.99s_refine_percent:", overhead_percent)
-        print("latency_gate_le_10_percent:", overhead_percent <= 10.0)
+    print("latency_gate:", "not evaluated by legacy runner; use E034 for a matching same-run baseline")
     print("interaction_min_median_max:", summary["interaction_min_median_max"])
     print("matched_anchors_median:", summary["matched_anchors_median"])
     print("spearman_vs_gaussian:", summary["spearman_rho_vs_rigid_objective"])

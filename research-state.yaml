@@ -1,11 +1,44 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E033-library-retrieval-acceptance
+current_experiment: E034-expanded-wee1-refinement
+expanded_wee1_refinement:
+  requested_at: '2026-09-18'
+  status: implemented_local_validation_workstation_execution_pending
+  protocol: experiments/E034-expanded-wee1-refinement-protocol.md
+  protocol_commit: d2aaa73
+  runner: scripts/run_e034_expanded_wee1.sh
+  handoff: to_human/E034_WORKSTATION_RUN.md
+  e033_directory: /mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604
+  default_output: /mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/20260918-run1
+  queries: ['8BJU:QT9:A:601', '1X8B:824:A:901']
+  candidate_budget: 10000
+  nprobes: [128, 256]
+  recall_gate: 0.95
+  e031_timing_baseline: same_run_same_query_gaussian_refine_not_historical_constant
+  local_validation: 166_passed_2_dependency_skips_bash_syntax_passed
+  workstation_validated: false
 library_acceptance:
   requested_at: '2026-09-15'
-  status: implementation_local_tested_workstation_measurement_pending
-  registration_status: user_reports_complete_COMPLETE_marker_not_yet_verified
+  status: passed_user_supplied_report_calibration_gate_passed_on_panel
+  registration_status: completed_as_reported_by_user_acceptance_summary
+  latest_user_confirmation: '2026-09-18'
+  evidence_provenance: user_pasted_report_and_partial_json_not_independently_rerun
+  result_record: to_human/resume-checkpoint-2026-09-18-e033-panel-passed.md
+  result_summary: to_human/e033-user-reported-20260918.json
+  workstation_output_directory: /mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604
+  workstation_output_path_source: user_confirmed_report_md_directory_20260918
+  library_conformers: 25813808
+  source_grouped_molecules: 8318351
+  provisional_candidate_budget: 10000
+  provisional_nprobe: 128
+  panel_query_count: 8
+  worst_query_recall: 0.99
+  mean_query_recall: 0.997125
+  raw_reports_locally_reviewed: false
+  workstation_evaluation_verified: false
+  latest_pushed_code_commit: bbd7675
+  local_validation: 147_passed_2_dependency_related_skips_bash_syntax_passed
   protocol: experiments/E033-library-retrieval-acceptance-protocol.md
   handoff: to_human/E033_LIBRARY_ACCEPTANCE.md
   runner: scripts/run_e033_library_acceptance.sh
@@ -13,7 +46,8 @@ library_acceptance:
   biology_and_pose_quality: separate_target_specific_validation_pending
 bulk_precompute:
   requested_at: '2026-09-11'
-  status: linux_full_batch_source_label_conflict_preservation_fix_ready
+  status: completed_per_user_e033_acceptance_report_raw_marker_not_locally_inspected
+  completion_marker_verified: false
   latest_fix_date: '2026-09-15'
   conflict_source: split_0119.mol2
   conflict_record_indices_zero_based: [131568, 131625]
@@ -37,7 +71,7 @@ bulk_precompute:
     strict: 4485
     aromatic_no_kekulize: 1259
   N5_0_seconds: 6.7
-  faiss_full_library_validation: pending_full_batch
+  faiss_full_library_validation: e033_panel_passed_per_user_report_20260918
   pushed_to_github: true
   fix_commit: bdcb912
   previous_e031_real_timing: still_pending
@@ -54,10 +88,10 @@ roadmap:
     - H_scale_transfer_and_regulated_readiness
   laboratory_control_policy: llm_advisory_only_typed_validated_simulated_human_released_execution
 last_checkpoint:
-  date: 2026-09-09
-  git_commit: f6cd02d
-  test_result: 123_passed_e031_sidecar_offline_real_timing_pending
-  handoff: to_human/resume-checkpoint-2026-09-09-e031-implemented.md
+  date: '2026-09-18'
+  protocol_commit: d2aaa73
+  test_result: 166_passed_2_dependency_skips_e034_workstation_pending
+  handoff: to_human/E034_WORKSTATION_RUN.md
 active_deployment:
   storage_root: /mnt/medchem_taltio/wrk/yu_agent/runtime
   user_id: USR-667167B3141D
@@ -95,10 +129,12 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - run the frozen E032 full batch without max-new-files and monitor per-shard completion
-  - verify COMPLETE.json and all artifact/chemical/pharmacophore/FAISS catalog counts and hashes
-  - after successful pilot run the same frozen batch without the pilot cap and collect completion and timing evidence
-  - calibrate expanded-library FAISS recall and query latency before claiming production-scale retrieval performance
+  - pull GitHub main on the workstation and run scripts/run_e034_expanded_wee1.sh; return report.md and report.json
+  - locate the completed E033 output directory and inspect full report.json acceptance.json protocol.json and metrics.csv for provenance
+  - generate fresh target-specific WEE1 8BJU/QT9 and 1X8B/824 candidates against the accepted expanded index at provisional budget 10000 and nprobe 128
+  - verify matching query identities frozen descriptor normalization and expanded artifact/chemical catalog lineage before Gaussian refinement
+  - run Gaussian refinement and E031 sidecar on identical retained candidate IDs and measure each stage separately
+  - evaluate E034 same-run timing gate; legacy E031 fixed 77.99-second comparison has been removed
   - run E031 key-interaction sidecar on real 8BJU/QT9 and 1X8B/824 refined poses and accept or reject the <=10% latency gate
   - keep receptor vdW single-pose annotation in the small docking handoff and reserve torsion or rigid micro-relaxation for downstream docking pose preparation
   - extend interaction anchors beyond direct hydrogen bonds only after target-independent extraction tests; keep torsion refinement in docking pose preparation

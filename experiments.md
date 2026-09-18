@@ -1520,3 +1520,12 @@ Implementation result (exploratory, not the real workstation acceptance):
 
 ## E033 — Expanded-library acceptance and retrieval calibration
 Protocol committed as 1e94c8c before local implementation validation. User reports registration complete; E032 COMPLETE marker remains unverified remotely. Implemented read-only acceptance, full-corpus bounded-memory exact truth and reproducible FAISS budget/nprobe calibration with report.json/report.md/metrics.csv and candidate exports. Local regression: 147 passed, 2 dependency-related skips. Real Linux library timing, recall and reduction measurements pending. Follow to_human/E033_LIBRARY_ACCEPTANCE.md.
+
+## E033 reported workstation acceptance — 2026-09-18
+This supersedes earlier pending-result descriptions. User-supplied report: acceptance passed on 25,813,808 conformers / 8,318,351 source-grouped molecules. Eight-query calibration at budget 10000, nprobe 128: worst/mean recall .99/.997125; search p50/p95 6.356/7.209 ms; search plus fetch and exact descriptor reranking median 45.945 ms; retained molecules 8352–9834. Provisional engineering setting only: budget-induced reduction does not measure chemical rejection, activity enrichment, or pose quality; panel is not independent holdout. Full raw report/hashes have not been independently reviewed locally. Workstation output: /mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604. Continue using target-matched WEE1 queries and expanded-library catalogs, preserving conformer provenance. Gaussian and E031 costs/retention remain separately unmeasured on this candidate set. See to_human/resume-checkpoint-2026-09-18-e033-panel-passed.md.
+
+## E034 — Expanded-library target-specific refinement handoff
+Protocol: experiments/E034-expanded-wee1-refinement-protocol.md (frozen commit d2aaa73).
+Status: implementation validated locally; real workstation run pending.
+Runner: scripts/run_e034_expanded_wee1.sh; instructions: to_human/E034_WORKSTATION_RUN.md.
+The two WEE1 queries get new candidates from the expanded index and independent exact-descriptor references. Both must meet .95 recall at10000/128, or both at10000/256, before refinement. Gaussian/E031 provenance and counts remain query-specific. Completed-stage reuse preserves original timing; partial refinement reuse cannot pass the latency gate. Local166passed/2dependency skips are engineering checks, including synthetic real mmap Gaussian/E031 integration, not evidence of biological or real-workstation performance.

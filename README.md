@@ -12,6 +12,11 @@ Campaigns are optional branches inside a Project.
 
 ## Current capabilities
 
+For the expanded-library WEE1 retrieval → Gaussian refinement → E031 workstation
+run, see [E034 execution and resume instructions](to_human/E034_WORKSTATION_RUN.md).
+The E033 calibration panel has passed per the supplied workstation report;
+E034 target-specific results are still pending.
+
 - Streams one or many `@<TRIPOS>MOLECULE` records from each MOL2 file.
 - Groups terminal names such as `compound_conf0`, `compound_conf1`, and
   `compound_conf2` under one molecule.

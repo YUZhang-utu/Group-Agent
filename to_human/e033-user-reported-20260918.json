@@ -1,0 +1,34 @@
+{
+  "recorded_at": "2026-09-18",
+  "workstation_output_directory": "/mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604",
+  "provenance": "User-pasted E033 report and partial JSON; not an independently inspected original report",
+  "acceptance": "passed",
+  "conformers": 25813808,
+  "source_grouped_molecules": 8318351,
+  "provisional_setting": {
+    "candidate_budget": 10000,
+    "nprobe": 128,
+    "query_count": 8,
+    "recall_min": 0.99,
+    "recall_mean": 0.997125,
+    "gate_passed": true,
+    "search_p50_seconds": 0.00635648996103555,
+    "search_p95_seconds": 0.00720884472830221,
+    "search_plus_fetch_rerank_median_seconds": 0.04594542598351836,
+    "retained_molecules_min": 8352,
+    "retained_molecules_max": 9834,
+    "molecule_reduction_min": 0.9988177945364412,
+    "molecule_reduction_max": 0.9989959548473009
+  },
+  "calibration_status": "gate_passed_on_panel",
+  "biological_quality": "not_evaluated_no_active_decoy_labels",
+  "pose_refinement_filtering": "not_evaluated_USRCAT_coarse_stage_only",
+  "query_panel_status": "calibration_not_independent_holdout",
+  "peak_process_rss_bytes": 1208819712,
+  "wall_seconds": 231.3170806481503,
+  "environment": {
+    "platform": "Linux-5.14.0-611.49.2.el9_7.x86_64-x86_64-with-glibc2.34",
+    "cpu_count": 24,
+    "faiss": "1.14.3"
+  }
+}
