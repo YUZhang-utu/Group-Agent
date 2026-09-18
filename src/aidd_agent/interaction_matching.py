@@ -201,8 +201,11 @@ def interaction_match(
 def score_interaction_matches(
         artifact_catalog: Path, chemical_companion: Path, query_path: Path,
         rigid_result: Path, output_path: Path, *, sigma: float = 1.0,
-        cutoff: float | None = 4.5, angular_power: float = 2.0) -> dict:
+        cutoff: float | None = 4.5, angular_power: float = 2.0,
+        engine: str = "reference") -> dict:
     started = time.perf_counter()
+    if engine not in {"reference", "batched"}:
+        raise ValueError("interaction engine must be reference or batched")
     paths = [Path(value).resolve() for value in
              (artifact_catalog, chemical_companion, query_path, rigid_result)]
     artifact_catalog, chemical_companion, query_path, rigid_result = paths
@@ -254,12 +257,12 @@ def score_interaction_matches(
             or any(value.shape != ids.shape or not np.isfinite(value).all()
                    for value in rigid_scores.values())):
         raise ValueError("rigid result arrays have inconsistent shapes")
-    reader = ArtifactCatalogReader(artifact_catalog)
-    chemistry_reader = ChemicalCompanionReader(chemical_companion)
+    reader = ArtifactCatalogReader(artifact_catalog) if engine == "reference" else None
+    chemistry_reader = ChemicalCompanionReader(chemical_companion) if engine == "reference" else None
     scores = {name: [] for name in objectives}
     assignments = {name: [] for name in objectives}
     anchor_scores = {name: [] for name in objectives}
-    for index, gid in enumerate(ids):
+    for index, gid in (enumerate(ids) if engine == "reference" else ()):
         candidate = reader.get(int(gid)); chemistry = chemistry_reader.get(int(gid))
         if (candidate.molecule_id != molecule_ids[index] or candidate.conformer_id != conformer_ids[index]
                 or chemistry.molecule_id != candidate.molecule_id
@@ -280,6 +283,11 @@ def score_interaction_matches(
             scores[objective].append(result["interaction_match_score"])
             assignments[objective].append(result["assignments"])
             anchor_scores[objective].append(result["anchor_scores"])
+    if engine == "batched":
+        from .interaction_fast import score_batched
+        scores, assignments, anchor_scores = score_batched(
+            artifact_catalog, chemical_companion, query, ids, molecule_ids, conformer_ids,
+            objectives, transforms, sigma=sigma, cutoff=cutoff, angular_power=angular_power)
     arrays: dict[str, np.ndarray] = {
         "global_ids": ids, "molecule_ids": molecule_ids, "conformer_ids": conformer_ids,
         "objective_names": np.asarray(objectives, dtype="U40"),
@@ -306,6 +314,7 @@ def score_interaction_matches(
     }
     manifest = {
         "format": FORMAT, "version": VERSION, "status": "complete",
+        "engine": engine,
         "output": str(output_path), "output_sha256": _sha256(output_path),
         "inputs": {"artifact_catalog": {"path": str(artifact_catalog), "sha256": artifact_sha256},
                    "chemical_companion": {"path": str(chemical_companion), "sha256": _sha256(chemical_companion)},

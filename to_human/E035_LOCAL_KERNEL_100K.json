@@ -1,0 +1,70 @@
+{
+  "scope": "synthetic kernel only; not real-library/pose/biology validation",
+  "cases": 100000,
+  "passed": true,
+  "groups": [
+    {
+      "anchors": 3,
+      "features": 0,
+      "cases": 25000,
+      "max_absolute_error": 0.0,
+      "assignment_mismatches": 0,
+      "float32_ranks_exact": true,
+      "passed": true,
+      "scoring_seconds": {
+        "reference": 3.6861567000087234,
+        "batched": 0.698598300012236
+      }
+    },
+    {
+      "anchors": 3,
+      "features": 12,
+      "cases": 25000,
+      "max_absolute_error": 1.1102230246251565e-16,
+      "assignment_mismatches": 0,
+      "float32_ranks_exact": true,
+      "passed": true,
+      "scoring_seconds": {
+        "reference": 5.127537900043535,
+        "batched": 1.392347500048345
+      }
+    },
+    {
+      "anchors": 5,
+      "features": 12,
+      "cases": 25000,
+      "max_absolute_error": 1.1102230246251565e-16,
+      "assignment_mismatches": 0,
+      "float32_ranks_exact": true,
+      "passed": true,
+      "scoring_seconds": {
+        "reference": 6.83127390001755,
+        "batched": 2.612585900002159
+      }
+    },
+    {
+      "anchors": 5,
+      "features": 32,
+      "cases": 25000,
+      "max_absolute_error": 1.1102230246251565e-16,
+      "assignment_mismatches": 0,
+      "float32_ranks_exact": true,
+      "passed": true,
+      "scoring_seconds": {
+        "reference": 10.274693999977899,
+        "batched": 4.8822106000443455
+      }
+    }
+  ],
+  "environment_recorded_after_run": {
+    "python": "3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 19:09:58) [MSC v.1929 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.3.5",
+    "seed": 20260918,
+    "source_sha256": {
+      "scripts\\validate_e035_kernel.py": "92a6fe5a4da0ebcd8cd6c8378b16a0b65c96b181fe70db4522b676e674d7e763",
+      "src\\aidd_agent\\interaction_fast.py": "5e45b2a620f969cb9cd9d2ebbb010252ab83fa2048cc132b3b866658b3252bee",
+      "src\\aidd_agent\\interaction_matching.py": "6f9d8898b0877180deb75a4c75379a21eddaf140d7da6c8201a6f0df9b057c02"
+    }
+  }
+}
