@@ -74,6 +74,10 @@ BLAS 单线程；可用 E034_WORKERS/E034_THREADS 覆盖。
 bash scripts/run_e034_expanded_wee1.sh --resume
 ```
 
+首次运行不需要 `--resume`。如果带了该参数但输出目录尚不存在，脚本会
+明确提示并开始新任务。若目录已存在却缺少 `protocol.json`，不会接管或
+覆盖其中内容：设置新的 `E034_OUTPUT` 后首次运行，或指向真正的旧任务目录。
+
 同一输出目录必须匹配输入、源码、依赖版本、机器和 worker/thread 参数。
 已完成阶段检查哈希后复用，保留原始计时；中断的 Gaussian 阶段复用其
 已验证 chunk。若精修阶段只有部分重新计算，本轮延迟门槛标记 unavailable，

@@ -279,6 +279,19 @@ def check_output_location(output, batch, evaluation, query_dirs):
                    "Output must be separate from batch, E033 report and source queries")
 
 
+def resolve_resume(output, requested):
+    if not output.exists():
+        if requested:
+            ev.log(f"No prior E034 output at {output}; starting a fresh run")
+        return False
+    ev.require(requested, f"Output already exists: {output}. Use --resume for the same run, or choose a new E034_OUTPUT.")
+    ev.require((output / "protocol.json").is_file(),
+               f"Cannot resume {output}: protocol.json is missing. Existing contents were preserved. "
+               "Set E034_OUTPUT to a new directory and run without --resume; "
+               "or point E034_OUTPUT to the actual prior E034 run containing protocol.json.")
+    return True
+
+
 def run(args):
     # Workstation entry point: exclusive existing library lock; no library writes.
     import fcntl
@@ -290,8 +303,7 @@ def run(args):
     for path in sources:
         ev.require(path.is_file(), f"Missing locked query input: {path}")
     ev.require(args.workers > 0 and args.threads > 0, "Workers/threads must be positive")
-    ev.require(not output.exists() or args.resume, "Output exists; use --resume with identical inputs")
-    ev.require(not args.resume or (output / "protocol.json").is_file(), "Resume needs an existing E034 protocol")
+    resume = resolve_resume(output, args.resume)
     versions = runtime_versions()
     with (batch / "run.lock").open("r") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -309,9 +321,9 @@ def run(args):
                         versions=versions, python=sys.version, host=platform.node(), cpu_count=os.cpu_count(),
                         query_ids=[s[1] for s in QUERY_SPECS], budget=10000, nprobes=[128, 256], recall_gate=.95,
                         top_n_per_objective=5000, max_pair_seeds=512, excluded_molecule_ids=["", ""])
-        if args.resume:
+        if resume:
             ev.require(ev.read(output / "protocol.json") == protocol, "Changed E034 inputs/code/environment; use a fresh output")
-        output.mkdir(parents=True, exist_ok=args.resume)
+        output.mkdir(parents=True, exist_ok=resume)
         _atomic_json(output / "protocol.json", protocol)
         _atomic_json(output / "RUN_STATUS.json", dict(status="running"))
         try:

@@ -207,7 +207,8 @@ def test_failed_gate_report_distinguishes_execution_and_quality(tmp_path):
     assert "biological and docking quality remain unassessed" in text
 
 
-def test_run_stops_before_pose_on_failed_gate_and_pins_resume(library, tmp_path, monkeypatch):
+@pytest.mark.parametrize("initial_resume", [False, True])
+def test_run_stops_before_pose_on_failed_gate_and_pins_resume(library, tmp_path, monkeypatch, initial_resume):
     batch, _, _ = library
     evaluation = make_e033(batch, tmp_path / "e033")
     (batch / "run.lock").touch()
@@ -231,7 +232,7 @@ def test_run_stops_before_pose_on_failed_gate_and_pins_resume(library, tmp_path,
     monkeypatch.setattr(e, "retrieve", retrieve)
     monkeypatch.setattr(e, "run_pose_stages", no_poses)
     args = SimpleNamespace(batch=batch, e033=evaluation, output=tmp_path / "result", qt9=directories[0],
-                           x8b=directories[1], workers=1, threads=1, resume=False)
+                           x8b=directories[1], workers=1, threads=1, resume=initial_resume)
     assert e.run(args) == 2
     assert ev.read(args.output / "RUN_STATUS.json")["status"] == "retrieval_gate_failed"
     args.resume = True
@@ -241,6 +242,19 @@ def test_run_stops_before_pose_on_failed_gate_and_pins_resume(library, tmp_path,
     args.workers = 2
     with pytest.raises(ValueError, match="Changed E034 inputs"):
         e.run(args)
+
+
+def test_resume_missing_protocol_preserves_existing_directory(tmp_path):
+    old = tmp_path / "old"; old.mkdir()
+    with pytest.raises(ValueError, match="protocol.json is missing"):
+        e.resolve_resume(old, True)
+    evidence = old / "evidence.txt"; evidence.write_text("keep me")
+    with pytest.raises(ValueError, match="new directory"):
+        e.resolve_resume(old, True)
+    assert evidence.read_text() == "keep me"
+    assert not (old / "protocol.json").exists()
+    with pytest.raises(ValueError, match="already exists"):
+        e.resolve_resume(old, False)
 
 
 @pytest.mark.parametrize("limits,raises,changes", [((1024, 65536), False, True),
