@@ -4,7 +4,15 @@ stage: ligand_comparison_and_similarity_search
 current_experiment: E034-expanded-wee1-refinement
 expanded_wee1_refinement:
   requested_at: '2026-09-18'
-  status: implemented_local_validation_workstation_execution_pending
+  status: workstation_complete_user_report_retrieval_passed_latency_partial
+  result_record: to_human/E034_RESULT_2026-09-18.md
+  result_summary: to_human/E034_RESULT_2026-09-18.json
+  workstation_output: /mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/recheck-20260918-163847-316118
+  evidence_provenance: user_pasted_report_and_partial_json_raw_artifacts_not_independently_inspected
+  selected_nprobe: 128
+  target_query_top1000_recall: [1.0, 1.0]
+  e031_latency_gate_8bju: false
+  e031_latency_gate_1x8b: true
   protocol: experiments/E034-expanded-wee1-refinement-protocol.md
   protocol_commit: d2aaa73
   runner: scripts/run_e034_expanded_wee1.sh
@@ -17,7 +25,7 @@ expanded_wee1_refinement:
   recall_gate: 0.95
   e031_timing_baseline: same_run_same_query_gaussian_refine_not_historical_constant
   local_validation: 166_passed_2_dependency_skips_bash_syntax_passed
-  workstation_validated: false
+  workstation_validated: user_reported_execution_complete_scientific_quality_pending
 library_acceptance:
   requested_at: '2026-09-15'
   status: passed_user_supplied_report_calibration_gate_passed_on_panel
@@ -129,7 +137,8 @@ privacy:
   experimental_data_visible_to_llm: false
   compute_and_storage: local
 next_actions:
-  - pull GitHub main on the workstation and run scripts/run_e034_expanded_wee1.sh; return report.md and report.json
+  - reuse completed E034 artifacts to inspect molecule-level Gaussian versus E031 ranking disagreement and representative poses
+  - profile E031 on immutable QT9 and 824 rigid results; preserve equivalent scores and the original 10 percent timing gate
   - locate the completed E033 output directory and inspect full report.json acceptance.json protocol.json and metrics.csv for provenance
   - generate fresh target-specific WEE1 8BJU/QT9 and 1X8B/824 candidates against the accepted expanded index at provisional budget 10000 and nprobe 128
   - verify matching query identities frozen descriptor normalization and expanded artifact/chemical catalog lineage before Gaussian refinement

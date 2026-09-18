@@ -1,0 +1,55 @@
+{
+  "recorded_at": "2026-09-18",
+  "provenance": "user-pasted report.md and partial report.json; raw NPZ and hashes not independently inspected",
+  "output_directory": "/mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/recheck-20260918-163847-316118",
+  "execution": "complete",
+  "candidate_budget": 10000,
+  "selected_nprobe": 128,
+  "descriptor_recall_top1000": {
+    "8BJU:QT9:A:601": 1,
+    "1X8B:824:A:901": 1
+  },
+  "queries": [
+    {
+      "id": "8BJU:QT9:A:601",
+      "search_p50_seconds": 0.005104,
+      "retrieved_conformers": 10000,
+      "retrieved_molecules": 4058,
+      "refined_conformers": 6299,
+      "refined_molecules": 2212,
+      "coarse_seconds": 3.003,
+      "refine_seconds": 31.24205078696832,
+      "e031_seconds": 4.8704337240196764,
+      "overhead_fraction": 0.15589353455795646,
+      "latency_gate": false,
+      "anchored_spearman": 0.18009154976041583,
+      "anchored_top100_overlap": 1,
+      "anchored_top1000_overlap": 219,
+      "anchored_score_median": 0.16065877676010132,
+      "matched_anchors_median": 2,
+      "anchors": 3
+    },
+    {
+      "id": "1X8B:824:A:901",
+      "search_p50_seconds": 0.005929,
+      "retrieved_conformers": 10000,
+      "retrieved_molecules": 4126,
+      "refined_conformers": 6791,
+      "refined_molecules": 2961,
+      "coarse_seconds": 2.054105091141537,
+      "refine_seconds": 69.9541175190825,
+      "e031_seconds": 4.421330427983776,
+      "overhead_fraction": 0.06320329073950078,
+      "latency_gate": true,
+      "anchored_spearman": 0.19191882078884423,
+      "anchored_top100_overlap": 2,
+      "anchored_top1000_overlap": 254,
+      "anchored_score_median": 0.12808308005332947,
+      "matched_anchors_median": 4,
+      "anchors": 5
+    }
+  ],
+  "biological_quality": "not_evaluated",
+  "pose_quality": "not_independently_validated",
+  "e031_changes_ranking": false
+}
