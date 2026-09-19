@@ -100,3 +100,11 @@ The completed E035 million-conformer evidence is summarized in
 Run `bash scripts/run_e037_workstation_suite.sh` to compare original/finer chunks
 and exact bounded seed generation in reverse-order repeats, with separate worker
 profiling. See [one-shot instructions](to_human/E037_ONE_SHOT_VALIDATION.md).
+
+## E038 prompt, protein data and AlphaFold 3
+Use [E038 setup and workstation tests](to_human/E038_PROMPT_PROTEIN_AF3.md) for
+OpenAI-compatible prompt planning, verified UniProt/RCSB data, installed AF3
+execution and calibrated WEE1 search. Start with
+`bash scripts/run_e038_prompt_smoke.sh` (offline fixtures only), then configure
+your local endpoint/model and AF3 profile for `scripts/run_e038_prompt.sh`.
+No library or experimental data is automatically sent to the model.

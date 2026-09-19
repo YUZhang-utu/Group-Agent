@@ -52,6 +52,9 @@ def run(args):
     import fcntl
     bounded_seeds = getattr(args, "bounded_pair_seeds", False)
     profile = getattr(args, "profile_first_chunk", False)
+    selected = getattr(args, "query", "both")
+    ev.require(selected in {"both", "8bju", "1x8b"}, "Unknown calibrated query")
+    query_specs = tuple(q for q in QUERIES if selected == "both" or q[0] == selected)
     batch, source, output = (p.resolve() for p in (args.batch, args.e034, args.output))
     for protected in (batch, source):
         ev.require(not output.is_relative_to(protected) and not protected.is_relative_to(output),
@@ -65,7 +68,7 @@ def run(args):
         catalog = ev.read(batch / "artifacts/catalog.json")
         ensure_file_descriptor_limit(len(catalog["shards"]))
         schedules = {}
-        for label, qid in QUERIES:
+        for label, qid in query_specs:
             cfg = baseline["poses"][qid]["gaussian"]["config"]
             schedule = source / "retrieval" / f"{label}-np128-candidates.npz"
             ev.require(ev.sha(schedule) == cfg["candidate_schedule_sha256"], "Candidate lineage mismatch")
@@ -88,7 +91,7 @@ def run(args):
                        "Unexpected index dimensions/count")
             with np.load(batch / "faiss/transform.npz", allow_pickle=False) as tr:
                 mean, std = tr["mean"].astype(np.float32), tr["std"].astype(np.float32)
-            for label, _ in QUERIES:
+            for label, _ in query_specs:
                 p = source / label / "query/usrcat.npy"
                 # The original query receipt binds this descriptor to its crystal query.
                 receipt = ev.read(source / f"{label}-query.stage.json")
@@ -99,7 +102,7 @@ def run(args):
                         versions=runtime_versions(), host=platform.node(), cpu_count=os.cpu_count(),
                         workers=args.workers, coarse_chunk=args.coarse_chunk, refine_chunk=args.refine_chunk,
                         fresh_retrieval=args.fresh_retrieval, bounded_pair_seeds=bounded_seeds,
-                        profile_first_chunk=profile,
+                        profile_first_chunk=profile, query=selected,
                         threads={k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")})
         if output.exists():
             ev.require((output / "protocol.json").is_file()
@@ -110,7 +113,7 @@ def run(args):
         _atomic_json(output / "RUN_STATUS.json", dict(status="running"))
         try:
             rows = []
-            for label, qid in QUERIES:
+            for label, qid in query_specs:
                 root = output / label
                 root.mkdir(exist_ok=True)
                 cfg = baseline["poses"][qid]["gaussian"]["config"]
@@ -181,6 +184,7 @@ def main():
     p.add_argument("--resume", action="store_true")
     p.add_argument("--bounded-pair-seeds", action="store_true")
     p.add_argument("--profile-first-chunk", action="store_true")
+    p.add_argument("--query", choices=("both", "8bju", "1x8b"), default="both")
     run(p.parse_args())
 
 

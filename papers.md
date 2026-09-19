@@ -12,3 +12,6 @@
 
 ## E033 engineering references — 2026-09-15
 FAISS official wiki: https://github.com/facebookresearch/faiss/wiki/How-to-make-Faiss-run-faster and https://github.com/facebookresearch/faiss/wiki/FAQ . Used to ground search effort, candidate budget and timing distinctions; our .95 gate and panel are project protocol choices, not source guarantees. No biological filtering rate is inferred from these sources.
+
+## E038 engineering API references — 2026-09-19
+Official API documentation (not research papers): OpenAI Chat Completions https://developers.openai.com/api/reference/resources/chat ; UniProt REST query help https://www.uniprot.org/help/api_queries ; RCSB Data API https://data.rcsb.org/ ; AlphaFold3 inputs https://github.com/google-deepmind/alphafold3/blob/main/docs/input.md . Used for provider-neutral JSON chat, public sequence/structure evidence, and basic AF3 dialect-v1 protein/CCD inputs compatible with existing local installations. No new biological findings from these API references.

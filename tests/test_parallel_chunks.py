@@ -89,7 +89,8 @@ def test_indexed_candidates_fetches_only_found_ids_and_reranks(tmp_path):
         assert a["squared_l2"].tolist() == [0, 1, 4]
 
 
-def test_e036_full_indexed_pipeline_and_completed_resume(tmp_path, monkeypatch):
+@pytest.mark.parametrize("selected", ["both", "8bju"])
+def test_e036_full_indexed_pipeline_and_completed_resume(tmp_path, monkeypatch, selected):
     from aidd_agent import fast_3d_search as fast
     from aidd_agent.expanded_wee1 import run_pose_stages, fingerprint
     from aidd_agent.gaussian_batch import _load_query, write_gaussian_query
@@ -135,10 +136,11 @@ def test_e036_full_indexed_pipeline_and_completed_resume(tmp_path, monkeypatch):
         ("artifacts/catalog.json", "faiss/manifest.json", "faiss/transform.npz")])))
     before = fingerprint(p for p in source.rglob("*") if p.is_file())
     args = SimpleNamespace(batch=batch, e034=source, output=tmp_path / "e036", resume=False,
-                           workers=2, coarse_chunk=1, refine_chunk=1, fresh_retrieval=True)
+                           workers=2, coarse_chunk=1, refine_chunk=1, fresh_retrieval=True, query=selected)
     fast.run(args)
     result = ev.read(args.output / "report.json")
     assert result["status"] == "complete"
+    assert len(result["queries"]) == (2 if selected == "both" else 1)
     assert all(r["fresh_compute"] and r["gaussian_equivalence"]["passed"] for r in result["queries"])
     assert all(r["annotation_equivalence"]["passed"] for r in result["queries"])
     args.resume = True

@@ -1542,3 +1542,6 @@ Protocol: experiments/E036-parallel-chunks-protocol.md (70beeff). E035 real mill
 
 ## E037 bounded pair seeds — 2026-09-18
 Protocol1a46816; exact early termination after512unique seeds replaces generating unused suffix only when opted in. Local205tests passed/2dependency skips,12synthetic generator cases exact prefix; capped groups1.27–9.69x generator speedup, not whole-query evidence. Workstation two-by-two scheduling/kernel comparison, two reverse-order rounds plus separate profiling prepared. One command:scripts/run_e037_workstation_suite.sh. Real full-query speedup pending; E031 annotation-only and all budgets preserved.
+
+## E038 prompt workflow — 2026-09-19
+Protocol1ba97f4; user chooses OpenAI-compatible LLM and reports AF3 installed. Project-scoped planner and allowlisted executor implement UniProt/RCSB evidence, single-protein/CCD AF3 preparation/run and calibrated WEE1 search. 222local tests passed/2dependency skips; standalone synthetic smoke and final16targeted tests pass. Live LLM/AF3/network integration awaits workstation configuration, no scientific success inferred. Handoff:to_human/E038_PROMPT_PROTEIN_AF3.md. E037 performance experiment remains pending; keep its original candidate/seed budgets and pose review boundaries.

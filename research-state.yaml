@@ -1,7 +1,24 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E037-bounded-seeds-and-workstation-suite
+current_experiment: E038-prompt-protein-af3
+prompt_protein_af3:
+  status: implemented_offline_and_mock_validated_live_workstation_pending
+  protocol: experiments/E038-prompt-protein-af3-protocol.md
+  protocol_commit: 1ba97f4
+  handoff: to_human/E038_PROMPT_PROTEIN_AF3.md
+  runner: scripts/run_e038_prompt.sh
+  smoke_runner: scripts/run_e038_prompt_smoke.sh
+  llm_provider: openai_compatible_user_selected
+  af3_installation: installed_per_user_2026_09_19_local_paths_pending
+  model_api_credentials: workstation_environment_only
+  model_context: user_prompt_and_capabilities_only
+  regression_tests: 222_passed_2_dependency_skips
+  offline_smoke: passed_synthetic_fixtures_not_live_evidence
+  live_llm_and_af3_tested: false
+  search_scope: calibrated_WEE1_QT9_824_only
+  af3_scope: single_verified_protein_construct_and_optional_CCD_ligands
+  e031_changes_ranking: false
 bounded_seeds_and_workstation_suite:
   status: implemented_205_tests_passed_2_dependency_skips_workstation_pending
   protocol: experiments/E037-bounded-seed-generation-protocol.md

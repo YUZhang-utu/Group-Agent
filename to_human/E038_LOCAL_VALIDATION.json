@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-19",
+  "status": "offline_and_mock_checks_passed",
+  "regression": {"passed": 222, "skipped_missing_dependencies": 2},
+  "standalone_smoke": "passed_with_hash_checked_resume",
+  "coverage": [
+    "compatible_chat_request_and_strict_JSON_response",
+    "credential_body_redaction_and_truncated_response_rejection",
+    "unknown_actions_paths_and_typed_dependency_rejection",
+    "Project_ownership_and_plan_audit",
+    "UniProt_identity_species_and_ambiguity_with_fixtures",
+    "AF3_construct_and_CCD_input_with_fixtures",
+    "AF3_adapter_argv_and_output_import_with_fake_runner",
+    "compute_blocked_resume_tamper_and_changed_runner_rejection",
+    "calibrated_search_adapter_and_single_query_pipeline_fixture"
+  ],
+  "live_llm": "not_run_no_local_credentials_requested",
+  "live_protein_api": "not_run",
+  "real_af3_inference": "not_run_workstation_required",
+  "real_library_performance": "E037_workstation_pending",
+  "scientific_quality": "not_inferred_from_interface_tests"
+}

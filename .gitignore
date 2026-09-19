@@ -10,6 +10,9 @@ pkgs/
 .env.*
 !.env.example
 configs/tools/*.local.json
+configs/**/*.local.json
+configs/*.local.json
+.tmp-e038-*/
 data/
 6aa/
 workspaces/

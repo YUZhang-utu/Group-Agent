@@ -172,3 +172,6 @@ Use identical input hashes/samples for serial vs parallel stress comparisons; no
 
 ## E037 benchmarks — 2026-09-18
 Microbenchmark:scripts/benchmark_bounded_seeds.py, seeded20260918,12cases, feature counts8/16/32,5queryanchors,3alternating repeats,cap512. Exact object prefix required; to_human/E037_LOCAL_SEED_BENCHMARK.json records all timings/environment/source hash. Local205passed/2dependency skips. Workstation suite compares4fixed combinations, two reverse-order repeats, same-machine query medians vs old-reference; partial reuse/profiles excluded. Original E034 scores/poses/identities remain exact acceptance reference. No post-hoc budget tuning, no biological claims. Actual end-to-end results pending.
+
+## E038 interface benchmark — 2026-09-19
+222passed/2dependency skips, final16targeted checks passed; standalone offline smoke labeled synthetic. Coverage: strict planner schema, auth error redaction, unknown action/path/dependency rejection, Project isolation, UniProt identity/species/ambiguity, AF3 construct/CCD/provenance, shell-free fake scientific runners, artifact tamper and resume. Real LLM plan fidelity, real protein endpoints, AF3 inference and actual GPU timings remain unmeasured. to_human/E038_LOCAL_VALIDATION.json records evidence boundaries. Do not equate offline smoke with live workflow or scientific acceptance.
