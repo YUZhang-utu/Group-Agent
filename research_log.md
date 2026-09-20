@@ -969,3 +969,12 @@ Validation: 224 tests passed, two dependency skips; all four skill validators pa
 E033 shell syntax and whitespace checks passed. This is implementation validation,
 not a new scientific experiment. Live LLM/AF3 and end-to-end optimized workstation
 measurements remain pending. E031 remains annotation-only.
+
+
+## 2026-09-20 - Consolidated workstation acceptance handoff
+
+Added to_human/WORKSTATION_FULL_ACCEPTANCE.md after inspecting the current wrappers,
+planner actions, receipts and E037 report fields. Distinguishes supplied E033-E035
+evidence from pending E037 timings and live E038 model/protein/AF3/search execution.
+Includes one combined live compute prompt, reuse checks and noncompute boundary
+cases. No new workstation or scientific execution was performed.
