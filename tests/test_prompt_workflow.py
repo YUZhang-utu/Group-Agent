@@ -56,7 +56,7 @@ def test_compatible_chat_request_and_no_secret_in_payload(monkeypatch):
             seen.append(request)
             return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason="stop", message=dict(content=json.dumps(SMOKE_PLAN)))],
                                              id="fixture", usage=dict(total_tokens=123))).encode())
-    plan, metadata = chat_plan("准备人WEE1 AF3输入", dict(base_url="https://example.org/v1", model="test",
+    plan, metadata = chat_plan("Prepare AF3 input for human WEE1", dict(base_url="https://example.org/v1", model="test",
                               api_key_env="TEST_LLM_KEY"), Opener())
     assert plan == SMOKE_PLAN
     request = seen[0]

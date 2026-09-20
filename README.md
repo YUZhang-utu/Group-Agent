@@ -12,15 +12,20 @@ Campaigns are optional branches inside a Project.
 
 ## Current capabilities
 
-For molecule-level pose review and E031 equivalence/performance validation on the
-completed E034 results, use [E035 workstation instructions](to_human/E035_WORKSTATION_RUN.md).
-Default scale is 100,000 distinct library conformers (600,000 scoring comparisons);
-the optional million-conformer tier remains an engineering stress test, not docking validation.
+Repository workflow skills cover 3D search, protein preparation, AlphaFold 3 and
+OpenAI-compatible prompt orchestration. See [workflow skills](docs/workflow-skills.md)
+and the [prompt/AF3 workstation guide](to_human/E038_PROMPT_PROTEIN_AF3.md).
+Maintained content is authored in English; check it with `python scripts/check_english.py`.
 
-For the expanded-library WEE1 retrieval → Gaussian refinement → E031 workstation
-run, see [E034 execution and resume instructions](to_human/E034_WORKSTATION_RUN.md).
-The E033 calibration panel has passed per the supplied workstation report;
-E034 target-specific results are still pending.
+The supplied E033 and E034 workstation reports establish calibrated WEE1 retrieval
+and completed Gaussian refinement. E035 reports equivalent optimized E031 scores
+across one million distinct conformers and six million comparisons. E031 remains
+annotation-only; biological enrichment and pose quality are not validated.
+See [E035 instructions and evidence scope](to_human/E035_WORKSTATION_RUN.md).
+
+Chunk and bounded-seed optimizations are locally tested; their end-to-end workstation
+speedup remains unmeasured. Use the [E037 validation suite](to_human/E037_ONE_SHOT_VALIDATION.md).
+Live model and installed AF3 execution remain workstation validation tasks.
 
 - Streams one or many `@<TRIPOS>MOLECULE` records from each MOL2 file.
 - Groups terminal names such as `compound_conf0`, `compound_conf1`, and

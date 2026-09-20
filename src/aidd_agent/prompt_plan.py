@@ -8,6 +8,8 @@ import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
+from .workflow_skills import WORKFLOW_SKILLS
+from .language_policy import contains_han
 
 ACTION_FIELDS = {
     "protein_fetch": ({"accession"}, {"organism_id"}),
@@ -19,6 +21,7 @@ ACTION_FIELDS = {
     "search_3d": ({"query"}, set()),
 }
 CAPABILITIES = {
+    "workflow_skills": list(WORKFLOW_SKILLS),
     "format": "aidd-prompt-plan-v1",
     "example": {"version": 1, "summary": "Resolve human WEE1 and prepare AF3 input",
                 "clarifications": [], "steps": [
@@ -28,7 +31,8 @@ CAPABILITIES = {
                 for name, (required, optional) in ACTION_FIELDS.items()},
     "search_queries": ["wee1_qt9", "wee1_824", "wee1_both"],
 }
-SYSTEM_PROMPT = """You are the AIDD workflow planner. Return exactly one JSON object matching
+SYSTEM_PROMPT = """You are the AIDD workflow planner. Write summaries and clarification questions in English,
+regardless of the input language. Preserve exact biological identifiers. Return exactly one JSON object matching
 the supplied plan format, no Markdown. Use only allowlisted actions and fields.
 Never generate shell commands, filesystem paths, API keys, protein sequences or scientific results.
 protein_resolve uses gene and organism taxonomy ID; when identity is ambiguous, use clarifications.
@@ -72,6 +76,8 @@ def validate_plan(plan):
     questions = plan["clarifications"]
     if not isinstance(questions, list) or len(questions) > 10 or any(not isinstance(q, str) or not 1 <= len(q) <= 1000 for q in questions):
         raise ValueError("Invalid clarifications")
+    if any(contains_han(text) for text in [plan["summary"], *questions]):
+        raise ValueError("Plan summaries and clarification questions must be in English")
     steps = plan["steps"]
     if not isinstance(steps, list) or len(steps) > 20 or (not steps and not questions) or (steps and questions):
         raise ValueError("Plan needs steps OR clarification questions")

@@ -1,37 +1,47 @@
-# E033 已通过校准面板；下一步接靶点特异性精修
+# E033 calibration passed: handoff to target-specific refinement
 
-记录日期：2026-09-18。来源为用户本轮粘贴的 report.md 内容与部分 report.json，未在本地重新执行工作站验收，尚未读取完整原始报告、哈希和逐查询表。该结果更新 9 月 15 日“等待登记与验证”的进度。
+Historical checkpoint,2026-09-18. Based on user-pasted report.md and partial JSON,
+not local re-execution or independent inspection of full artifacts/hashes/tables.
+This superseded the September15waiting-for-registration state.
 
-## 结果
+## Reported results
 
-- 库验收：用户报告 passed；25,813,808 构象、8,318,351 个按来源分组的分子。
-- 8 个查询构成校准面板，不是独立留出集。
-- 暂选：candidate_budget=10,000、nprobe=128；最差召回 0.99，平均 0.997125，通过原协议最低 0.95 门槛。
-- 搜索 p50/p95：0.00635649 / 0.00720884 秒；搜索加读取与精确描述符重排中位数 0.04594543 秒。
-- 保留独立分子 8,352–9,834；预算导致的分子缩减 99.8818%–99.8996%。不能解释为化学淘汰率。
-- 10,000/256：最差召回 0.998，均值 0.9995；搜索 p50/p95 0.01076154 / 0.01169474 秒，搜索加读取重排中位数 0.05118022 秒。作为精度/耗时对照保留，不宣称已在靶点查询上更优。
-- 1,000 候选预算全部未过门槛；10,000 或 100,000 候选配 nprobe=64 均未过门槛。
-- 用户报告运行环境：Linux 5.14.0-611.49.2.el9_7 x86_64、24 CPU、FAISS 1.14.3。总评测 231.3171 秒，进程峰值 RSS 1,208,819,712 字节。两者不等同于在线单次查询成本。
+- Acceptance passed:25813808conformers,8318351source-grouped molecules.
+- Eight-query calibration panel, not an independent holdout.
+- Provisional budget10000/nprobe128: worst recall0.99, mean0.997125; passes0.95gate.
+- Search p50/p95:0.00635649/0.00720884s; search+fetch+exact descriptor rerank median0.04594543s.
+- Retained molecules8352-9834; budget-induced reduction99.8818%-99.8996%, not chemical rejection.
+- Budget10000/nprobe256: worst0.998, mean0.9995; search p50/p95 0.01076154/0.01169474s,
+  search+fetch/rerank median0.05118022s. Retain as a tradeoff comparison, not proof
+  of target-specific superiority.
+- All1000budgets failed;10000/100000with nprobe64also failed.
+- Linux5.14.0-611.49.2.el9_7x86_64,24CPUs,FAISS1.14.3. Evaluation wall231.3171s,
+  peakRSS1208819712bytes; neither is per-query online cost.
 
-## 能力边界
+## Boundaries and handoff
 
-测量的是标准化 USRCAT 描述符检索召回；没有评估活性富集、Gaussian 姿态质量或 docking 成功率。首次调用不保证冷缓存，8 查询的描述性 p95 不是服务 SLA。source-grouped molecule 数不是已证明的全库化学结构去重数；旧名称碰撞立体化学 QC 仍独立保留。
+This measures standardized USRCAT recall, not enrichment, Gaussian poses or docking.
+First-call timing may be warm; eight-query p95 is descriptive. Source grouping is
+not demonstrated full-library chemical deduplication. Collision stereochemistry
+QC remains separate.
 
-## 下一步具体衔接
+Confirmed report.md directory:
+`/mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604`.
+Other raw artifacts had not been inspected locally.
 
-用户已确认报告目录：`/mnt/local/hand/yuzhang/aidd/e033-library-acceptance/20260918-091604`，其中包含本轮 report.md。其他原始产物尚未从本机读取。
+1. Inspect report/acceptance/protocol/metrics and lineage; preserve the accepted library.
+2. Retrieve fresh candidates for the actual8BJU/QT9and1X8B/824crystal queries using
+   the frozen USRCAT transform; start10000/128and compare10000/256.
+3. E033 panel candidates belong only to their original queries. Use actual WEE1
+   `global_ids` with matching Gaussian queries. Molecule caps are capacity analysis.
+4. Verify expanded artifact/chemical catalogs, IDs, query/receptor identities and
+   hashes. Historical E031 defaults pointed at the old library.
+5. Measure Gaussian coarse/refine and E031 separately, with retention counts;
+   keep E031 annotation-only.
+6. Replace the old77.99sbaseline from7704candidates with same-query/same-run timing.
 
-1. 从上述目录读取 report.json、acceptance.json、protocol.json、metrics.csv 与完整参数/来源。不要重建已验收的库。
-2. 用已有 WEE1 8BJU/QT9 与 1X8B/824 共晶查询，按同一 USRCAT 方法和冻结标准化参数，对扩大后的索引重新取候选。10,000/128 仅作起始配置；保留 10,000/256 精度对照，靶点特异召回尚待检验。
-3. E033 库内查询的 candidates_q*.npz 只属于其原查询，不能直接与 WEE1 Gaussian query 配对。使用实际靶点候选的完整 global_ids 对接 Gaussian；每分子一个代表的 cap 是容量分析，不是最终姿态政策。
-4. 检查扩大库 artifact/chemical catalog、全局 ID、查询、受体和文件哈希一致性。现有 E031 脚本默认旧库 catalog，必须显式指向当前数据。
-5. 测量 Gaussian 粗评分、精修、E031 侧评分的独立耗时与分子/构象保留数；E031 保持注释，不自动改排名。
-6. `scripts/run_e031_key_interaction_matching.sh` 当前将 QT9 耗时除以固定 77.99 秒。该值来自旧 7,704 候选精修，不能用于新候选的 <=10% 门槛。运行前需改为同机器、同候选 ID 的当次实测基线，并对两个查询分别判断。
-
-当前尚未运行新靶点检索或 E031，也未宣称端到端验收通过。详细机器可读摘要见 `to_human/e033-user-reported-20260918.json`。
-
-后续开发：E034 工作站脚本已实现，见 `to_human/E034_WORKSTATION_RUN.md`。
-旧 E031 脚本的固定77.99秒门槛判断已移除，新流程使用同次同查询精修计时。
-本文件前面的“运行前需修改”是开发前检查点，现由该实现更新；真实工作站结果仍待返回。
-
-续接提示：读取本文件和 research-state.yaml，从已通过 E033 校准面板的 25.8M 构象库继续 WEE1 靶点检索 → Gaussian 精修 → E031 分阶段验收。先核对工作站路径和查询/库来源，不回到旧的“等待登记”状态。
+Subsequent implementation note: E034 removed the fixed77.99s gate and added the
+new runner; see [E034 handoff](E034_WORKSTATION_RUN.md). Workstation execution was
+still pending at this checkpoint. Later results are recorded separately in E034
+and E035. Machine-readable E033 summary: `e033-user-reported-20260918.json`.
+Resume from the passed25.8M-conformer panel, not the older registration-wait state.

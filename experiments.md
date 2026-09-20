@@ -1545,3 +1545,12 @@ Protocol1a46816; exact early termination after512unique seeds replaces generatin
 
 ## E038 prompt workflow — 2026-09-19
 Protocol1ba97f4; user chooses OpenAI-compatible LLM and reports AF3 installed. Project-scoped planner and allowlisted executor implement UniProt/RCSB evidence, single-protein/CCD AF3 preparation/run and calibrated WEE1 search. 222local tests passed/2dependency skips; standalone synthetic smoke and final16targeted tests pass. Live LLM/AF3/network integration awaits workstation configuration, no scientific success inferred. Handoff:to_human/E038_PROMPT_PROTEIN_AF3.md. E037 performance experiment remains pending; keep its original candidate/seed budgets and pose review boundaries.
+
+
+## E039 - English content and workflow skills (2026-09-20)
+
+Protocol: `experiments/E039-english-workflow-skills-protocol.md` (e8e41cb).
+Completed translation and four repository skills, planner routing metadata, and
+English prose guards. Confirmatory software checks: 224 passed, two dependency
+skips; four skill metadata validations passed; shell syntax and whitespace passed.
+No scientific timing or quality experiment was run for this change.

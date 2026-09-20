@@ -381,3 +381,12 @@ The reference Gaussian path constructs the entire deterministic pair-seed list b
 
 ## E038 natural-language boundary — 2026-09-19
 Prompt usability is independent of numerical/scientific validity. LLM compiles requests into allowlisted structured tasks; deterministic adapters retrieve verified protein data and create AF3 JSON, rather than accepting model-invented sequences or arbitrary commands. Model context is user prompt plus capability schema only. Ambiguous protein identity blocks; structure retrieval does not choose a receptor. Only calibrated WEE1 search queries are exposed, keeping E031 annotation-only. AF3 predictions still need downstream structure/pose review. 222local checks and offline/mock pipeline validate orchestration, not real service/AF3 quality. User confirms AF3 installed; provider/model and installed paths must be configured locally for real testing.
+
+
+## 2026-09-20 - English workflow guidance
+
+E039 supplies four repository skills and compact planner routing for existing
+allowlisted actions. These organize the calibrated search and protein/AF3 adapters;
+they do not expand target acceptance or establish biological quality. Maintained
+content is English and checked for Han text. Local regression: 224 passed, two
+optional dependency skips; live provider/AF3 validation remains pending.

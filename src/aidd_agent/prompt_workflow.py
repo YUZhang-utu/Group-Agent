@@ -23,6 +23,7 @@ from .prompt_plan import CAPABILITIES, SYSTEM_PROMPT, chat_plan, strict_json, va
 from .protein_data import fetch_protein, resolve_protein, get_json
 from .rcsb import search_structures
 from .registry import connect
+from .workflow_skills import skills_for_plan
 
 
 class Blocked(RuntimeError):
@@ -75,6 +76,7 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
     directory = ensure_within(root / "runs" / ("PROMPT-" + uuid.uuid4().hex[:16]), root)
     directory.mkdir(parents=True)
     envelope = dict(format="aidd-prompt-envelope-v1", user=user, project=project, prompt=prompt,
+                    workflow_skills=skills_for_plan(plan),
                     plan=plan, model=model, request_id=request_id, recommendation_id=recommendation,
                     system_prompt_sha256=hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest())
     target = directory / "plan.json"

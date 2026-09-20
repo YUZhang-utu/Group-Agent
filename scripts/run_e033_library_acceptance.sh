@@ -11,8 +11,8 @@ export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
 if [[ ! -f "$BATCH/COMPLETE.json" ]]; then
-  echo "E032 尚未全部完成：缺少 $BATCH/COMPLETE.json。" >&2
-  echo "登记完成不等于索引完成。请先按 to_human/E032_CONFORMER_CONFLICT.md 续跑原预计算命令。" >&2
+  echo "E032 is incomplete: missing $BATCH/COMPLETE.json." >&2
+  echo "Registration is not index completion. Resume the original precompute command in to_human/E032_CONFORMER_CONFLICT.md." >&2
   exit 66
 fi
 

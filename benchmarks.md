@@ -175,3 +175,12 @@ Microbenchmark:scripts/benchmark_bounded_seeds.py, seeded20260918,12cases, featu
 
 ## E038 interface benchmark — 2026-09-19
 222passed/2dependency skips, final16targeted checks passed; standalone offline smoke labeled synthetic. Coverage: strict planner schema, auth error redaction, unknown action/path/dependency rejection, Project isolation, UniProt identity/species/ambiguity, AF3 construct/CCD/provenance, shell-free fake scientific runners, artifact tamper and resume. Real LLM plan fidelity, real protein endpoints, AF3 inference and actual GPU timings remain unmeasured. to_human/E038_LOCAL_VALIDATION.json records evidence boundaries. Do not equate offline smoke with live workflow or scientific acceptance.
+
+
+## E039 software acceptance (2026-09-20)
+
+Run `python scripts/check_english.py` for maintained UTF-8 content and `python -m
+pytest -q` with `PYTHONPATH=src` for regression. Observed: no Han text, 224 passed,
+two dependency skips. Four repository skills passed the skill-creator validator.
+Tests enforce exact skill/action coverage, valid reference links, routing and
+English-plan rejection. This is not a live LLM, AF3 or search latency benchmark.

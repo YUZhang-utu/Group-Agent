@@ -1,11 +1,11 @@
-# E035：分子级对比、姿态检查及 E031 等价加速验证
+# E035: molecule review and equivalent E031 acceleration
 
-目标：复用已完成 E034，不重建库、不重跑 Gaussian；E031 继续只作注释。
-优化后是否达到 QT9 <=3.1242秒，以工作站完整调用实测为准，不能用本地内核速度代替。
+Reuse completed E034 outputs without rebuilding the library or rerunning Gaussian.
+E031 remains annotation-only. The historical QT9 target was<=3.1242seconds for a
+full call, not a kernel microbenchmark. Subsequent million-conformer workstation
+results are in [the result record](E035_WORKSTATION_1M_RESULT.json).
 
-## 台式机运行（默认10万不同构象）
-
-在之前成功执行 E034 的环境中：
+## Run (default100000distinct conformers)
 
 ```bash
 cd /mnt/medchem_taltio/wrk/yu_agent/Group-Agent
@@ -13,86 +13,95 @@ git pull --ff-only origin main
 bash scripts/run_e035_review_and_scale.sh
 ```
 
-默认读取：
-`/mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/recheck-20260918-163847-316118`
+Default source:
+`/mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/recheck-20260918-163847-316118`.
+Current parallel-runner output:
+`/mnt/local/hand/yuzhang/aidd/e035-review-and-scale/run-100k-parallel-v2`.
+The original serial handoff used `run-100k-v1`; preserve that historical directory.
+See [E036](E036_FAST_3D_RUN.md) for8-worker scheduling and512-row chunks.
 
-默认结果：
-`/mnt/local/hand/yuzhang/aidd/e035-review-and-scale/run-100k-v1`
+Use the existing Python/NumPy environment. Preserve full E034 evidence: report,
+EXECUTION_COMPLETE marker, protocol, both original query/result NPZ files, manifests
+and structures. A copied report alone is insufficient. Overrides:
+`E035_E034_SOURCE`, `AIDD_BATCH`, `E035_OUTPUT`.
 
-仅使用已安装的 Python/NumPy 等现有依赖，无新增化学模型下载。
-请保留完整 E034 目录，包括 report.json、EXECUTION_COMPLETE.json、protocol.json、
-两条查询的原始 NPZ、manifest 和结构文件；仅复制 report.md 不能运行。
-路径变动可设置 `E035_E034_SOURCE`、`AIDD_BATCH`、`E035_OUTPUT`。
+## Measurements
 
-## 程序实际做什么
+1. Verify report, query, rigid-result, sidecar and catalog provenance/hashes.
+2. Profile the reference separately (`profile.txt`, `reference.pstats`), excluded
+   from latency comparison.
+3. For both queries, run three alternating reference/optimized full-call repeats,
+   including reads, checks, all three objective poses, analysis and serialization.
+   Compare every repeat to the original E034 sidecar.
+4. Independently select each score's best conformer per source-grouped molecule;
+   record IDs, cross-scores, ranks, correlations and Top-K overlap.
+5. Select at most10molecules per group: Gaussian Top100/E031 rank>500, the reverse,
+   and both Top100. Do not backfill empty groups. Export both winning conformers
+   when distinct.
+6. Sample100000distinct library conformers across shards. Two WEE1 anchor sets and
+   three fixed centroid-aligned orientations give600000comparisons. Save sample IDs,
+   shard coverage, errors and global rank checks. The original full readers verify
+   every optimized-reader feature coordinate/type/direction/ID independently.
 
-1. 校验原始报告、查询、刚体结果、侧评分和库清单来源/哈希。
-2. 单独运行参考版 cProfile，生成 profile.txt / reference.pstats，此次不计入延迟比较。
-3. 两条查询分别做三轮交替顺序的参考版/优化版完整调用。时间包含读取、校验、
-   三套目标姿态的评分、分析和结果写出。每轮与原 E034 侧评分逐项比较。
-4. 分子级分别选择两个评分的最优构象，并记录各自的ID、交叉评分、排名、相关性和Top-K重合。
-5. 每查询从三组各选最多10个分子：Gaussian前100/E031后500、反向分歧、两者均前100。
-   组内不足不凑数；每分子的两个代表构象不同则同时导出。
-6. 默认从全库各分片分层抽100,000个**不同构象**，使用两条WEE1查询和三种固定质心对齐朝向，
-   进行600,000次参考/优化评分比较。保存抽样ID、分片覆盖、误差和全局排序对比。
-   参考侧使用原始完整读取器，先逐项核对优化读取器的坐标、类型、方向和ID，
-   避免两侧共用一个错误的数据读取结果而产生虚假的一致性。
+The optimized engine batches geometry and reads only required interaction features,
+avoiding unrelated atom/bond/torsion objects. It retains the original Hungarian
+assignment. Reference remains the default E031 engine; this experiment opts into
+batched scoring for comparison.
 
-优化版：批量计算特征变换/距离/方向，按需读取相互作用特征，省去无关原子/键/扭转对象的构造。
-一对一匹配仍使用原 Hungarian 实现。原 E031 默认引擎仍是参考版；E035 显式选择优化版作对照。
+Acceptance requires exact identities/order/assignments, absolute score and anchor
+error<=1e-6, exact conformer ranks and molecule representatives/ranks. A tiny numerical
+error that changes ordering fails. Failures stop and update `RUN_STATUS.json`.
 
-等价门槛：ID/顺序/匹配分配完全一致；评分与逐anchor贡献绝对误差<=1e-6；
-构象级排序及分子级代表/排序完全一致。即使误差很小，只要排名变化也失败。
-失败停止并写 RUN_STATUS.json，不冒充等价通过。
+## Pose review
 
-## 如何检查导出的姿态
+Each query's `review/` contains `molecule-ranks.csv`, `poses.json` (IDs, transforms,
+scores and anchor contributions), native-crystal-frame heavy-atom SDF files,
+`receptor.cif`, and `review.py`. In PyMOL:
 
-每个查询目录中 `review/` 包含：
+```text
+run /absolute/path/to/review.py
+```
 
-- `molecule-ranks.csv`：独立代表构象及分子级排名。
-- `poses.json`：原始 global_id、transform、评分、逐anchor匹配及坐标。
-- `*.sdf`：原晶体坐标系中的重原子、键、形式电荷；未重新最小化或 docking。
-- `receptor.cif`：对应晶体结构副本。
-- `review.py`：在 PyMOL 输入 `run /完整路径/review.py`，逐个启用候选对象检查。
+Enable poses individually and inspect placement, receptor clashes, feature types,
+directions and anchor contributions. Dashed assignment lines are not validated
+hydrogen bonds. SDF exports do not reconstruct every original stereochemical label;
+there is no new minimization or docking. Human review, redocking and enrichment are
+separate validation tasks.
 
-重点看两种评分意见相反的姿态：配体位置、受体碰撞、供受体类型与方向以及逐anchor贡献。
-虚线表示算法分配，不能直接当成已确认氢键。SDF不重建全部原始立体化学标注。
-人工姿态检查、redocking和活性富集仍是独立验收任务。
+## Million-conformer tier
 
-## 百万构象档位
-
-先完成10万档；若等价检查通过，再运行：
+After the100kchecks, use a fresh output for the current code:
 
 ```bash
 E035_SCALE=1000000 \
-E035_OUTPUT=/mnt/local/hand/yuzhang/aidd/e035-review-and-scale/run-1m-v1 \
+E035_OUTPUT=/mnt/local/hand/yuzhang/aidd/e035-review-and-scale/run-1m-parallel-v2 \
 bash scripts/run_e035_review_and_scale.sh
 ```
 
-该档位是1,000,000个不同库构象、6,000,000次评分对照，绝不通过重复旧候选充数。
-两档均使用真实库特征，但朝向为构造的压力测试姿态，**不是百万个Gaussian精修姿态或生物学验证**。
-原E034精修姿态验证则覆盖6,299+6,791个构象的三套目标，共39,270个真实精修姿态评分。
+This is1Mdistinct conformers and6Mcomparisons, never duplicated old candidates.
+The original serial `run-1m-v1` has already passed per user report; do not overwrite
+or unnecessarily repeat it. Stress orientations are constructed, not1MGaussian
+poses or biological validation. Original E034 pose checks cover6299+6791conformers
+across three objectives, totaling39270scores.
 
-## 续跑
+## Resume and interpretation
 
 ```bash
 bash scripts/run_e035_review_and_scale.sh --resume
 ```
 
-百万档续跑要保留同样的 `E035_SCALE=1000000` 和 `E035_OUTPUT` 设置。
-输入、代码、参数和环境必须匹配；完成的查询阶段及512构象压力测试块按哈希复用。
-中断的查询计时阶段会重新完成全部重复，避免不完整基线；压力测试只续做未完成块。
-缺少协议但已有内容的目录不覆盖。初次误加resume而目录尚不存在时，按新任务运行。
+Retain the same scale/output/worker/chunk settings. Inputs, code and environment
+must match. Completed queries and512-row stress receipts are hash-checked. A partial
+query timing stage reruns all repeats; stress resumes unfinished blocks. Existing
+content without a protocol is rejected; absent output starts fresh.
 
-## 看哪些结果
+Return root `report.md`/`report.json` and query `review/summary.json`. The gate uses
+historical E034 refinement time with matching host/CPU count, not a newly measured
+Gaussian denominator. Load/clocks are uncontrolled; three repeats are not an SLA.
+Stress kernel timing excludes shared reads, checkpoints and global rank checks;
+parallel cumulative worker time is not elapsed wall time.
 
-发回根目录 `report.md`、`report.json`，以及各查询 `review/summary.json`。
-程序只报告当前机器host/CPU数是否与E034一致；延迟门槛分母是历史E034精修时间，
-不是重跑Gaussian的新基线。负载/频率变化未完全控制，三轮计时不是服务SLA。
-大规模部分的耗时是评分计算，公共读取、检查点和全局排名检查不计入该内核计时。
-无论工程计时是否通过，都不会自动让E031改变候选入选或原有排名。
-
-本地已完成10万合成案例的内核验证，见 E035_LOCAL_KERNEL_100K.json：分配零差异，
-最大数值差约1.1e-16，float32排序一致；非空组内核约快2.1–3.7倍。
-这是合成输入上的内核结果，真实库大规模验证和完整调用3.12秒目标仍待台式机结果。
-本地全套回归189项通过、2项依赖相关跳过；包含原生坐标SDF导出、完整小规模流程、续跑和篡改拒绝检查。
+Historical local evidence:100000synthetic kernel cases, zero assignment mismatches,
+max error about1.1e-16, exactfloat32ranks, nonempty-group speedup2.1-3.7x;189tests
+passed/2dependency skips. These did not establish workstation full-call performance.
+The later real-library result is recorded separately rather than rewriting history.

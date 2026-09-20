@@ -952,3 +952,20 @@ CONFIRMATORY local correctness:205passed/2dependency skips. Tests cover seeded/d
 ## 2026-09-19 — E038 prompt/protein/AF3 interface implemented
 User requested LLM prompts for protein data, AF3 and subsequent 3D workflows, confirmed OpenAI-compatible provider and AF3 already installed on workstation. Protocol1ba97f4 preceded implementation tests. Added strict JSON intent planner (fixed actions/typed dependencies/no model-supplied argv, paths or sequences), compatible chat transport with environment-only credentials and redacted HTTP errors, active-Project ownership and existing AI audit integration, hashed plan/stage receipts and explicit compute capability. Public UniProt fetch/unique gene+taxonomy resolution validates accession/species/sequence; ambiguous matches fail rather than choose. RCSB candidates/downloads reuse existing adapters; no receptor selection is inferred. AF3 preparation takes verified sequence, optional explicit1-based construct and validated CCD ligands; local profile compiles argv with shell=False, imports model/confidence/provenance, preserves failed attempts. Only one protein chain plus optional CCD ligands is currently exposed. E031 remains annotation-only. Search prompt adapter selects only calibrated WEE1 QT9/824/both; fast_3d_search now supports one-query execution without changing scientific parameters.
 CONFIRMATORY local engineering validation:222passed/2dependency skips full regression; final AF3 path-type change rechecked16targeted tests. Standalone credential-free synthetic smoke passed, including resume. Mock tests exercise provider request shape/response validation, invalid actions/dependencies, secret redaction, organism/ambiguity, ownership/tampering, AF3 prepare/run argv and output import, compute blocking/resume and query adapter. No live model API, protein API, real AF3/GPU or library performance run here. Offline fixtures are labeled, not scientific results. State/JSON/Bash syntax checked. Handoff:to_human/E038_PROMPT_PROTEIN_AF3.md; summary:to_human/E038_LOCAL_VALIDATION.json. Tomorrow:run_e038_prompt_smoke.sh, E037 suite if pending, then local LLM/AF3 config and run_e038_prompt.sh. E037 passing supports calibrated engineering use, not new-target/pose/activity acceptance.
+
+
+## 2026-09-20 - E039 English content and workflow skills
+
+Translated maintained guides, script messages, examples and historical checkpoints
+into English while preserving original evidence dates and scientific measurements.
+The previously untracked September 15 checkpoint is retained as an English historical
+record. Added repository instructions and four discoverable skills for calibrated
+3D search, verified protein preparation, installed AF3, and prompt orchestration.
+The planner receives compact skill/action groups; validated envelopes record routing.
+English summaries/questions are requested and Han text is rejected. A repository
+check covers tracked and nonignored UTF-8 content, excluding raw ignored data and
+Git history. README now reflects supplied E034/E035 results and pending E037 timings.
+Validation: 224 tests passed, two dependency skips; all four skill validators passed;
+E033 shell syntax and whitespace checks passed. This is implementation validation,
+not a new scientific experiment. Live LLM/AF3 and end-to-end optimized workstation
+measurements remain pending. E031 remains annotation-only.
