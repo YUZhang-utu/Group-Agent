@@ -76,6 +76,7 @@ def test_funnel_skips_impossible_rows_and_preserves_uncapped_pass_set(tmp_path,m
     original=query([[0,0,0],[10,0,0]],[1,2])
     original['anchor_feature_indices']=np.array([0,1])
     def initialize(q):
+        q['pose_feasibility']=False  # Fixture substitutes scoring; real seed path is tested separately.
         full._STATE=(None,original,original,q)
         full._FILTER_READER=SimpleNamespace(get=lambda gid:records[gid])
         full._BOUND=NecessaryConditions(original,[0,1],'all',.5)

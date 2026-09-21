@@ -126,7 +126,7 @@ def test_benchmark_report_uses_spread_rows_and_rejects_disagreement(tmp_path,mon
         def __exit__(self,*args):pass
         def map(self,fn,batches):return map(fn,batches)
     def work(ids):
-        values=data(0,4);values['condition_passed']=np.array([True,False,False,True])
+        values=data(0,4);values['checked_global_ids']=ids;values['condition_passed']=np.array([True,False,False,True])
         return values,dict(prefilter_seconds=.01,pose_seconds=.1,annotation_seconds=.01,prefilter_passed=4,rejection_reasons={})
     monkeypatch.setattr(bench.full,'initialize',initialize)
     monkeypatch.setattr(bench,'ProcessPoolExecutor',Pool)

@@ -248,3 +248,14 @@ per-anchor scores and selected membership. Record worker count, backend, sample
 IDs, code and input hashes. GPU absence is not GPU acceptance. Summed worker
 stage times differ from elapsed time. Small-pilot startup/I/O costs and source
 integrity checks must not be extrapolated as a production SLA.
+
+
+## E047 workload validation
+
+Separate invariant survival, seed feasibility and Gaussian evaluations. The full
+reference scores even candidate rejects; the new pipeline checks membership and
+all survivor arrays. Record zero false rejections, reference-positive coverage,
+and elapsed improvement alongside work reduction. The enriched positive/boundary
+panel is intentionally biased and cannot estimate library prevalence. Small
+process-startup measurements are not a full-run SLA. Code and seed budgets remain
+pinned, and query/threshold changes cannot reuse negative results without proof.

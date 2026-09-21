@@ -61,3 +61,11 @@ If seed-batched CuPy loses to multicore NumPy, investigate a CPU producer / sing
 GPU consumer with cross-conformer buckets and pinned buffers; do not multiply GPU
 contexts. Profile seed generation separately. Assess stronger necessary bounds
 without adding unrequested interactions or rejecting uncertain geometry.
+
+
+## E047 scaling boundary
+
+Measure the remaining seed-construction fraction after pose-feasibility rejection.
+Only then decide between cached query-independent frames, vectorized seed generation,
+selective persistent geometric indexes or cross-conformer GPU work queues. A broad
+necessary-condition index that retains everything is not a scalability solution.

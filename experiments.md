@@ -1674,3 +1674,12 @@ Workstation experiment: /benchmark on the saved selection rule, spread global ID
 reference / batched CPU / available CUDA, exact arrays and membership comparison.
 Reject acceleration acceptance on any discrete disagreement. Full-library work
 must follow an acceptable pilot, not be inferred from local synthetic throughput.
+
+
+## E047 - pose feasibility before Gaussian scoring
+
+Protocol: experiments/E047-pose-feasibility-protocol.md. Test actual E031 passing
+assignments survive optimistic per-seed checks; compare all survivor arrays and
+final membership with unfiltered reference. Pilot mixes spread IDs with labeled
+saved-pose stress examples and reports missing current positives. No completed
+full-library speedup is inferred from synthetic tests or the prior GPU pilot.

@@ -330,11 +330,33 @@ def _query_self_overlaps(query: Mapping[str, np.ndarray], sigma: float,
     }
 
 
+def prepare_seeds(candidate, query, *, pair_tolerance, axial_samples,
+                  max_pair_seeds, bounded_pair_seeds=False, **unused):
+    """Generate the exact ordered pose set independently of overlap scoring."""
+    query_shape = query['shape_points']
+    query_features = query['feature_points']
+    query_types = query['feature_types']
+    anchor_indices = query['anchor_feature_indices']
+    seeds = list(principal_axis_seeds(candidate.shape_points, query_shape))
+    pair_count = 0
+    if (max_pair_seeds and len(anchor_indices) >= 2
+            and len(candidate.feature_points) >= 2):
+        pair_seeds = pair_alignment_seeds(
+            candidate.feature_points, candidate.feature_types,
+            query_features[anchor_indices], query_types[anchor_indices],
+            tolerance=pair_tolerance, axial_samples=axial_samples,
+            max_seeds=max_pair_seeds if bounded_pair_seeds else None)
+        pair_seeds = pair_seeds[:max_pair_seeds]
+        pair_count = len(pair_seeds)
+        seeds.extend(pair_seeds)
+    return seeds, pair_count
+
+
 def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
                ids: np.ndarray, *, sigma: float, cutoff: float | None,
                pair_tolerance: float, axial_samples: int,
                max_pair_seeds: int, bounded_pair_seeds: bool = False,
-               backend: str = 'reference') -> dict[str, np.ndarray]:
+               backend: str = 'reference', prepared=None) -> dict[str, np.ndarray]:
     """Score a locked ID slice while caching every rigid-invariant self overlap."""
     query_shape = query["shape_points"]
     query_features = query["feature_points"]
@@ -350,21 +372,14 @@ def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
                      "color_query_self": [], "color_candidate_self": [], "transform": []}
               for name in OBJECTIVES}
     for gid in ids:
-        candidate = reader.get(int(gid))
+        candidate = reader.get(int(gid)) if prepared is None else prepared[int(gid)][0]
         molecule_ids.append(candidate.molecule_id)
         conformer_ids.append(candidate.conformer_id)
-        seeds = list(principal_axis_seeds(candidate.shape_points, query_shape))
-        pair_count = 0
-        if (max_pair_seeds and len(anchor_indices) >= 2
-                and len(candidate.feature_points) >= 2):
-            pair_seeds = pair_alignment_seeds(
-                candidate.feature_points, candidate.feature_types,
-                query_features[anchor_indices], query_types[anchor_indices],
-                tolerance=pair_tolerance, axial_samples=axial_samples,
-                max_seeds=max_pair_seeds if bounded_pair_seeds else None)
-            pair_seeds = pair_seeds[:max_pair_seeds]
-            pair_count = len(pair_seeds)
-            seeds.extend(pair_seeds)
+        if prepared is None:
+            seeds, pair_count = prepare_seeds(candidate,query,pair_tolerance=pair_tolerance,
+                axial_samples=axial_samples,max_pair_seeds=max_pair_seeds,bounded_pair_seeds=bounded_pair_seeds)
+        else:
+            _, seeds, pair_count = prepared[int(gid)]
         seed_counts.append(len(seeds)); pair_seed_counts.append(pair_count)
         candidate_self = {
             "shape": gaussian_self_overlap(
@@ -434,14 +449,14 @@ def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
         "global_ids": np.asarray(ids, dtype=np.int64),
         "molecule_ids": np.asarray(molecule_ids, dtype="U16"),
         "conformer_ids": np.asarray(conformer_ids, dtype="U16"),
-        "best_seed_ids": np.asarray(seed_ids, dtype="U96"),
+        "best_seed_ids": np.asarray(seed_ids, dtype="U96").reshape(-1,len(OBJECTIVES)),
         "seed_counts": np.asarray(seed_counts, dtype=np.int32),
         "pair_seed_counts": np.asarray(pair_seed_counts, dtype=np.int32),
         "objective_names": np.asarray(OBJECTIVES, dtype="U40"),
     }
     for name, records in values.items():
         for metric, payload in records.items():
-            arrays[f"{name}__{metric}"] = np.asarray(payload, dtype=np.float64)
+            arrays[f"{name}__{metric}"] = np.asarray(payload, dtype=np.float64).reshape(-1,16) if metric == "transform" else np.asarray(payload, dtype=np.float64)
     return arrays
 
 

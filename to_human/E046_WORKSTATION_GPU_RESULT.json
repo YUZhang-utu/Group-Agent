@@ -1,0 +1,53 @@
+{
+  "provenance": "User-pasted E046 workstation report; no independent access to raw files",
+  "sample_count": 256,
+  "every_scenario_arrays_exact": true,
+  "prefilter_passed": 256,
+  "matching_conformers": 0,
+  "gpu": {
+    "status": "available",
+    "cupy": "14.2.0",
+    "device": "CUDA Device 0",
+    "driver": "580.126.20",
+    "name": "NVIDIA GeForce RTX 5090"
+  },
+  "scenarios": [
+    {
+      "backend": "reference",
+      "workers": 8,
+      "timings": [
+        3.0052159598562866,
+        2.9767108850646764
+      ],
+      "median_seconds": 2.9909634224604815
+    },
+    {
+      "backend": "numpy",
+      "workers": 8,
+      "timings": [
+        1.6196789210662246,
+        1.6802983621601015
+      ],
+      "median_seconds": 1.649988641613163
+    },
+    {
+      "backend": "numpy",
+      "workers": 22,
+      "timings": [
+        1.6320090831723064,
+        1.540561388945207
+      ],
+      "median_seconds": 1.5862852360587567
+    },
+    {
+      "backend": "cupy",
+      "workers": 1,
+      "timings": [
+        9.418556749122217,
+        4.867526882793754
+      ],
+      "median_seconds": 7.143041815957986
+    }
+  ],
+  "interpretation": "GPU available and sample-equivalent, slower than CPU; no useful invariant pruning; full-library scalability not accepted"
+}

@@ -489,3 +489,14 @@ silently. Speed work must preserve the user rule and optimize the scoring cost.
 Seed batching locally reduced repeated validation, kernel and Python record work;
 workstation CPU/CUDA pilots now compare outputs as well as timing. Richer feature
 classification does not itself prove better discrimination than pharmacophores.
+
+
+## E047: scope expensive scoring to possible final matches
+
+Final match sparsity plus invariant survival motivates checking requested anchor
+geometry at existing seeds before whole-ligand overlap. The sufficient rejection
+statement is about the current bounded seed protocol, not all possible rigid
+orientations. Survivors retain their full seed competition, so a nonpassing but
+Gaussian-optimal pose cannot be discarded to manufacture a match. Indexing broad
+necessary invariants alone cannot cure nonselectivity. Future larger-library
+claims require measurement of both query-dependent seed work and precise scoring.

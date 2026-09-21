@@ -1170,3 +1170,27 @@ Guide: to_human/E046_HARDWARE_FUNNEL.md. Larger cross-conformer GPU batching and
 quantified real-library pruning remain open if this pilot is insufficient.
 
 E046 regression: 300 passed, 3 dependency/GPU skips. English guard: 250 maintained files passed. No physical CUDA device was exercised in this environment.
+
+
+## 2026-09-21 - E047: change the work, not only the device
+
+User E046 GPU report: 256 samples, exact arrays, no positive matches, every sample
+survived invariant bounds. NumPy/22 median 1.586 s; CuPy/1 median 7.143 s, second
+repeat 4.868 s. Real CPU speedup did not establish acceptable library scaling.
+Raw supplied timings are transcribed in to_human/E046_WORKSTATION_GPU_RESULT.json.
+
+Implemented a cheap rule-specific test over the unchanged existing seed set,
+before whole-shape Gaussian evaluation. Independent anchor maxima upper-bound
+any assignment; ALL remains within one seed. Skip a conformer only if all seeds
+are impossible, and keep every original seed competing on survivors. Reuse seed
+construction/decoded records. Preserve full ID coverage and explicit unscored masks.
+No invented contacts, tighter threshold, Top-K or altered winner policy.
+
+The benchmark now supplements spread IDs with saved positive/near-threshold rows,
+reports current reference positives, checks skipped negatives and exact surviving
+arrays, and separates seed, feasibility and Gaussian timing. GPU remains optional.
+This does not yet remove linear seed-generation work. A generic index of the same
+nonselective invariant bounds was not built: it would not justify a speed claim.
+Real-library benefit of E047 remains pending a workstation pilot.
+
+E047 local regression: 313 passed, 3 dependency/GPU skips; English guard 255 files; skill validation passed. Passing actual E031 fixtures, same-pose ALL, threshold boundaries, preserved original seed competition, full ID coverage with skipped Gaussian rows, and false-rejection detection are covered. Workstation speedup and whole-library totals remain unmeasured.

@@ -116,7 +116,7 @@ def screening_summary(job):
         path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
         child = read_json(path) or {}
         if child.get('kind') == 'hardware_benchmark':
-            return {k:child[k] for k in ('kind','status','sample_count','sample_scope','scenarios','gpu','recommendation') if k in child}
+            return {k:child[k] for k in ('kind','status','sample_count','sample_scope','scenarios','gpu','recommendation','sample_panel','reference_positive_count','positive_membership_validation','scalability_gate','scalability_scope') if k in child}
         if child.get('kind') in {'docking_preparation','docking_execution'}:
             return {k:child[k] for k in ('kind','status','engine','geometry','preparation_status','policy','reference_validation','pose_quality') if k in child}
         summary = {k:child[k] for k in ("kind", "library", "refined_molecule_union", "retrieved_molecule_union", "retrieved_conformer_union", "counts", "policy", "approval", "sdf", "ids", "preparation", "docking_status") if k in child}

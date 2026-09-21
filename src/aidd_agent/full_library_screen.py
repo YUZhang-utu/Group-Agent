@@ -118,9 +118,17 @@ def compute_funnel_chunk(task, ids, started):
             arrays[OBJECTIVE+'__transform'] = prior[OBJECTIVE+'__transform'].reshape(-1,16)
             arrays['pose_evaluated'] = np.ones(n,dtype=bool)
             reused = True
+    prepared = None
+    feasibility = {}
+    invariant_keep = keep.copy()
+    if query.get('pose_feasibility') and not reused:
+        from .pose_feasibility import prepare_survivors
+        keep,prepared,feasibility = prepare_survivors(reader,original,_BOUND,records,ids,keep,POSE_PARAMETERS)
+        arrays['pose_evaluated'] = keep.copy()
+    arrays['pose_feasibility_passed'] = keep.copy()
     if keep.any() and not reused:
         stage_started = time.perf_counter()
-        rigid = _score_ids(reader,original,ids[keep],backend=query.get('pose_backend','reference'),**POSE_PARAMETERS)
+        rigid = _score_ids(reader,original,ids[keep],backend=query.get('pose_backend','reference'),prepared=prepared,**POSE_PARAMETERS)
         ev.require(np.array_equal(rigid['molecule_ids'],arrays['molecule_ids'][keep]) and
                    np.array_equal(rigid['conformer_ids'],arrays['conformer_ids'][keep]), 'Prefilter/pose identity mismatch')
         pose_seconds = time.perf_counter()-stage_started
@@ -136,9 +144,11 @@ def compute_funnel_chunk(task, ids, started):
     arrays['condition_passed'] = pose_mask(arrays,columns,policy,OBJECTIVE)
     _atomic_savez(Path(target),arrays)
     receipt = dict(start=start,stop=stop,sha256=ev.sha(target),wall_seconds=time.perf_counter()-started,
-        prefilter_seconds=prefilter_seconds,pose_seconds=pose_seconds,annotation_seconds=annotation_seconds,pose_backend=query.get('pose_backend','reference'),prefilter_passed=int(keep.sum()),
-        prefilter_rejected=int((~keep).sum()),rejection_reasons=dict(reasons),
+        prefilter_seconds=prefilter_seconds,pose_seconds=pose_seconds,annotation_seconds=annotation_seconds,pose_backend=query.get('pose_backend','reference'),prefilter_passed=int(invariant_keep.sum()),
+        prefilter_rejected=int((~invariant_keep).sum()),rejection_reasons=dict(reasons),
         matching_conformers=int(arrays['condition_passed'].sum()))
+    receipt.update(feasibility)
+    receipt['pose_candidates'] = int(keep.sum())
     receipt['legacy_chunk_reused'] = reused
     receipt['new_pose_evaluations'] = 0 if reused else int(keep.sum())
     if reused:
@@ -165,6 +175,10 @@ def load_chunk(path, start, stop, indices):
         for key in ('condition_passed','pose_evaluated','prefilter_passed'):
             ev.require(data[key].shape == (stop-start,) and data[key].dtype == bool, 'Invalid funnel masks')
         ev.require(not np.any(data['condition_passed'] & ~data['pose_evaluated']), 'A match needs an evaluated pose')
+        if 'pose_feasibility_passed' in data:
+            mask=data['pose_feasibility_passed']
+            ev.require(mask.shape==(stop-start,) and mask.dtype==bool,'Invalid pose feasibility mask')
+            ev.require(not np.any(data['condition_passed'] & ~mask),'A match cannot fail pose feasibility')
     return data
 
 
@@ -179,7 +193,7 @@ class Counts:
         self.molecules = np.zeros((3, width), dtype=np.int64)
         self.conformers = np.zeros((3, width), dtype=np.int64)
         self.processed = 0
-        self.prefilter_passed = self.pose_evaluated = self.matching_conformers = 0
+        self.prefilter_passed = self.pose_evaluated = self.matching_conformers = self.pose_candidates = 0
 
     def add(self, data):
         scores = data[OBJECTIVE+'__anchor_scores']
@@ -188,6 +202,7 @@ class Counts:
         condition = data.get('condition_passed',np.zeros(len(scores),dtype=bool))
         if 'condition_passed' in data: flags &= condition[None,:,None]
         self.prefilter_passed += int(data.get('prefilter_passed',np.ones(len(scores),dtype=bool)).sum())
+        self.pose_candidates += int(data.get('pose_feasibility_passed',data.get('prefilter_passed',np.ones(len(scores),dtype=bool))).sum())
         self.pose_evaluated += int(data.get('pose_evaluated',np.ones(len(scores),dtype=bool)).sum())
         self.matching_conformers += int(condition.sum())
         self.conformers += flags.sum(axis=1)
@@ -337,10 +352,14 @@ def run_funnel(selection, output, **kwargs):
     return run(source,output,condition=normalize_policy(selected['policy']),selection_source=selection,**kwargs)
 
 
-def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condition=None, selection_source=None, reuse=None, backend=None):
+def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condition=None, selection_source=None, reuse=None, backend=None, pose_feasibility=None):
     from .prompt_workflow import file_lock
     from .pose_acceleration import hardware_options, array_module
     backend, workers = hardware_options(backend,workers)
+    if pose_feasibility is None:
+        setting=os.environ.get('AIDD_POSE_FEASIBILITY','1')
+        ev.require(setting in ('0','1'),'AIDD_POSE_FEASIBILITY must be 0 or 1')
+        pose_feasibility=setting=='1'
     if backend == 'cupy': array_module(backend)
     ev.log(f'Pose backend: {backend}; workers: {workers}; chunk size: {chunk_size}')
     source, output = Path(source).resolve(), Path(output).resolve()
@@ -358,7 +377,9 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
         ev.require(len(selected_queries) == 1, 'A funnel rule must use one crystal query')
         evidence['queries'] = [q for q in evidence['queries'] if q['query_id'] in selected_queries]
         for q in evidence['queries']: q['condition_policy'] = condition
-    for q in evidence['queries']: q['pose_backend'] = backend
+    for q in evidence['queries']:
+        q['pose_backend'] = backend
+        q['pose_feasibility'] = bool(condition and pose_feasibility)
     for q in evidence['queries']:
         for protected in (source.parent, Path(q['artifact_catalog']).resolve().parent,
                           Path(q['chemical_companion']).resolve().parent):
@@ -407,7 +428,7 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
                         sources[str((directory/filename).resolve())] = record['sha256']
                     sources.update(fingerprint([manifest]))
         protocol = dict(source_hashes=sources, code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))),
-                        chunk_size=chunk_size, pose_parameters=POSE_PARAMETERS, thresholds=THRESHOLDS, pose_backend=backend,
+                        chunk_size=chunk_size, pose_parameters=POSE_PARAMETERS, thresholds=THRESHOLDS, pose_backend=backend, pose_feasibility=pose_feasibility,
                         numpy=np.__version__, candidate_top_k=None, gaussian_top_n=None,condition_policy=condition,
                         reuse=str(Path(reuse).resolve()) if reuse else None)
         # JSON normalizes tuple values, including thresholds.
@@ -423,7 +444,9 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
             policy='All catalog conformers; one heuristic anchored-Gaussian pose per conformer, not all possible poses. No Top-K/Top-N membership truncation.',
             biological_quality='not_evaluated', candidate_top_k=None, gaussian_top_n=None)
         if condition:
-            result['policy'] = 'All catalog conformers checked by necessary conditions; survivors receive the unchanged heuristic pose search. No Top-K/Top-N. Feature counts are conditional on the requested rule.'
+            result['policy'] = 'All catalog conformers checked by necessary conditions; existing seed poses receive optimistic rule checks; only possible conformers receive unchanged Gaussian winner selection over ALL original seeds. No Top-K/Top-N. Feature counts are conditional on the requested rule.'
+            if not pose_feasibility:
+                result['policy'] = 'Invariant necessary conditions only; survivors receive unchanged Gaussian winner selection. No Top-K/Top-N. Conditional feature counts.'
             result['unscored_rows'] = 'pose_evaluated=false, assignments=-2; zero scores and identity transforms are placeholders, not calculated results'
         try:
             for qi, original in enumerate(evidence['queries']):
@@ -438,7 +461,7 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
                 selected = min(chunk_total, max_chunks) if max_chunks else chunk_total
                 progress = dict(query_id=q['query_id'], total_conformers=total,
                     checked_conformers=0, checked_this_invocation=0, reused_completed_rows=0, new_pose_evaluations=0,
-                    prefilter_passed=0, prefilter_rejected=0, matching_conformers=0, status='running')
+                    prefilter_passed=0, prefilter_rejected=0, pose_candidates=0, pose_feasibility_rejected=0, matching_conformers=0, status='running')
                 def update_progress(receipt, reused):
                     n = receipt['stop']-receipt['start']
                     progress['checked_conformers'] += n
@@ -446,6 +469,8 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
                     if not reused: progress['new_pose_evaluations'] += receipt.get('new_pose_evaluations',n)
                     progress['prefilter_passed'] += receipt.get('prefilter_passed',n)
                     progress['prefilter_rejected'] += receipt.get('prefilter_rejected',0)
+                    progress['pose_candidates'] += receipt.get('pose_candidates',receipt.get('prefilter_passed',n))
+                    progress['pose_feasibility_rejected'] += receipt.get('pose_feasibility_rejected',0)
                     progress['matching_conformers'] += receipt.get('matching_conformers',0)
                     _atomic_json(output/'progress.json',progress)
                 def tasks():
@@ -478,9 +503,9 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
                             _atomic_json(output/'progress.json',progress)
                             if condition and progress['checked_conformers'] >= chunk_size*workers and progress['prefilter_rejected'] == 0:
                                 if progress['checked_conformers'] == chunk_size*workers:
-                                    ev.log('Prefilter has rejected zero rows so far; the necessary rule is nonselective on this sample. Final matches are separate. Benchmark before committing to a full run.')
+                                    ev.log('Invariant prefilter has rejected zero rows; inspect Gaussian candidate counts to assess the additional pose-feasibility stage. Final matches are separate.')
                             detail = (f"; prefilter kept {receipt['prefilter_passed']}/{receipt['stop']-receipt['start']}; "
-                                      f"matches {receipt['matching_conformers']}" if condition else '')
+                                      f"Gaussian candidates {receipt.get('pose_candidates',receipt['prefilter_passed'])}; matches {receipt['matching_conformers']}" if condition else '')
                             ev.log(f"{q['query_id']}: checked {progress['checked_conformers']} / {total}; "
                                    f"finished IDs {receipt['start']}..{receipt['stop']-1}{detail}")
                     progress['stage'] = 'aggregating_verified_chunks'
@@ -496,6 +521,8 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
                     if condition:
                         q['counts'].update(prefilter_passed=count.prefilter_passed,
                             prefilter_rejected=count.processed-count.prefilter_passed,
+                            pose_candidates=count.pose_candidates,
+                            pose_feasibility_rejected=count.prefilter_passed-count.pose_candidates,
                             pose_evaluated_conformers=count.pose_evaluated,
                             matching_conformers=count.matching_conformers,
                             matching_molecules=count.db.execute('SELECT COUNT(*) FROM molecules WHERE matched=1').fetchone()[0])
@@ -540,9 +567,10 @@ def main():
     p.add_argument('--workers', type=int, help='CPU default: affinity minus two, capped at 24; GPU: one')
     p.add_argument('--backend', choices=['reference','numpy','cupy'], help='Default: AIDD_POSE_BACKEND or numpy')
     p.add_argument('--chunk-size', type=int, default=256)
+    p.add_argument('--no-pose-feasibility',action='store_true',help='Reference comparison: disable rule-aware seed rejection')
     p.add_argument('--max-chunks', type=int, help='Explicit pilot limit per query; incomplete coverage is labeled partial')
     a = p.parse_args()
-    options = dict(workers=a.workers,chunk_size=a.chunk_size,max_chunks=a.max_chunks,reuse=a.reuse,backend=a.backend)
+    options = dict(workers=a.workers,chunk_size=a.chunk_size,max_chunks=a.max_chunks,reuse=a.reuse,backend=a.backend,pose_feasibility=False if a.no_pose_feasibility else None)
     result = run_funnel(a.selection,a.output,**options) if a.selection else run(a.classification,a.output,**options)
     print(json.dumps(dict(status=result['status'], report=str(a.output/'report.json'))))
 
