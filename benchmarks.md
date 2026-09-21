@@ -184,3 +184,12 @@ pytest -q` with `PYTHONPATH=src` for regression. Observed: no Han text, 224 pass
 two dependency skips. Four repository skills passed the skill-creator validator.
 Tests enforce exact skill/action coverage, valid reference links, routing and
 English-plan rejection. This is not a live LLM, AF3 or search latency benchmark.
+
+
+## E040 software acceptance (2026-09-21)
+
+Full regression: 230 passed, two dependency skips. Container tests verify the
+supplied mount/argument semantics, prerequisites, failure preservation, reuse and
+image provenance. Provider tests verify explicit selection and credential isolation.
+This establishes software behavior under fixtures, not API reliability, AF3 quality
+or GPU runtime. English-content and shell syntax checks passed.

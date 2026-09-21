@@ -1,5 +1,9 @@
 # Complete workstation acceptance: search, live prompts, proteins and AF3
 
+For the user-supplied Apptainer installation and selectable GPT/DeepSeek profiles,
+use [the container/provider setup](AF3_CONTAINER_AND_LLM_PROVIDERS.md) instead of
+the native AF3 configuration below.
+
 ## What already passed
 
 The supplied E033 report passed library acceptance/calibration. E034 completed both

@@ -390,3 +390,12 @@ allowlisted actions. These organize the calibrated search and protein/AF3 adapte
 they do not expand target acceptance or establish biological quality. Maintained
 content is English and checked for Han text. Local regression: 224 passed, two
 optional dependency skips; live provider/AF3 validation remains pending.
+
+
+## 2026-09-21 - AF3 installation compatibility
+
+The workstation uses Apptainer rather than native Python AF3. E040 now supports
+that deployment without changing the requested scientific input or scoring methods.
+Profiles separate host resources from container paths. GPT and DeepSeek can be
+selected per new plan; selection does not change an existing sealed workflow.
+Real GPU/provider validation is still needed despite 230 passing local tests.

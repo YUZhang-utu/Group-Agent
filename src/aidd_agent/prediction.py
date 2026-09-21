@@ -5,6 +5,7 @@ import csv
 import hashlib
 from pathlib import Path
 import re
+import shutil
 from typing import Any, Sequence
 
 from .project_context import ensure_within
@@ -97,12 +98,54 @@ def load_model_profile(path: Path) -> dict[str, Any]:
     if backend not in required_by_backend:
         raise ValueError("Unsupported prediction backend")
     required = common | required_by_backend[backend]
+    if backend == "alphafold3":
+        execution = profile.get("execution", "native")
+        if execution not in {"native", "apptainer"}:
+            raise ValueError("Unsupported AF3 execution mode")
+        if execution == "apptainer":
+            required |= {"image", "executable"}
+        if profile.get("flash_attention_implementation", "xla") not in {"xla", "triton", "cudnn"}:
+            raise ValueError("Invalid AF3 flash attention implementation")
     missing = sorted(required - profile.keys())
     if missing:
         raise ValueError(f"Model profile is missing: {', '.join(missing)}")
     if profile["backend"] == "alphafold3" and profile.get("license_acknowledged") is not True:
         raise ValueError("AlphaFold 3 model-parameter terms must be acknowledged in the local profile")
     return profile
+
+
+def validate_af3_installation(profile: dict[str, Any]) -> None:
+    """Check host resources; container Python/runner are checked by Apptainer."""
+    container = profile.get("execution", "native") == "apptainer"
+    keys = ("image",) if container else ("python", "runner")
+    for key in (*keys, "model_parameters", "databases"):
+        target = Path(profile[key])
+        exists = target.is_file() if key in keys else target.is_dir()
+        if not target.is_absolute() or not exists:
+            raise ValueError(f"Missing absolute AF3 profile path: {key}")
+    if container:
+        if not shutil.which(profile["executable"]):
+            raise ValueError("Apptainer executable is unavailable; load its workstation module")
+        if not str(profile["runner"]).startswith("/"):
+            raise ValueError("AF3 container runner must be an absolute container path")
+        if not isinstance(profile["python"], str) or not profile["python"] or profile["python"].startswith("-"):
+            raise ValueError("Invalid container Python executable")
+
+
+def _apptainer_af3_command(profile, input_path, output_dir):
+    # Bind syntax treats colon/comma as separators, even with shell=False.
+    sources = [input_path.parent, output_dir, Path(profile["model_parameters"]), Path(profile["databases"])]
+    if any(any(c in p.as_posix() for c in (":", ",", "\n", "\r")) for p in sources):
+        raise ValueError("AF3 bind paths cannot contain colon, comma or newline")
+    command = [str(profile["executable"]), "exec", "--nv"]
+    for source, destination, mode in zip(sources,
+            ("/root/af_input", "/root/af_output", "/root/models", "/root/public_databases"),
+            ("ro", "rw", "ro", "ro")):
+        command += ["--bind", f"{source.as_posix()}:{destination}:{mode}"]
+    return command + [str(profile["image"]), str(profile["python"]), str(profile["runner"]),
+        f"--json_path=/root/af_input/{input_path.name}", "--output_dir=/root/af_output",
+        "--model_dir=/root/models", "--db_dir=/root/public_databases",
+        f"--flash_attention_implementation={profile.get('flash_attention_implementation', 'xla')}"]
 
 
 def _clean_sequences(sequences: Sequence[str]) -> list[str]:
@@ -163,6 +206,8 @@ def write_prediction_input(backend: str, name: str, sequences: Sequence[str],
 def prediction_command(profile: dict[str, Any], input_path: Path,
                        output_dir: Path) -> list[str]:
     backend = profile["backend"]
+    if backend == "alphafold3" and profile.get("execution", "native") == "apptainer":
+        return _apptainer_af3_command(profile, input_path, output_dir)
     if backend == "boltz2":
         command = [str(profile["executable"]), "predict", str(input_path),
                    "--out_dir", str(output_dir), "--cache", str(profile["cache"])]

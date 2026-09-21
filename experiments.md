@@ -1554,3 +1554,11 @@ Completed translation and four repository skills, planner routing metadata, and
 English prose guards. Confirmatory software checks: 224 passed, two dependency
 skips; four skill metadata validations passed; shell syntax and whitespace passed.
 No scientific timing or quality experiment was run for this change.
+
+
+## E040 - Installed container AF3 and provider selection
+
+Protocol committed as e3cbad4 before validation. Implemented and locally validated:
+230 passed, two dependency skips. GPT and DeepSeek mocked HTTP remain distinct;
+AF3 simulated failure/retry/reuse and changed-image rejection pass. Setup preserves
+existing profiles. Real service/model access and GPU inference remain pending.

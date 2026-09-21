@@ -1,5 +1,9 @@
 # E038: prompts for protein data, AF3 and calibrated 3D search
 
+For the user-supplied Apptainer installation and selectable GPT/DeepSeek profiles,
+use [the container/provider setup](AF3_CONTAINER_AND_LLM_PROVIDERS.md) instead of
+the native AF3 configuration below.
+
 The interface uses OpenAI-compatible Chat Completions. The user reports AF3 already
 installed on the workstation. The LLM generates a structured plan; local adapters
 retrieve verified protein sequences, prepare AF3 JSON and invoke the configured

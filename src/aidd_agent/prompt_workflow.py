@@ -24,6 +24,7 @@ from .protein_data import fetch_protein, resolve_protein, get_json
 from .rcsb import search_structures
 from .registry import connect
 from .workflow_skills import skills_for_plan
+from .prediction import validate_af3_installation
 
 
 class Blocked(RuntimeError):
@@ -115,8 +116,13 @@ def load_runtime(path):
         if p.is_file():
             inputs.append(p)
             raw = ev.read(p)
-            runner = Path(raw.get("runner", ""))
-            if runner.is_file(): inputs.append(runner)
+            if raw.get("execution") == "apptainer":
+                image = Path(raw.get("image", ""))
+                # Hash once per invocation, not once for every workflow stage.
+                if image.is_file(): cfg["af3_image_sha256"] = ev.sha(image)
+            else:
+                runner = Path(raw.get("runner", ""))
+                if runner.is_file(): inputs.append(runner)
     if "search" in cfg:
         search = cfg["search"]
         if not isinstance(search, dict) or set(search) != {"batch", "e034", "workers", "coarse_chunk", "refine_chunk", "bounded_pair_seeds"}:
@@ -181,17 +187,18 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
             raise Blocked("Configure the installed AF3 profile in the local runtime JSON")
         profile = load_model_profile(Path(cfg["af3_profile"]))
         if profile["backend"] != "alphafold3": raise ValueError("AF3 action requires alphafold3 profile")
-        for key in ("python", "runner", "model_parameters", "databases"):
-            target = Path(profile[key])
-            exists = target.is_file() if key in {"python", "runner"} else target.is_dir()
-            if not target.is_absolute() or not exists:
-                raise Blocked(f"Missing absolute AF3 profile path: {key}")
+        try:
+            validate_af3_installation(profile)
+        except ValueError as exc:
+            raise Blocked(str(exc)) from None
         input_path = execution / params["input_step"] / "af3-input.json"
         attempt = 1
         while (directory / f"prediction-attempt-{attempt:03d}").exists(): attempt += 1
         prediction_dir = directory / f"prediction-attempt-{attempt:03d}"
         # No model-supplied argv is ever loaded or executed.
         command = prediction_command(profile, input_path, prediction_dir)
+        if profile.get("execution") == "apptainer":
+            prediction_dir.mkdir(parents=True)
         _atomic_json(directory / "command.json", dict(argv=command, source="local_operator_profile"))
         services.run_command(command, directory / "execution.log")
         payload = ev.read(input_path)

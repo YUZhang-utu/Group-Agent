@@ -1,0 +1,11 @@
+{
+  "af3_profile": "alphafold3-apptainer.local.json",
+  "search": {
+    "batch": "/mnt/local/hand/yuzhang/aidd/library-precompute-20260911",
+    "e034": "/mnt/local/hand/yuzhang/aidd/e034-expanded-wee1/recheck-20260918-163847-316118",
+    "workers": 16,
+    "coarse_chunk": 500,
+    "refine_chunk": 64,
+    "bounded_pair_seeds": false
+  }
+}

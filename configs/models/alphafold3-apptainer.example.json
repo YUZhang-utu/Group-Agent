@@ -1,0 +1,12 @@
+{
+  "backend": "alphafold3",
+  "execution": "apptainer",
+  "executable": "apptainer",
+  "image": "/mnt/medchem_taltio/wrk/yu_agent/alphafold3/images/alphafold3-local-rebuilt.sif",
+  "python": "python",
+  "runner": "/app/alphafold/run_alphafold.py",
+  "model_parameters": "/mnt/medchem_taltio/wrk/yu_agent/alphafold3/models",
+  "databases": "/mnt/local/hand/yuzhang/alphafold3/databases",
+  "flash_attention_implementation": "xla",
+  "license_acknowledged": false
+}

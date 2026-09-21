@@ -37,3 +37,7 @@ Preserve plan seals, code/runtime fingerprints, stage receipts and reports. Repo
 `complete`, `blocked`, `failed` and `not_run` accurately. A failed external adapter
 is not successful because its inputs were prepared. Return the relevant plan and
 report locations, excluding credentials and sensitive user prompt content.
+
+Select `--provider gpt` or `--provider deepseek` using separate environment keys.
+See the [provider guide](../../../to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md).
+Provider changes create fresh plans; they do not silently replace sealed plans.

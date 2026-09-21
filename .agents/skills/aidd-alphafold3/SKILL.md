@@ -23,8 +23,10 @@ when that is the user's request.
 
 ## Execute and import
 
-The trusted local runtime selects an AF3 profile containing actual absolute Python,
-runner, parameter-directory and database-directory paths. Reuse the existing
+The trusted local runtime selects native Python or Apptainer execution. Native
+profiles use host Python/runner paths; container profiles use host image/model/data
+paths and container Python/runner paths. See the
+[container guide](../../../to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md). Reuse the existing
 installation and profile checks; do not invent paths, reinstall AF3 or download
 weights merely to prepare a plan. Credentials remain outside model output.
 

@@ -978,3 +978,19 @@ planner actions, receipts and E037 report fields. Distinguishes supplied E033-E0
 evidence from pending E037 timings and live E038 model/protein/AF3/search execution.
 Includes one combined live compute prompt, reuse checks and noncompute boundary
 cases. No new workstation or scientific execution was performed.
+
+
+## 2026-09-21 - E040 container AF3 and provider profiles
+
+Implemented Apptainer execution matching the supplied SIF, weights/databases, GPU
+flag and XLA setting. Native execution remains compatible. Output bind directories
+are created before launch; failures preserve attempt directories; image SHA-256 is
+computed once per invocation and bound to resume. Added independent GPT/DeepSeek
+profiles and explicit provider selection, preserving the legacy profile environment.
+Setup copies local profiles without overwriting existing files. Keys remain separate
+environment variables. Confirmatory software validation: 230 passed, two dependency
+skips; shell syntax, English content and updated skill metadata passed. Mock tests
+cover command mapping, missing host inputs, failed/retried/reused execution, changed
+image rejection and provider credential isolation. No live API or GPU run performed.
+Official current DeepSeek setup uses deepseek-flash; GPT profile uses gpt-5.6-terra.
+See to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md for workstation commands and sources.
