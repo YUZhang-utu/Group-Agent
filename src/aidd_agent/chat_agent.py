@@ -22,6 +22,7 @@ WORKFLOWS = [
     {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein and optional CCD ligands; installed native or Apptainer profile."},
     {"name": "3D screening", "status": "WEE1 templates; exhaustive coarse retrieval by default", "scope": "All conformer descriptors compared before budgeted Gaussian refinement. Approximate mode requires explicit selection. New exhaustive runs are not claimed equivalent to old ANN candidate sets."},
     {"name": "Uncapped library condition counts", "status": "full_count adapter; workstation validation pending", "scope": "Evaluate every conformer pose against classified features without descriptor Top-K or Gaussian Top-N. Long batch job, not all possible orientations or torsions. Reuse completed classification as query definition."},
+    {"name": "Necessary-condition funnel", "status": "rule-based adapter; workstation speedup pending", "scope": "Use an explicit selection rule across all library conformers; reject only impossible feature type/assignment/pair geometry, then refine every survivor without Top-K. Per-feature counts are conditional on that rule."},
     {"name": "Screening evidence and human selection", "status": "available", "scope": "Review a completed search, preview explicit same-pose anchor conditions, then separately request SDF/ID export for docking preparation."},
     {"name": "New-target query preparation", "status": "not exposed in chat", "scope": "Requires reference ligand/site, query preparation and independent retrieval calibration."},
     {"name": "Molecule aggregation and pocket QC", "status": "CLI components; chat integration pending", "scope": "Requires validated query poses, receptor/site definitions and aggregation artifacts."},
@@ -30,7 +31,7 @@ WORKFLOWS = [
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
 intent, message, task_id, request, and ONLY for select a selection object.
-intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/select/export/prepare_docking/run_docking.
+intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/select/export/prepare_docking/run_docking.
 Write message in English. task_id is an existing task ID from this session or null (latest).
 request is a self-contained scientific request only for run, otherwise empty.
 Use conversation context to resolve follow-up clarifications. Never invent biological sequences,
@@ -44,6 +45,13 @@ Use evidence to classify anchors and counts from a completed search task; no new
 Use classify on a completed evidence task to derive broader crystal-based query features
 (hydrophobic, aromatic, charge, water and metal hypotheses) and match stored 3D poses.
 This requires no PLIP or docking. Halogen-specific features are not indexed.
+Use funnel on a completed selection-preview task to apply its explicit same-pose
+rule to the WHOLE library, with necessary-condition rejection before pose scoring.
+The old preview candidate IDs and molecule cap do not constrain the full-library run.
+Never invent a threshold or make every contact in a classification mandatory.
+If no rule exists, explain that unconstrained individual-feature counts and a
+combined feature rule answer different questions; do not launch full_count as a
+substitute for a fast conditional funnel. full_count is an expensive baseline.
 Use full_count on a completed classification task when the user wants every library
 conformer evaluated for feature conditions, without a Top-K or Top-N membership limit.
 This computes all feature scores first and reports existing diagnostic levels 0.25/0.5/0.75;
@@ -73,7 +81,7 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 def validate_route(value):
     if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "select", "export", "prepare_docking", "run_docking"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "select", "export", "prepare_docking", "run_docking"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -102,16 +110,17 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
-        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "full_library_screen", "select_screening", "export_screening", "prepare_docking", "run_docking"}: continue
+        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"}: continue
         path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
         child = read_json(path) or {}
         if child.get('kind') in {'docking_preparation','docking_execution'}:
             return {k:child[k] for k in ('kind','status','engine','geometry','preparation_status','policy','reference_validation','pose_quality') if k in child}
         summary = {k:child[k] for k in ("kind", "library", "refined_molecule_union", "retrieved_molecule_union", "retrieved_conformer_union", "counts", "policy", "approval", "sdf", "ids", "preparation", "docking_status") if k in child}
-        if child.get("kind") == "full_library_conditions":
+        if child.get("kind") in ("full_library_conditions","condition_funnel"):
             summary.update(status=child['status'], interaction_table=str(path.parent/'interactions.html'),
                 queries=[dict(query_id=q['query_id'], counts=q['counts'], full_coverage=q['full_coverage'],
                     anchors=[{k:a[k] for k in ('anchor_id','feature_class','diagnostic_counts')} for a in q['anchors']]) for q in child['queries']])
+            if child.get('condition_policy'): summary['condition_policy'] = child['condition_policy']
         if child.get("kind") == "screening_evidence":
             if child.get('classification'):
                 summary['classification']=child['classification'];summary['interaction_table']=str(path.parent/'interactions.html')
@@ -129,11 +138,15 @@ def screening_feedback(summary):
     if summary['kind'] in {'docking_preparation','docking_execution'}:return json.dumps(summary,indent=2)
     if summary.get("library"):
         lines.append(f"Library: {summary['library']['library_conformers']:,} conformers / {summary['library']['library_molecules']:,} source-grouped molecules.")
-    if summary['kind'] == 'full_library_conditions':
-        lines.append('No descriptor Top-K or Gaussian Top-N membership truncation. One heuristic pose per conformer, not all possible poses.')
+    if summary['kind'] in ('full_library_conditions','condition_funnel'):
+        lines.append('No descriptor Top-K or Gaussian Top-N membership truncation. Necessary-condition rejects may have no calculated pose; survivors use heuristic rigid poses.')
+        if summary.get('condition_policy'): lines.append('Selection rule: '+json.dumps(summary['condition_policy']))
         for q in summary['queries']:
             c=q['counts']
             lines.append(f"{q['query_id']}: {c['evaluated_conformers']:,}/{c['total_conformers']:,} conformers evaluated; {c['evaluated_molecules']:,} molecules; full coverage: {q['full_coverage']}")
+            if summary['kind']=='condition_funnel':
+                lines.append('Funnel stages: '+json.dumps(c))
+                lines.append('Feature counts below are conditional on passing the selected rule.')
             for a in q['anchors']:
                 lines.append(a['anchor_id']+' | '+ '; '.join(f"score >= {d['minimum_score']}: {d['molecules']} molecules" for d in a['diagnostic_counts']))
         lines.append('Classification table: '+summary['interaction_table'])
@@ -301,7 +314,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/export", "/prepare_docking", "/run_docking"}:
+            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/export", "/prepare_docking", "/run_docking"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
             else:
@@ -329,18 +342,18 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent in {"evidence", "classify", "full_count", "select", "export", "prepare_docking", "run_docking"}:
+            if intent in {"evidence", "classify", "full_count", "funnel", "select", "export", "prepare_docking", "run_docking"}:
                 job = self.task(sid, decision["task_id"])
                 if job["status"] != "complete" or not job["plan"]:
                     raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "select":{"review_screening","classify_screening","full_library_screen"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
+                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
                 details = read_json(job["report"]) or {}
                 if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
                     raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
-                action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
+                action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
                 params = dict(source_run=Path(job["plan"]).parent.name)
                 if intent == "select": params.update(decision["selection"])
-                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N",
+                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching",
                     "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
                     clarifications=[], steps=[dict(id="screening", action=action, params=params)])
                 ctx = self.context
@@ -350,6 +363,7 @@ class ChatAgent:
                     db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
                         (jid,sid,local_plan["summary"],provider,"","queued",str(plan),str(plan.parent / "execution/report.json"),str(self.root / (jid+".log")),time.time()))
                 answer = f"Task {jid} queued: {local_plan['summary']}. Source task: {job['id']}. No new search or docking job is launched."
+                if intent=='funnel':answer=f"Task {jid} queued for a full-library necessary-condition funnel using the selected rule, with no Top-K or Top-N cap. Source task: {job['id']}."
                 if intent=='full_count':answer=f"Task {jid} queued for full-library pose and feature evaluation with no Top-K/Top-N membership limit. This can be a long batch job. Source task: {job['id']}."
                 if intent=='run_docking':answer=f"Task {jid} queued for preparation, reference redocking and gated candidate docking. Source task: {job['id']}."
             elif intent == "run":

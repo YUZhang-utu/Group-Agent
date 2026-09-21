@@ -1,5 +1,10 @@
 # Uncapped full-library feature conditions
 
+This is the expensive unfiltered baseline. The user-observed QT9 window processed
+about 86 conformers/second. For a rule-based necessary-condition funnel, use the
+[E045 guide](E045_NECESSARY_CONDITION_FUNNEL.md). Do not launch this baseline as a
+substitute for a fast conditional screen.
+
 E043 exhaustive retrieval compares every descriptor but only refines Top-10,000
 conformers and a Gaussian Top-N union. It cannot count every library molecule
 matching a feature condition. E044 is a separate, substantially heavier batch job:

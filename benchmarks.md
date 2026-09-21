@@ -227,3 +227,13 @@ pose before aggregation. Partial runs fail full-coverage acceptance. Local tests
 compare the worker's Gaussian transforms against the existing scoring path and
 exercise corruption/restart, last-chunk hits and export provenance. No full-library
 latency, storage or biological-quality number has been measured for this mode.
+
+## E045 necessary-condition validation
+
+Analytic basis: for positive spatial-times-angular feature score >= t with
+angular <= 1, positional error <= sigma*sqrt(-2 log(t)), bounded by cutoff.
+Pair-distance discrepancy is bounded by the sum of errors. Tests retain passing
+rigid fixtures under random transforms and boundary radii, reject impossible
+assignment graphs, and compare final pass IDs with an unfiltered small fixture.
+Legacy passing-pose contradictions stop a run. Workstation prefilter retention,
+wall-time speedup and scalability have not yet been measured.

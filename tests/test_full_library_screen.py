@@ -152,18 +152,20 @@ def test_compute_evaluates_every_id_and_preserves_gaussian_pose(tmp_path,monkeyp
     assert np.array_equal(result['global_ids'],np.arange(3))
 
 
-def test_full_count_is_local_chat_action_without_threshold_question(tmp_path):
+@pytest.mark.parametrize('intent,source_action,action',[('full_count','classify_screening','full_library_screen'),
+                                                      ('funnel','select_screening','condition_funnel')])
+def test_full_count_is_local_chat_action_without_threshold_question(tmp_path,intent,source_action,action):
     from aidd_agent.chat_agent import ChatAgent, validate_route
     from test_screening_selection import attach_fixture
     app=ChatAgent(tmp_path,start=False)
     try:
         sid=app.new_session();jid=attach_fixture(app,sid);job=app.task(sid,jid)
         report=json.loads(Path(job['report']).read_text())
-        for step in report['steps'].values():step['action']='classify_screening'
+        for step in report['steps'].values():step['action']=source_action
         _atomic_json(Path(job['report']),report)
-        reply=app.ask(sid,'/full_count '+jid,'deepseek')
-        assert 'no Top-K/Top-N' in reply and 'No new search' not in reply
+        reply=app.ask(sid,'/'+intent+' '+jid,'deepseek')
+        assert 'Top-K' in reply and 'No new search' not in reply
         plan=json.loads(Path(app.task(sid)['plan']).read_text())['plan']
-        assert plan['steps'][0]['action']=='full_library_screen'
-        validate_route(dict(intent='full_count',message='Evaluate every conformer',request='',task_id=jid))
+        assert plan['steps'][0]['action']==action
+        validate_route(dict(intent=intent,message='Evaluate every conformer',request='',task_id=jid))
     finally:app.close()

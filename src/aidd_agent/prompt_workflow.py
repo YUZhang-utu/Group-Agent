@@ -145,9 +145,9 @@ def load_runtime(path):
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     action, params = step["action"], step["params"]
-    if action in {"review_screening", "classify_screening", "full_library_screen", "select_screening", "export_screening", "prepare_docking", "run_docking"}:
+    if action in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"}:
         from .screening_selection import upstream, review, preview, export
-        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "select_screening": ("review_screening","classify_screening","full_library_screen"),
+        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "condition_funnel":"select_screening", "select_screening": ("review_screening","classify_screening","full_library_screen","condition_funnel"),
                          "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking"}[action]
         source, _ = upstream(execution, params["source_run"], source_action)
         output = directory / "screening"
@@ -156,6 +156,10 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
             if not allow_compute: raise Blocked("Enable --allow-compute to score expanded 3D features")
             from .classified_features import classify
             summary = classify(source, output)
+        elif action == "condition_funnel":
+            if not allow_compute: raise Blocked("Enable --allow-compute for a full-library condition funnel")
+            from .full_library_screen import run_funnel
+            summary = run_funnel(source, output)
         elif action == "full_library_screen":
             if not allow_compute: raise Blocked("Enable --allow-compute for uncapped all-conformer pose evaluation")
             from .full_library_screen import run as run_full_library
@@ -308,7 +312,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     _atomic_json(execution / "report.json", report)
                     if "source_run" in step["params"]:
                         from .screening_selection import upstream
-                        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "select_screening": ("review_screening","classify_screening","full_library_screen"),
+                        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "condition_funnel":"select_screening", "select_screening": ("review_screening","classify_screening","full_library_screen","condition_funnel"),
                                          "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking"}[step["action"]]
                         _, source_files = upstream(execution, step["params"]["source_run"], source_action)
                         dependencies.extend(source_files)

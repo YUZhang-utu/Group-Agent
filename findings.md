@@ -469,3 +469,12 @@ budgets and retains raw feature scores for later conditions. The remaining bound
 is heuristic pose generation and selection, not catalog coverage. Full-library
 match totals are unknown until the workstation run completes; old counts must
 never be relabeled as the new totals.
+
+## E045: coverage is not an efficient funnel
+
+Removing candidate budgets alone creates an all-pose scan, not efficient screening.
+The observed E044 rate makes this distinction operationally significant. Selective
+conjunctive feature rules admit rigid-invariant necessary bounds; unconstrained
+single-feature statistics often do not. Speed and recall claims must be attached
+to an explicit rule and pose protocol. E045 retains the old pose computation for
+survivors and labels conditional counts; runtime validation is still pending.

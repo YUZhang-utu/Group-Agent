@@ -1122,3 +1122,32 @@ resume, corruption, same-pose conditions, zero/nonzero export, local chat routin
 and unchanged Gaussian pose computation. Licensed docking and actual uncapped
 full-library throughput/counts remain untested here. Guide:
 to_human/E044_FULL_LIBRARY_CONDITIONS.md.
+
+## 2026-09-21 — E045 necessary-condition funnel after observed E044 cost
+
+User log: QT9 completed 18 additional 2,048-row chunks between 14:21:29 and
+14:28:38, or 36,864 rows / 429 s = 85.93 rows/s. Local-rate extrapolation gives
+about 83 hours for remaining QT9 work, excluding the second query and aggregation;
+it is not a reliable full-run ETA. E044 removed budgets but did not implement
+cheap necessary-condition rejection, so it missed the intended fast-funnel design.
+
+Added an explicit-rule funnel using type/direction-kind compatibility, injective
+feature assignment and conservative rigid pair-distance bounds before the same
+Gaussian pose search. All survivors are scored without Top-K/Top-N; actual passes
+are deduplicated. Conditional feature counts are labeled as such. Unscored rows
+have explicit masks and cannot be exported as calculated poses. Rule changes
+require a new funnel; no threshold or required contact set is silently invented.
+The unfiltered per-feature diagnostic question remains distinct and potentially
+expensive, especially for ANY/single-feature rules.
+
+Compatible frozen E044 chunks can be reused through the CLI, with input/scoring
+code/parameter checks and a hard failure if a bound rejects a previously passing
+pose. Progress now counts completed rows rather than interpreting the largest
+out-of-order ID as cumulative coverage, and reports new pose work separately.
+
+Exploratory local validation: 279 passed, 2 dependency skips. Tests cover exact
+pipeline pass IDs on a small fixture, type/matching/pair-distance rejection,
+random rigid-transform retention at four thresholds, boundary cases, source-task
+routing, and legacy contradiction detection. Real necessary-condition survivor
+rates and end-to-end speedup are pending. Guide:
+to_human/E045_NECESSARY_CONDITION_FUNNEL.md.

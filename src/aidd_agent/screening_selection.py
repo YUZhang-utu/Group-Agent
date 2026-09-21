@@ -264,7 +264,7 @@ def select_rows(r, s, columns, policy, query_id):
 def preview(review_path, output, policy):
     validate_selection(policy)
     evidence = ev.read(review_path)
-    if evidence.get('kind') == 'full_library_conditions':
+    if evidence.get('kind') in ('full_library_conditions','condition_funnel'):
         from .full_library_screen import preview as full_preview
         return full_preview(review_path, output, policy)
     if evidence.get("kind") != "screening_evidence": raise ValueError("Expected screening evidence")

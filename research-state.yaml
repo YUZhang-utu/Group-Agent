@@ -1,7 +1,18 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E044-full-library-condition-counts
+current_experiment: E045-necessary-condition-funnel
+necessary_condition_funnel:
+  status: implemented_local_tests_passed_workstation_speedup_pending
+  protocol: experiments/E045-necessary-condition-funnel-protocol.md
+  guide: to_human/E045_NECESSARY_CONDITION_FUNNEL.md
+  source: explicit_selection_rule_not_budgeted_candidate_ids
+  membership: necessary_condition_rejection_then_uncapped_survivor_refinement
+  bounds: type_direction_kind_injective_assignment_rigid_pair_distance
+  baseline_qt9_observed_conformers_per_second: 85.93006993006993
+  baseline_rate_scope: user_log_36864_rows_in_429_seconds_not_full_runtime
+  real_prefilter_survival_and_speedup: pending
+  local_validation: 279_passed_2_dependency_skips
 full_library_conditions:
   status: implemented_local_tests_passed_workstation_pending
   protocol: experiments/E044-full-library-condition-counts-protocol.md

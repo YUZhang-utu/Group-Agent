@@ -1655,3 +1655,12 @@ passed. Every catalog ID is scheduled without either ranking budget. Synthetic
 cross-chunk duplicates, last-chunk matches, interrupted/resumed counts and same-pose
 selection/export are covered. Full-library runtime, storage and chemistry acceptance
 remain pending. No inference of biological recall or all-orientation completeness.
+
+## E045 — necessary-condition funnel
+
+Protocol: `experiments/E045-necessary-condition-funnel-protocol.md`.
+Local exploratory software outcome: 279 passed, 2 skipped. An explicit same-pose
+rule now controls cheap necessary-condition rejection before uncapped refinement.
+No claim of real-library acceleration is made until survivor-rate and wall-time
+measurements exist. E044 user log established about 86 conformers/s for one QT9
+window, motivating this correction; it did not establish full-library counts.

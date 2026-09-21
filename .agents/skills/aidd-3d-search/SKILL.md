@@ -8,6 +8,14 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For a condition-driven full-library funnel use the
+[E045 guide](../../../to_human/E045_NECESSARY_CONDITION_FUNNEL.md) and
+`/funnel SELECTION_TASK_ID`. The source preview supplies the explicit rule only;
+its candidate list/export cap never limits the scan. Reject only necessary-condition
+failures, refine every survivor, retain all actual passes. Do not silently substitute
+an ALL rule for separate per-feature diagnostics or invent thresholds. Conditional
+feature counts are not unconditional totals. Speedup requires workstation measurement.
+
 For counts over every library conformer under classified feature conditions, use
 the [E044 guide](../../../to_human/E044_FULL_LIBRARY_CONDITIONS.md) and chat
 `/full_count CLASSIFICATION_TASK_ID`. Do not substitute exhaustive descriptor
