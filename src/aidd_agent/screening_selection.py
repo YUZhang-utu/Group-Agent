@@ -19,7 +19,22 @@ from .project_context import ensure_within
 
 def archive(path):
     with np.load(path, allow_pickle=False) as data:
-        return {key: data[key] for key in data.files}
+        arrays = {key: data[key] for key in data.files}
+    # Retrieval stores S16 bytes; Gaussian stores U16 text. str(bytes) creates
+    # a Python representation such as "b'm1'", not the actual identifier.
+    for key in ("molecule_ids", "conformer_ids"):
+        if key not in arrays: continue
+        values = arrays[key]
+        if values.ndim != 1 or values.dtype.kind not in {"S", "U"}:
+            raise ValueError("Identifier arrays must contain one-dimensional bytes or text")
+        try:
+            decoded = [v.decode("utf-8") if isinstance(v, (bytes, np.bytes_)) else str(v) for v in values]
+        except UnicodeDecodeError as exc:
+            raise ValueError("Identifier bytes must be valid UTF-8") from exc
+        if any(not v or "\0" in v for v in decoded):
+            raise ValueError("Identifiers must be nonempty and contain no embedded NUL")
+        arrays[key] = np.asarray(decoded, dtype=str)
+    return arrays
 
 
 def check_hashes(hashes):

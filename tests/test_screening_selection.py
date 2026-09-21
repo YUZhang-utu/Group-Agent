@@ -54,7 +54,8 @@ def fixture_search(root):
         key:dict(path=str(p),sha256=sha(p)) for key,p in
         (("query",query),("rigid_result",rigid),("artifact_catalog",artifact),("chemical_companion",chemical))}))
     schedule = root / "8bju/candidates.npz"
-    np.savez(schedule, **identities)
+    # Match production: retrieval uses bytes, refinement uses Unicode strings.
+    np.savez(schedule, **{**identities, "molecule_ids":identities["molecule_ids"].astype("S16")})
     baseline = write(root.parent / "e034/report.json", dict(acceptance=dict(library_conformers=100, library_molecules=50)))
     write(root / "protocol.json", dict(sources=fingerprint([baseline, query.with_suffix(".manifest.json")])))
     config = dict(query=str(query), candidate_schedule=str(schedule), candidate_schedule_sha256=sha(schedule))
@@ -70,6 +71,7 @@ def test_evidence_and_same_pose_selection(tmp_path):
     evidence = selection.review(search, tmp_path / "review")
     assert evidence["library"]["library_molecules"] == 50
     assert evidence["refined_molecule_union"] == 3
+    assert evidence["retrieved_molecule_union"] == 3
     anchors = [a["anchor_id"] for a in evidence["queries"][0]["anchors"]]
     assert evidence["queries"][0]["anchors"][0]["evidence"]["protein_partner"]["residue"] == "ASN"
     policy = dict(required_anchors=anchors, match_mode="all", minimum_score=.5)
@@ -82,6 +84,33 @@ def test_evidence_and_same_pose_selection(tmp_path):
     assert result["counts"]["matching_conformers"] == 4
     assert result["representatives"][0]["global_id"] == 1
     assert result["counts"]["selected_molecules"] == 1
+
+
+def test_real_identity_mismatch_is_still_rejected(tmp_path):
+    search = fixture_search(tmp_path / "search")
+    schedule = search.parent / "8bju/candidates.npz"
+    arrays = selection.archive(schedule)
+    arrays["molecule_ids"] = np.array(["wrong", "m1", "m2", "m3"], dtype="S16")
+    np.savez(schedule, **arrays)
+    report = json.loads(search.read_text())
+    report["queries"][0]["gaussian"]["config"]["candidate_schedule_sha256"] = sha(schedule)
+    write(search, report)
+    write(search.parent / "RUN_STATUS.json",dict(status="complete", report_sha256=sha(search)))
+    with pytest.raises(ValueError,match="molecule identity mismatch"):
+        selection.review(search,tmp_path / "review")
+
+
+def test_archive_decodes_ids_without_changing_scientific_arrays(tmp_path):
+    path = tmp_path / "arrays.npz"
+    scores = np.array([.2,.7],dtype="float32")
+    np.savez(path,molecule_ids=np.array([b"m1",b"m2"],dtype="S16"),
+             conformer_ids=np.array(["c1","c2"],dtype="U16"),scores=scores)
+    arrays = selection.archive(path)
+    assert arrays["molecule_ids"].tolist() == ["m1","m2"]
+    assert arrays["conformer_ids"].tolist() == ["c1","c2"]
+    assert np.array_equal(arrays["scores"],scores) and arrays["scores"].dtype == scores.dtype
+    np.savez(path,molecule_ids=np.array([b"\xff"],dtype="S16"))
+    with pytest.raises(ValueError,match="UTF-8"): selection.archive(path)
 
 
 def test_zero_export_and_tampering(tmp_path):

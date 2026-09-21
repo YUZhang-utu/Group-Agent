@@ -1,5 +1,14 @@
 # Prompt-driven screening evidence and human selection
 
+Recovery from `Retrieval/refinement molecule identity mismatch`: update to the
+bytes/text ID compatibility fix and restart the chat server. Retrieval stores S16
+byte IDs while Gaussian refinement stores U16 text IDs. The review now decodes
+IDs before comparing them; genuine mismatches still fail. Keep the completed
+search. Submit a NEW `/evidence SEARCH_TASK_ID` using that search's chat task ID,
+not the failed review task ID. Do not resume the failed review after a code update,
+because its execution protocol is bound to the previous code. Do not edit NPZs or
+receipts to bypass validation.
+
 This workflow has four chat turns: search, evidence review, selection preview and
 explicit export. Reuse a completed search when possible. No docking calculation
 is submitted by these steps. The implementation supports the calibrated WEE1

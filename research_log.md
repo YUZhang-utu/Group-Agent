@@ -1077,3 +1077,6 @@ real-library export and manual crystal/pose review remain workstation acceptance
 PLANTS executable permission success is user-reported; no docking was run here.
 Guide: to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md. No AF3 or library search was
 repeated locally. No continuity scheduler is exposed; repository checkpoints retain state.
+
+### 2026-09-21 E042 workstation ID representation fix
+User-reported evidence review failed at retrieval/refinement molecule identity comparison. Production retrieval stores S16 byte IDs; Gaussian stores U16 text IDs. str(bytes) introduced a false mismatch. Normalize identifier arrays with strict UTF-8 decoding on read, preserving scientific arrays and genuine mismatch checks. Updated fixtures to production byte retrieval IDs, plus genuine mismatch and invalid encoding tests. Full regression: 260 passed, 2 skips; English guard and diff checks passed. Keep completed search artifacts; restart updated chat and create a fresh evidence task rather than resuming an old code-bound review. Live retry pending.
