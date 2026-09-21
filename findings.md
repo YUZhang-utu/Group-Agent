@@ -449,3 +449,5 @@ New-target query calibration, docking, rescoring and biological validation are n
 marked complete by adding a chat UI. The guide records stage-by-stage acceptance.
 No live model/GPU chat test was performed here. Repository checkpoints provide
 continuity because this environment exposes neither /loop nor a cron tool.
+
+E042 separates crystal-contact evidence, candidate feature matching and explicit human selection. Tests demonstrate that separate conformers cannot jointly satisfy an ALL policy. A docking handoff is not prepared docking input or pose acceptance. See to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md.

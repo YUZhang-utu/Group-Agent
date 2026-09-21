@@ -219,6 +219,7 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
     ordinary = float(document.get("weights", {}).get("ordinary", 1.0))
     weights = np.full(len(points), ordinary, dtype=np.float64)
     anchor_indices = []
+    anchor_mapping = {}
     for anchor in document.get("anchors", []):
         expected = ANCHOR_TO_ARTIFACT_TYPE.get(anchor.get("feature_type"))
         atom_ids = set(map(int, anchor.get("ligand_atom_indices", [])))
@@ -237,6 +238,7 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
                 directions[best] = projected_direction / length
                 direction_kinds[best] = 1
         anchor_indices.append(best)
+        anchor_mapping[anchor["anchor_id"]] = int(best)
     return write_gaussian_query(
         output_path, shape_points=shape, feature_points=points, feature_types=types,
         anchored_weights=weights, anchor_feature_indices=anchor_indices,
@@ -245,7 +247,7 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
                 "ccd": str(ccd.resolve()), "ccd_sha256": _sha256(ccd),
                 "query_manifest": str(query_manifest.resolve()),
                 "query_manifest_sha256": _sha256(query_manifest),
-                "query_id": document["query_id"]})
+                "query_id": document["query_id"], "anchor_mapping": anchor_mapping})
 
 
 def _load_query(path: Path) -> tuple[dict, dict[str, np.ndarray]]:

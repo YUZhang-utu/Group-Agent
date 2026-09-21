@@ -1,7 +1,7 @@
 """Compact planner routing, paired with repository-discoverable Codex skills."""
 
 WORKFLOW_SKILLS = (
-    {"name": "aidd-3d-search", "actions": ["search_3d"],
+    {"name": "aidd-3d-search", "actions": ["search_3d", "review_screening", "select_screening", "export_screening"],
      "description": "Calibrated WEE1 full-library retrieval and Gaussian refinement; E031 annotations only."},
     {"name": "aidd-protein-preparation", "actions": ["protein_fetch", "protein_resolve", "pdb_search", "pdb_fetch"],
      "description": "Verified UniProt target identity, sequences and RCSB structure evidence; no automatic receptor acceptance."},

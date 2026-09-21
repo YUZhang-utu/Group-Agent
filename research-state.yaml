@@ -1,7 +1,19 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E041-conversational-agent
+current_experiment: E042-screening-evidence-selection
+screening_evidence_selection:
+  status: implemented_local_fixtures_workstation_acceptance_pending
+  protocol: experiments/E042-screening-evidence-selection-protocol.md
+  protocol_commit: b91d479
+  guide: to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md
+  stages: [completed_search, crystal_anchor_review, explicit_selection_preview, separately_requested_pose_export]
+  matching: same_conformer_same_anchored_objective_pose
+  scope: one_crystal_query_per_selection
+  e031_original_ranking_changed: false
+  membership: explicit_user_selection_branch_only
+  docking_execution: pending_prepared_receptor_grid_and_ligands
+  plants_executable: user_reported_permission_check_passed
 conversational_agent:
   status: implemented_local_validation_workstation_chat_pending
   protocol: experiments/E041-conversational-agent-protocol.md
@@ -14,7 +26,7 @@ conversational_agent:
   new_target_chat_query_preparation: pending
   downstream_docking:
     reported_installed: [Schrodinger_Maestro_module, PLANTS]
-    executable_license_grid_validation: paths_reported_permissions_licenses_grids_pending
+    executable_license_grid_validation: user_reported_executable_permissions_passed_licenses_grids_pending
     schrodinger_root: /site/app9/schrodinger/2025-1
     plants_executable_provisional: ~/PLANTS1.2/PLANTS1.2_64bit
     profile_template: configs/docking/workstation.example.json

@@ -56,15 +56,21 @@ def project_root(db, user, project):
         return Path(row["workspace_path"]).resolve()
 
 
-def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=None):
+def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=None, local_plan=None):
     root = project_root(db, user, project)
     if not isinstance(prompt, str) or not 1 <= len(prompt) <= 20000: raise ValueError("Invalid prompt length")
-    if (llm_profile is None) == (response_file is None): raise ValueError("Choose one LLM profile or offline response fixture")
-    if response_file is not None:
+    if sum(v is not None for v in (llm_profile, response_file, local_plan)) != 1:
+        raise ValueError("Choose one LLM profile, offline fixture or local coordinator plan")
+    if local_plan is not None:
+        plan = validate_plan(local_plan)
+        model = dict(provider="local-coordinator", model="session-bound-explicit-workflow")
+    elif response_file is not None:
         plan = validate_plan(strict_json(Path(response_file).read_text(encoding="utf-8")))
         model = dict(provider="offline-fixture", model="fixture-not-a-live-LLM", fixture_sha256=ev.sha(response_file))
     else:
         plan, model = chat_plan(prompt, strict_json(Path(llm_profile).read_text(encoding="utf-8")))
+        if any("source_run" in s["params"] for s in plan["steps"]):
+            raise ValueError("Use separate chat evidence/selection/export actions for prior tasks")
     with connect(db) as connection:
         request_id = create_ai_review_request(connection, user, project, task_type="workflow_planning",
             subject_type="project", subject_id=project, prompt_version="e038-v1", prompt_text=prompt,
@@ -139,6 +145,17 @@ def load_runtime(path):
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     action, params = step["action"], step["params"]
+    if action in {"review_screening", "select_screening", "export_screening"}:
+        from .screening_selection import upstream, review, preview, export
+        source_action = {"review_screening": "search_3d", "select_screening": "review_screening",
+                         "export_screening": "select_screening"}[action]
+        source, _ = upstream(execution, params["source_run"], source_action)
+        output = directory / "screening"
+        if action == "review_screening": summary = review(source, output)
+        elif action == "select_screening": summary = preview(source, output, {k:v for k,v in params.items() if k != "source_run"})
+        else: summary = export(source, output)
+        return dict(status=summary["kind"], report=str(output / "report.json"),
+                    e031_changes_ranking=False, biological_quality="not_evaluated")
     if action == "protein_fetch":
         record = fetch_protein(params["accession"], params.get("organism_id"), services.fetch_json)
     elif action == "protein_resolve":
@@ -239,7 +256,10 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
         raise ValueError("Plan ownership mismatch")
     if seal != dict(plan_sha256=ev.sha(path), user=user, project=project): raise ValueError("Plan changed after creation")
     plan = validate_plan(envelope["plan"])
-    cfg, config_inputs = load_runtime(runtime)
+    # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
+    # and runtime discovery would add avoidable startup cost to every preview.
+    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] for s in plan["steps"])
+    cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
     execution.mkdir(exist_ok=True)
@@ -273,6 +293,15 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 try:
                     results[sid] = dict(status="running", action=step["action"])
                     _atomic_json(execution / "report.json", report)
+                    if "source_run" in step["params"]:
+                        from .screening_selection import upstream
+                        source_action = {"review_screening": "search_3d", "select_screening": "review_screening",
+                                         "export_screening": "select_screening"}[step["action"]]
+                        _, source_files = upstream(execution, step["params"]["source_run"], source_action)
+                        dependencies.extend(source_files)
+                        for source_file in source_files:
+                            if source_file.name == "report.json":
+                                dependencies.extend(map(Path, ev.read(source_file).get("sources", {})))
                     result = checked_stage(execution, sid, dependencies, operation)
                     results[sid] = dict(status="complete", action=step["action"], result=result)
                     _atomic_json(execution / "report.json", report)

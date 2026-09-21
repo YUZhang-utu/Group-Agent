@@ -1052,3 +1052,28 @@ were not repeated. Remaining live chat and docking discovery steps are documente
 ### 2026-09-21 Docking installation handoff
 Operator supplied Schrodinger 2025-1 paths and a PLANTS home directory. Added a separate trusted discovery profile, home expansion, permission checks and explicit-path precedence. Three local fixture tests passed. No binaries were executed; licenses, receptor/grid inputs, live docking and chat docking integration remain pending. See to_human/DOCKING_INSTALLATION.md.
 Full local regression: 243 passed, 2 optional-dependency skips; English guard and Bash syntax checks passed.
+
+## 2026-09-21 - E042 screening evidence and explicit selection
+
+Protocol b91d479 locked the same-pose selection and immutable handoff contract.
+Implemented session-bound review/select/export actions using completed search
+receipts, source hashes and separately requested export. Crystal anchor provenance
+is mapped to stored feature columns; legacy reconstruction must match every query
+array. Reports classify HBA/HBD, retain original residue/geometry evidence, provide
+per-query and union counts, and explicitly leave other interaction classes unassessed.
+Selection evaluates ALL/ANY in one conformer/objective pose before molecule
+aggregation and an optional explicit cap. Gaussian ranks and E031 annotations are
+not rewritten. Exports preserve stable IDs and heavy-atom rigid poses; docking,
+ligand preparation and biological quality remain unvalidated.
+
+Confirmatory local regression: 258 passed, 2 optional-dependency skips. Fifteen
+E042 tests passed again after a platform-independent fixture adjustment. Tests
+cover same-pose versus mixed-conformer evidence, exact legacy mapping reconstruction,
+zero results, stable representatives, missing/invalid conditions, cross-query
+rejection, source modification failures, session isolation, and a real child-process
+review/preview/empty-export chain. Nonempty SDF export uses mock library readers.
+English-content and both updated skill validators passed. Live model routing,
+real-library export and manual crystal/pose review remain workstation acceptance.
+PLANTS executable permission success is user-reported; no docking was run here.
+Guide: to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md. No AF3 or library search was
+repeated locally. No continuity scheduler is exposed; repository checkpoints retain state.

@@ -208,3 +208,5 @@ Desktop UI rendered in headless Edge and was visually inspected; no live provide
 or GPU inference was invoked by these tests. Local preview uses isolated fixtures.
 The initial sandboxed Edge renderer failed; approved headless execution produced
 the inspected screenshot under outputs/e041/chat-desktop.png.
+
+E042: 258 local tests passed, 2 optional-dependency skips; 15 evidence/selection tests passed after final fixture portability adjustment. Fixture evidence only; live model routing, library exports and manual review pending.

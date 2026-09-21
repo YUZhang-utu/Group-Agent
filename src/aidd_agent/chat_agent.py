@@ -21,13 +21,15 @@ WORKFLOWS = [
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
     {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein and optional CCD ligands; installed native or Apptainer profile."},
     {"name": "3D screening", "status": "calibrated WEE1 only", "scope": "USRCAT retrieval, Gaussian rigid refinement and annotation-only E031 for QT9/824."},
+    {"name": "Screening evidence and human selection", "status": "available", "scope": "Review a completed search, preview explicit same-pose anchor conditions, then separately request SDF/ID export for docking preparation."},
     {"name": "New-target query preparation", "status": "not exposed in chat", "scope": "Requires reference ligand/site, query preparation and independent retrieval calibration."},
     {"name": "Molecule aggregation and pocket QC", "status": "CLI components; chat integration pending", "scope": "Requires validated query poses, receptor/site definitions and aggregation artifacts."},
     {"name": "Flexible docking and rescoring", "status": "not implemented as a validated executor", "scope": "Schrodinger/Maestro and PLANTS reported installed; CLI/license/grid discovery, receptor/ligand preparation and redocking/cross-docking remain pending."},
     {"name": "Biological enrichment and final selection", "status": "not validated", "scope": "Requires held-out active/decoy labels, diversity/property criteria and experimental evidence."},
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
-intent, message, task_id, request. intent is run/status/results/resume/cancel/capabilities/clarify.
+intent, message, task_id, request, and ONLY for select a selection object.
+intent is run/status/results/resume/cancel/capabilities/clarify/evidence/select/export.
 Write message in English. task_id is an existing task ID from this session or null (latest).
 request is a self-contained scientific request only for run, otherwise empty.
 Use conversation context to resolve follow-up clarifications. Never invent biological sequences,
@@ -37,14 +39,24 @@ Supported actions are supplied. Unsupported stages must explain missing capabili
 not substitute WEE1 for another target. AF3 prediction cannot automatically create a calibrated
 search query. Missing organism/construct/reference information requires clarification. Do not
 claim a task is queued or complete: the local executor reports its actual status.
+Use evidence to classify anchors and counts from a completed search task; no new search.
+Use select for a selection preview from a completed evidence task. selection must contain
+required_anchors (exact full IDs from that task), match_mode (all or any), minimum_score
+(explicit user threshold in (0,1]), and optional max_molecules (explicit user cap).
+Never invent anchors, thresholds, caps or interaction evidence. Clarify missing conditions.
+Select anchors from ONE query only per preview; all means the same pose satisfies all.
+Use export only on a completed selection preview after a NEW explicit user request to export
+or confirm that preview. This exports poses/IDs, does not run docking. Never combine selection
+and export or run docking automatically. request must be empty for these three intents.
+To inspect existing evidence or preview counts use results, avoiding duplicate review jobs.
 JSON example: {"intent":"status","message":"Checking task status.","task_id":null,"request":""}.
 """
 
 
 def validate_route(value):
-    if not isinstance(value, dict) or set(value) != {"intent", "message", "task_id", "request"}:
+    if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "select", "export"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -54,12 +66,62 @@ def validate_route(value):
         raise ValueError("Invalid task reference")
     if (value["intent"] == "run") != bool(value["request"].strip()):
         raise ValueError("Execution requires a nonempty request; queries cannot contain one")
+    if (value["intent"] == "select") != ("selection" in value):
+        raise ValueError("Only select accepts a selection policy")
+    if "selection" in value:
+        from .screening_selection import validate_selection
+        validate_selection(value["selection"])
     return value
 
 
 def read_json(path):
     try: return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError): return None
+
+
+def screening_summary(job):
+    """Bounded actual evidence for conversation context and deterministic feedback."""
+    from .project_context import ensure_within
+    report = read_json(job["report"]) if job.get("report") else None
+    if not report or not job.get("plan"): return {}
+    for step in report.get("steps", {}).values():
+        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "select_screening", "export_screening"}: continue
+        path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
+        child = read_json(path) or {}
+        summary = {k:child[k] for k in ("kind", "library", "refined_molecule_union", "retrieved_molecule_union", "retrieved_conformer_union", "counts", "policy", "approval", "sdf", "ids", "preparation", "docking_status") if k in child}
+        if child.get("kind") == "screening_evidence":
+            summary["queries"] = [dict(query_id=q["query_id"], counts=q["counts"], anchors=[
+                {k:a[k] for k in ("anchor_id", "feature_class", "ligand_atom_indices", "evidence_class", "evidence", "diagnostic_counts")} for a in q["anchors"]]) for q in child["queries"]]
+            summary["interpretation"] = "Feature-match hypotheses, not validated candidate hydrogen bonds; diagnostic score thresholds are not probabilities or accepted cutoffs."
+        return summary
+    return {}
+
+
+def screening_feedback(summary):
+    lines = [summary["kind"].replace("_", " ").capitalize()]
+    if summary.get("library"):
+        lines.append(f"Library: {summary['library']['library_conformers']:,} conformers / {summary['library']['library_molecules']:,} source-grouped molecules.")
+    for q in summary.get("queries", []):
+        c = q["counts"]
+        lines.append(f"{q['query_id']}: retrieved {c['retrieved_conformers']:,} conformers / {c['retrieved_molecules']:,} molecules; refined {c['refined_conformers']:,} conformers / {c['refined_molecules']:,} molecules.")
+        for a in q["anchors"]:
+            evd = a["evidence"]
+            partner = evd.get("protein_partner", {})
+            lines.append(f"Anchor {a['anchor_id']} | {a['feature_class']} | ligand atom indices {a['ligand_atom_indices']}")
+            lines.append("Crystal partner: " + json.dumps(partner) + f"; distance {evd.get('distance_angstrom')} A; angle {evd.get('angle_degrees')}; {evd.get('angle_status', 'angle status unreported')}.")
+            lines.append("Diagnostic molecule counts: " + "; ".join(f"score >= {d['minimum_score']}: {d['molecules']}" for d in a["diagnostic_counts"]))
+    if "refined_molecule_union" in summary:
+        lines.append(f"Across queries: {summary['retrieved_molecule_union']:,} retrieved / {summary['refined_molecule_union']:,} refined distinct source-grouped molecules. Do not sum per-query molecule counts.")
+        lines.append("HBA = ligand acceptor; HBD = ligand donor. These are crystal-derived feature hypotheses, not verified candidate hydrogen bonds. Other interaction classes are unassessed.")
+        lines.append("Next: specify exact anchor IDs from one query, all/any mode and a minimum score in (0,1]. Diagnostic thresholds are illustrative, not validated cutoffs. Request a preview first.")
+    if "counts" in summary:
+        lines.extend(f"{k}: {v:,}" for k,v in summary["counts"].items())
+        lines.append("Selection policy: " + json.dumps(summary["policy"]))
+    for key in ("approval", "sdf", "ids", "preparation", "docking_status"):
+        if key in summary: lines.append(key + ": " + str(summary[key]))
+    if summary["kind"] == "selection_preview":
+        lines.append("To export this exact preview, send a separate confirmation or /export TASK_ID. Original search ranks and E031 annotations remain unchanged.")
+    return "\n".join(lines)
 
 
 class ChatAgent:
@@ -193,7 +255,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel"}:
+            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/export"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
             else:
@@ -203,14 +265,42 @@ class ChatAgent:
                 # Bounded dialogue context; no files, sequences or execution logs sent to provider.
                 for item in context["conversation"]: item["text"] = item["text"][:1000]
                 for item in context["tasks"]: item["request"] = item["request"][:300]
+                # Scientific summaries are deliberately sent for anchor-aware follow-ups;
+                # no library structures, raw arrays, logs or credentials are uploaded.
+                for item in context["tasks"][-3:]:
+                    item["screening_evidence"] = screening_summary(self.task(sid, item["id"]))
                 context["latest_message"] = text
                 prompt = json.dumps(context, ensure_ascii=False)
                 if len(prompt) > 20000: context["conversation"] = context["conversation"][-4:]; prompt = json.dumps(context, ensure_ascii=False)
+                while len(prompt) > 19000 and context["tasks"]:
+                    context["tasks"].pop(0)
+                    prompt = json.dumps(context, ensure_ascii=False)
                 decision = (self.router(prompt, profile) if self.router else chat_plan(prompt, read_json(profile),
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent == "run":
+            if intent in {"evidence", "select", "export"}:
+                job = self.task(sid, decision["task_id"])
+                if job["status"] != "complete" or not job["plan"]:
+                    raise ValueError("Choose a completed source task from this conversation")
+                expected = {"evidence":"search_3d", "select":"review_screening", "export":"select_screening"}[intent]
+                details = read_json(job["report"]) or {}
+                if sum(s.get("action") == expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
+                    raise ValueError("Choose a completed " + expected + " task")
+                action = {"evidence":"review_screening", "select":"select_screening", "export":"export_screening"}[intent]
+                params = dict(source_run=Path(job["plan"]).parent.name)
+                if intent == "select": params.update(decision["selection"])
+                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts",
+                    "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation"}[intent],
+                    clarifications=[], steps=[dict(id="screening", action=action, params=params)])
+                ctx = self.context
+                plan = create_plan(Path(ctx["db"]), ctx["user_id"], ctx["project_id"], text, local_plan=local_plan)
+                jid = uuid.uuid4().hex[:16]
+                with self.connect() as db:
+                    db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (jid,sid,local_plan["summary"],provider,"","queued",str(plan),str(plan.parent / "execution/report.json"),str(self.root / (jid+".log")),time.time()))
+                answer = f"Task {jid} queued: {local_plan['summary']}. Source task: {job['id']}. No new search or docking job is launched."
+            elif intent == "run":
                 jid = uuid.uuid4().hex[:16]
                 log = str(self.root / (jid + ".log"))
                 with self.connect() as db:
@@ -261,6 +351,9 @@ class ChatAgent:
                     if job["plan"]: lines.append("Plan: "+job["plan"])
                     if job["log"]: lines.append("Log: "+job["log"])
                     if not details: lines.append("No completed scientific report is available yet.")
+                    if intent == "results":
+                        summary = screening_summary(job)
+                        if summary: lines.append(screening_feedback(summary))
                     answer = "\n".join(lines)
             elif intent == "capabilities": answer = "\n\n".join(w["name"]+": "+w["status"]+". "+w["scope"] for w in WORKFLOWS)
             else: answer = decision["message"]
@@ -330,6 +423,9 @@ class ChatAgent:
                 if status not in {"complete","blocked","failed"} or (process.returncode != 0 and status == "complete"): status="failed"
                 self.update(jid,status=status,error=None if status=="complete" else "Inspect the task report and log; resolve configuration before retrying.")
                 self.message(sid,"assistant",f"Task {jid}: {status}. Report: {job['report']}")
+                if status == "complete":
+                    summary = screening_summary(job)
+                    if summary: self.message(sid,"assistant",screening_feedback(summary))
                 if status == "blocked" and report and report.get("clarifications"):
                     self.message(sid,"assistant"," ".join(report["clarifications"]))
 

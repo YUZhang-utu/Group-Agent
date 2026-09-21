@@ -39,3 +39,14 @@ not online query latency; summed worker compute is not wall time.
 Return the actual report paths, gate states, measured timing scope and any failed
 equivalence checks. Distinguish user-reported workstation evidence from local
 fixtures. Inspect exported discordant poses before interpreting ranking differences.
+
+## Human selection and docking handoff
+
+Use the [E042 guide](../../../to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md) for
+chat evidence review, explicit same-pose selection previews and separately confirmed
+pose/ID exports. These are session-bound local coordinator actions, not actions
+the model may append to a search plan. Reuse completed search artifacts and their
+receipts. Never invent anchor IDs or default a selection threshold. HBA/HBD feature
+matches are hypotheses, not validated candidate hydrogen bonds. A user selection
+branch changes membership only after explicit criteria; original E031 ranks stay
+unchanged. Export is a preparation handoff, not a docking result.

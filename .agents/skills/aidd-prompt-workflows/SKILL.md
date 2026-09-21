@@ -53,4 +53,10 @@ resume remains bound to code/configuration and the original sealed plan.
 
 The router receives bounded recent dialogue and task summaries; do not claim it
 only receives the latest prompt or that it automatically sees all local files.
+
+The E042 coordinator also sends compact anchor evidence and count summaries for
+screening follow-ups. Use separate evidence, selection-preview and export turns;
+the model must not invent thresholds or combine preview and export. Actual IDs,
+counts and paths are supplied by local reports. See the
+[screening handoff guide](../../../to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md).
 Do not present unavailable docking/new-target stages as completed capabilities.

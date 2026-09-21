@@ -1612,3 +1612,28 @@ New-target query calibration, docking, rescoring and biological validation are n
 marked complete by adding a chat UI. The guide records stage-by-stage acceptance.
 No live model/GPU chat test was performed here. Repository checkpoints provide
 continuity because this environment exposes neither /loop nor a cron tool.
+
+## 2026-09-21 - E042 screening evidence and explicit selection
+
+Protocol b91d479 locked the same-pose selection and immutable handoff contract.
+Implemented session-bound review/select/export actions using completed search
+receipts, source hashes and separately requested export. Crystal anchor provenance
+is mapped to stored feature columns; legacy reconstruction must match every query
+array. Reports classify HBA/HBD, retain original residue/geometry evidence, provide
+per-query and union counts, and explicitly leave other interaction classes unassessed.
+Selection evaluates ALL/ANY in one conformer/objective pose before molecule
+aggregation and an optional explicit cap. Gaussian ranks and E031 annotations are
+not rewritten. Exports preserve stable IDs and heavy-atom rigid poses; docking,
+ligand preparation and biological quality remain unvalidated.
+
+Confirmatory local regression: 258 passed, 2 optional-dependency skips. Fifteen
+E042 tests passed again after a platform-independent fixture adjustment. Tests
+cover same-pose versus mixed-conformer evidence, exact legacy mapping reconstruction,
+zero results, stable representatives, missing/invalid conditions, cross-query
+rejection, source modification failures, session isolation, and a real child-process
+review/preview/empty-export chain. Nonempty SDF export uses mock library readers.
+English-content and both updated skill validators passed. Live model routing,
+real-library export and manual crystal/pose review remain workstation acceptance.
+PLANTS executable permission success is user-reported; no docking was run here.
+Guide: to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md. No AF3 or library search was
+repeated locally. No continuity scheduler is exposed; repository checkpoints retain state.

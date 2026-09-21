@@ -136,6 +136,11 @@ then candidate docking with provenance and separate timing/quality gates.
 
 ## Workstation chat acceptance
 
+Evidence classification, explicit same-pose selection previews and a separate
+export confirmation are now available through the [E042 workflow](E042_SCREENING_TO_DOCKING_HANDOFF.md).
+These reuse completed searches and do not submit docking jobs. Compact anchor
+evidence summaries are included in model context for selection follow-ups.
+
 - Refresh and reopen: sessions, messages and task paths remain available.
 - Ask status/results repeatedly: no duplicate compute job is created.
 - Run one existing calibrated search; verify both inner equivalence checks.
