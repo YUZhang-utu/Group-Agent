@@ -3,7 +3,7 @@ objective: Build a local-first, resumable AIDD workflow beginning with batch MOL
 stage: ligand_comparison_and_similarity_search
 current_experiment: E040-container-af3-provider-selection
 container_af3_and_providers:
-  status: user_reported_deepseek_uniprot_af3_live_complete
+  status: user_reported_deepseek_uniprot_af3_and_calibrated_search_complete
   protocol: experiments/E040-container-af3-provider-selection-protocol.md
   protocol_commit: e3cbad4
   guide: to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md
@@ -13,8 +13,10 @@ container_af3_and_providers:
   validation: 230_passed_2_dependency_skips
   live_api_and_gpu_tested: user_reported_deepseek_and_af3_passed
   workstation_result: to_human/E040_WORKSTATION_AF3_RESULT.json
-  confidence_chain_metadata: repeated_ids_pending_raw_output_inspection
+  confidence_chain_metadata: repeated_A_confirmed_in_raw_AF3_summary_dimensions_inconsistent
   gpt_live_tested: false
+  search_result: to_human/E040_WORKSTATION_SEARCH_RESULT.json
+  search_inner_metrics: not_yet_supplied
 english_workflow_skills:
   status: implemented_and_locally_validated
   protocol: experiments/E039-english-workflow-skills-protocol.md
@@ -25,21 +27,21 @@ english_workflow_skills:
   regression_tests: 224_passed_2_dependency_skips
   maintained_content_han_check: passed
   scientific_algorithms_changed: false
-  live_llm_and_af3_tested: false
+  live_llm_and_af3_tested: user_reported_deepseek_and_af3_passed_GPT_pending
 prompt_protein_af3:
-  status: implemented_offline_and_mock_validated_live_workstation_pending
+  status: user_reported_deepseek_af3_and_search_live_complete_gpt_pending
   protocol: experiments/E038-prompt-protein-af3-protocol.md
   protocol_commit: 1ba97f4
   handoff: to_human/E038_PROMPT_PROTEIN_AF3.md
   runner: scripts/run_e038_prompt.sh
   smoke_runner: scripts/run_e038_prompt_smoke.sh
   llm_provider: openai_compatible_user_selected
-  af3_installation: installed_per_user_2026_09_19_local_paths_pending
+  af3_installation: user_reported_apptainer_GPU_prediction_passed_2026_09_21
   model_api_credentials: workstation_environment_only
   model_context: user_prompt_and_capabilities_only
   regression_tests: 222_passed_2_dependency_skips
   offline_smoke: passed_synthetic_fixtures_not_live_evidence
-  live_llm_and_af3_tested: false
+  live_llm_and_af3_tested: user_reported_deepseek_and_af3_passed_GPT_pending
   search_scope: calibrated_WEE1_QT9_824_only
   af3_scope: single_verified_protein_construct_and_optional_CCD_ligands
   e031_changes_ranking: false

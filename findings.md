@@ -412,3 +412,16 @@ Confidence JSON reports seven repeated A IDs despite single-chain arrays; the
 local adapter copies that JSON unchanged, so raw summary/CIF inspection is pending.
 Evidence is user-pasted report/log; see to_human/E040_WORKSTATION_AF3_RESULT.json.
 E037 performance, prompt-driven search, GPT and workstation reuse remain pending.
+
+
+## 2026-09-21 - Live prompt-driven WEE1 search and raw AF3 follow-up
+
+User supplied a complete live DeepSeek execution report for wee1_both in
+PROMPT-4689d49ad1834f89. E031 remains annotation-only. Inner search timings and
+per-query equivalence details have not been supplied, so no speedup claim is made.
+Raw AF3 summary also contains a long repeated-A list while chain_ptm and pair
+matrices describe one chain. This confirms the repetition is present upstream of
+our confidence importer, not that the model contains multiple chains. Token-level
+labeling remains a hypothesis; preserve raw evidence without silently deduplicating.
+No AF3 rerun is needed solely to inspect metadata. See
+ to_human/E040_WORKSTATION_SEARCH_RESULT.json. GPT and E037 timing remain pending.

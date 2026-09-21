@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-21",
+  "evidence": "user_pasted_outer_execution_report_not_independent_artifact_audit",
+  "status": "complete",
+  "run": "/mnt/local/hand/yuzhang/aidd/prompt-workspace/users/workstation/projects/prj-252fa94197d6-prompt-aidd/runs/PROMPT-4689d49ad1834f89",
+  "model": "deepseek-flash",
+  "action": "search_3d",
+  "query": "wee1_both",
+  "search_report": "/mnt/local/hand/yuzhang/aidd/prompt-workspace/users/workstation/projects/prj-252fa94197d6-prompt-aidd/runs/PROMPT-4689d49ad1834f89/execution/wee1_search/search/report.json",
+  "e031_changes_ranking": false,
+  "biological_quality": "not_evaluated",
+  "usage": {
+    "prompt_tokens": 901,
+    "completion_tokens": 512,
+    "total_tokens": 1413,
+    "cached_tokens": 640,
+    "reasoning_tokens": 412
+  },
+  "inner_search_metrics": "not_supplied",
+  "speedup": "not_established",
+  "af3_raw_summary_followup": {
+    "repeated_A_ids_present_in_raw_summary": true,
+    "chain_ptm_length": 1,
+    "chain_pair_matrix_shape": [
+      1,
+      1
+    ],
+    "interpretation": "raw chain metadata dimension mismatch; repeated IDs do not establish multiple chains; token-level labeling is a hypothesis, not confirmed",
+    "source_file": "wee1_summary_confidences.json"
+  }
+}
