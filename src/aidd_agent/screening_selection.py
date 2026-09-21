@@ -235,7 +235,7 @@ def review(search_report, output):
 
 def validate_selection(policy):
     required = {"required_anchors", "match_mode", "minimum_score"}
-    if not isinstance(policy, dict) or not required <= policy.keys() or policy.keys() - required - {"max_molecules"}:
+    if not isinstance(policy, dict) or not required <= policy.keys() or policy.keys() - required - {"max_molecules", "coarse_constraints"}:
         raise ValueError("Selection needs explicit anchors, all/any mode and minimum score")
     anchors = policy["required_anchors"]
     if not isinstance(anchors, list) or not anchors or len(anchors) > 64 or any(not isinstance(a, str) or not 1 <= len(a) <= 160 for a in anchors) or len(set(anchors)) != len(anchors):
@@ -244,6 +244,9 @@ def validate_selection(policy):
         raise ValueError("Use all/any and a score in (0,1]; this is not a probability")
     if "max_molecules" in policy and (type(policy["max_molecules"]) is not int or not 1 <= policy["max_molecules"] <= 100000):
         raise ValueError("Invalid molecule cap")
+    if 'coarse_constraints' in policy:
+        from .joint_coarse import validate_constraints
+        validate_constraints(policy['coarse_constraints'])
     return policy
 
 
@@ -251,6 +254,10 @@ def select_rows(r, s, columns, policy, query_id):
     """All conditions evaluated within one stored anchored-objective pose."""
     hits = (s[OBJECTIVE + "__anchor_scores"][:, columns] >= policy["minimum_score"]) & (s[OBJECTIVE + "__anchor_assignments"][:, columns] >= 0)
     passed = np.all(hits, axis=1) if policy["match_mode"] == "all" else np.any(hits, axis=1)
+    if 'coarse_constraints' in policy:
+        if 'joint_eligible' not in r:
+            raise ValueError('Joint coarse eligibility must be evaluated before selection')
+        passed &= r['joint_eligible']
     chosen = {}
     for index in np.lexsort((r["global_ids"], -r[OBJECTIVE + "__objective"])):
         if not passed[index]: continue
@@ -276,7 +283,14 @@ def preview(review_path, output, policy):
     if len(query_ids) != 1: raise ValueError("Select anchors from one crystal query per preview; do not mix query frames")
     q = available[policy["required_anchors"][0]][0]
     columns = sorted({available[a][1]["score_column"] for a in policy["required_anchors"]})
-    rows, conformers = select_rows(archive(q["rigid"]), archive(q["sidecar"]), columns, policy, q["query_id"])
+    rigid = archive(q['rigid'])
+    if 'coarse_constraints' in policy:
+        from .joint_coarse import eligibility
+        from .gaussian_batch import ArtifactCatalogReader, _load_query
+        _, query = _load_query(Path(q['query_npz']))
+        rigid['joint_eligible'] = eligibility(query, ArtifactCatalogReader(Path(q['artifact_catalog'])),
+                                              rigid['global_ids'], policy['coarse_constraints'])
+    rows, conformers = select_rows(rigid, archive(q["sidecar"]), columns, policy, q["query_id"])
     matched = len(rows)
     if "max_molecules" in policy: rows = rows[:policy["max_molecules"]]
     output = Path(output); output.mkdir(parents=True, exist_ok=True)

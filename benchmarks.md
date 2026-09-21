@@ -259,3 +259,12 @@ and elapsed improvement alongside work reduction. The enriched positive/boundary
 panel is intentionally biased and cannot estimate library prevalence. Small
 process-startup measurements are not a full-run SLA. Code and seed budgets remain
 pinned, and query/threshold changes cannot reuse negative results without proof.
+
+
+## E048 joint coarse audit
+
+Separate joint eligibility rejection, anchor-bound rejection, seed feasibility
+and final pose matches. /coarse measures only sampled pre-seed selectivity;
+its 90% target flag is exploratory, not a completeness or speed gate.
+Reference comparisons must use the same NEW predicates. Validate positives
+independently; empty positive panels cannot establish retention.

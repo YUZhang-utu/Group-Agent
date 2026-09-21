@@ -159,7 +159,10 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         elif action == "benchmark_funnel":
             if not allow_compute: raise Blocked("Enable --allow-compute for a bounded hardware pilot")
             from .funnel_benchmark import run as benchmark
-            summary = benchmark(source, output)
+            if params.get('coarse_only'):
+                summary = benchmark(source, output, coarse_only=True, count=10000, include_gpu=False)
+            else:
+                summary = benchmark(source, output)
             if summary["status"] != "complete": raise ValueError("Hardware equivalence failed; inspect screening/report.json")
         elif action == "condition_funnel":
             if not allow_compute: raise Blocked("Enable --allow-compute for a full-library condition funnel")

@@ -23,8 +23,8 @@ ACTION_FIELDS = {
     "classify_screening": ({"source_run"}, set()),
     "full_library_screen": ({"source_run"}, set()),
     "condition_funnel": ({"source_run"}, set()),
-    "benchmark_funnel": ({"source_run"}, set()),
-    "select_screening": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules"}),
+    "benchmark_funnel": ({"source_run"}, {"coarse_only"}),
+    "select_screening": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
     "export_screening": ({"source_run"}, set()),
     "prepare_docking": ({"source_run"}, set()),
     "run_docking": ({"source_run"}, set()),
@@ -141,6 +141,8 @@ def validate_plan(plan):
                 raise ValueError("Invalid source run ID")
             if len(steps) != 1:
                 raise ValueError("Evidence, selection and export require separate tasks")
+        if "coarse_only" in params and type(params["coarse_only"]) is not bool:
+            raise ValueError("coarse_only must be boolean")
         if action == "select_screening":
             from .screening_selection import validate_selection
             validate_selection({k: v for k, v in params.items() if k != "source_run"})

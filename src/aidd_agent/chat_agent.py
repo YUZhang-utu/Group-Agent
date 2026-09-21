@@ -31,7 +31,7 @@ WORKFLOWS = [
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
 intent, message, task_id, request, and ONLY for select a selection object.
-intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/select/export/prepare_docking/run_docking.
+intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/coarse/select/export/prepare_docking/run_docking.
 Write message in English. task_id is an existing task ID from this session or null (latest).
 request is a self-contained scientific request only for run, otherwise empty.
 Use conversation context to resolve follow-up clarifications. Never invent biological sequences,
@@ -45,6 +45,8 @@ Use evidence to classify anchors and counts from a completed search task; no new
 Use classify on a completed evidence task to derive broader crystal-based query features
 (hydrophobic, aromatic, charge, water and metal hypotheses) and match stored 3D poses.
 This requires no PLIP or docking. Halogen-specific features are not indexed.
+Use coarse on a completed joint selection preview to audit 10000 spread IDs plus
+saved boundary/positive rows without seeds or Gaussian. This is not a full-library count.
 Use benchmark on a completed selection-preview task to test CPU and available GPU
 performance and equivalence on a small sample before a full-library run.
 Use funnel on a completed selection-preview task to apply its explicit same-pose
@@ -70,6 +72,12 @@ and preparation chemistry must be reviewed; PLANTS execution is not supported ye
 Use select for a selection preview from a completed evidence task. selection must contain
 required_anchors (exact full IDs from that task), match_mode (all or any), minimum_score
 (explicit user threshold in (0,1]), and optional max_molecules (explicit user cap).
+Optional coarse_constraints requires all three explicit user fields: heavy_atom_ratio
+([lower, upper] inclusive candidate/query heavy atom count ratio), maximum_extent_distance
+(nonnegative normalized principal-extent distance), minimum_feature_coverage ((0,1]
+query typed-feature count coverage). These add joint eligibility BEFORE pose generation.
+Never invent these thresholds or claim a rejection percentage. Pocket-derived feature
+IDs may be selected explicitly; do not claim receptor clashes are evaluated.
 Never invent anchors, thresholds, caps or interaction evidence. Clarify missing conditions.
 Select anchors from ONE query only per preview; all means the same pose satisfies all.
 Use export only on a completed selection preview after a NEW explicit user request to export
@@ -83,7 +91,7 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 def validate_route(value):
     if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "select", "export", "prepare_docking", "run_docking"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -115,6 +123,8 @@ def screening_summary(job):
         if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"}: continue
         path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
         child = read_json(path) or {}
+        if child.get('kind') == 'coarse_audit':
+            return {k:v for k,v in child.items() if k not in {'sources','code','sample_ids','sample_panel','scenarios'}}
         if child.get('kind') == 'hardware_benchmark':
             return {k:child[k] for k in ('kind','status','sample_count','sample_scope','scenarios','gpu','recommendation','sample_panel','reference_positive_count','positive_membership_validation','scalability_gate','scalability_scope') if k in child}
         if child.get('kind') in {'docking_preparation','docking_execution'}:
@@ -139,7 +149,7 @@ def screening_summary(job):
 
 def screening_feedback(summary):
     lines = [summary["kind"].replace("_", " ").capitalize()]
-    if summary['kind'] in {'hardware_benchmark','docking_preparation','docking_execution'}:return json.dumps(summary,indent=2)
+    if summary['kind'] in {'coarse_audit','hardware_benchmark','docking_preparation','docking_execution'}:return json.dumps(summary,indent=2)
     if summary.get("library"):
         lines.append(f"Library: {summary['library']['library_conformers']:,} conformers / {summary['library']['library_molecules']:,} source-grouped molecules.")
     if summary['kind'] in ('full_library_conditions','condition_funnel'):
@@ -318,7 +328,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/export", "/prepare_docking", "/run_docking"}:
+            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
             else:
@@ -346,8 +356,8 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent in {"evidence", "classify", "full_count", "funnel", "benchmark", "select", "export", "prepare_docking", "run_docking"}:
-                if intent in {'benchmark','funnel'} and decision['task_id'] is None:
+            if intent in {"evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
+                if intent in {'benchmark','funnel','coarse'} and decision['task_id'] is None:
                     candidates = [j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
                         any(s.get('action')=='select_screening' and s.get('status')=='complete'
                             for s in (read_json(j.get('report')) or {}).get('steps',{}).values())]
@@ -357,14 +367,15 @@ class ChatAgent:
                     job = self.task(sid, decision["task_id"])
                 if job["status"] != "complete" or not job["plan"]:
                     raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
+                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
                 details = read_json(job["report"]) or {}
                 if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
                     raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
-                action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
+                action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "coarse":"benchmark_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
                 params = dict(source_run=Path(job["plan"]).parent.name)
                 if intent == "select": params.update(decision["selection"])
-                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
+                if intent == "coarse": params["coarse_only"] = True
+                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
                     "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
                     clarifications=[], steps=[dict(id="screening", action=action, params=params)])
                 ctx = self.context

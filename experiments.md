@@ -1683,3 +1683,12 @@ assignments survive optimistic per-seed checks; compare all survivor arrays and
 final membership with unfiltered reference. Pilot mixes spread IDs with labeled
 saved-pose stress examples and reports missing current positives. No completed
 full-library speedup is inferred from synthetic tests or the prior GPU pilot.
+
+
+## E048 - joint coarse eligibility before seeds
+
+Protocol: experiments/E048-joint-coarse-protocol.md. Add explicit whole-ligand
+shape extent, atom count and feature coverage predicates to the anchor rule.
+Use /coarse before pose pilots. Compare current positives and negative rows
+under the SAME joint rule. No default cutoff or forced rejection fraction.
+Workstation measurements are pending; no full-library acceptance claim.

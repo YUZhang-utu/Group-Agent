@@ -27,6 +27,7 @@ POSE_PARAMETERS = dict(sigma=1., cutoff=4.5, pair_tolerance=2., axial_samples=6,
 _STATE = None
 _FILTER_READER = None
 _BOUND = None
+_JOINT = None
 
 
 def catalog_count(catalog):
@@ -40,14 +41,14 @@ def catalog_count(catalog):
 
 
 def initialize(query):
-    global _STATE, _FILTER_READER, _BOUND
+    global _STATE, _FILTER_READER, _BOUND, _JOINT
     catalog = Path(query['artifact_catalog'])
     if os.name == 'posix': ensure_file_descriptor_limit(len(ev.read(catalog)['shards']))
     _, original = _load_query(Path(query['query_npz']))
     indices = sorted({a['feature_index'] for a in query['anchors']})
     expanded = dict(original, anchor_feature_indices=np.array(indices, dtype=np.int64))
     _STATE = (ArtifactCatalogReader(catalog), original, expanded, query)
-    _FILTER_READER = _BOUND = None
+    _FILTER_READER = _BOUND = _JOINT = None
     if query.get('condition_policy'):
         from .interaction_fast import InteractionFeatureReader
         from .necessary_conditions import NecessaryConditions
@@ -55,6 +56,27 @@ def initialize(query):
         required = [a['feature_index'] for a in query['anchors'] if a['anchor_id'] in policy['required_anchors']]
         _FILTER_READER = InteractionFeatureReader(catalog, Path(query['chemical_companion']))
         _BOUND = NecessaryConditions(expanded,required,policy['match_mode'],policy['minimum_score'])
+        if 'coarse_constraints' in policy:
+            from .joint_coarse import JointCoarse
+            _JOINT = JointCoarse(original, policy['coarse_constraints'])
+
+
+def coarse_decisions(ids, records):
+    """Joint eligibility precedes anchor bounds and any seed generation."""
+    joint = np.ones(len(ids), dtype=bool)
+    decisions = []
+    for i, (gid, record) in enumerate(zip(ids, records)):
+        if _JOINT is not None:
+            candidate = _STATE[0].get(int(gid))
+            ev.require(candidate.molecule_id == record.molecule_id and
+                       candidate.conformer_id == record.conformer_id, 'Joint coarse identity mismatch')
+            passed, reason = _JOINT.check(candidate)
+            joint[i] = passed
+            if not passed:
+                decisions.append((False, reason))
+                continue
+        decisions.append(_BOUND.check(record))
+    return decisions, joint
 
 
 def compute_chunk(task):
@@ -90,7 +112,7 @@ def compute_funnel_chunk(task, ids, started):
     policy = query['condition_policy']
     columns = sorted({a['score_column'] for a in query['anchors'] if a['anchor_id'] in policy['required_anchors']})
     records = [_FILTER_READER.get(int(gid)) for gid in ids]
-    decisions = [_BOUND.check(c) for c in records]
+    decisions, joint = coarse_decisions(ids, records)
     keep = np.array([x[0] for x in decisions],dtype=bool)
     reasons = Counter(x[1] for x in decisions if not x[0])
     prefilter_seconds = time.perf_counter()-started
@@ -102,9 +124,12 @@ def compute_funnel_chunk(task, ids, started):
         OBJECTIVE+'__transform':np.tile(np.eye(4).reshape(1,16),(n,1)),
         OBJECTIVE+'__anchor_scores':np.zeros((n,width)),
         OBJECTIVE+'__anchor_assignments':np.full((n,width),-2,dtype=np.int32)})
+    if 'coarse_constraints' in policy:
+        arrays['joint_eligible'] = joint
     pose_seconds = annotation_seconds = 0.
     reused = False
     if query.get('reuse_directory'):
+        ev.require('coarse_constraints' not in policy, 'Joint rules require fresh chunks; legacy chunks lack joint eligibility')
         legacy = Path(query['reuse_directory'])/f"chunk-{start//query['reuse_chunk_size']:08d}.npz"
         if legacy.with_suffix('.receipt.json').exists():
             prior = load_chunk(legacy,start,stop,expanded['anchor_feature_indices'])
@@ -172,6 +197,10 @@ def load_chunk(path, start, stop, indices):
     ev.require(np.isfinite(data[OBJECTIVE+'__objective']).all() and
                np.isfinite(data[OBJECTIVE+'__transform']).all(), 'Invalid pose arrays')
     if 'condition_passed' in data:
+        if 'joint_eligible' in data:
+            mask = data['joint_eligible']
+            ev.require(mask.shape == (stop-start,) and mask.dtype == bool, 'Invalid joint eligibility mask')
+            ev.require(not np.any(data['condition_passed'] & ~mask), 'A match cannot fail joint eligibility')
         for key in ('condition_passed','pose_evaluated','prefilter_passed'):
             ev.require(data[key].shape == (stop-start,) and data[key].dtype == bool, 'Invalid funnel masks')
         ev.require(not np.any(data['condition_passed'] & ~data['pose_evaluated']), 'A match needs an evaluated pose')
@@ -339,8 +368,11 @@ def export(source, output):
 def normalize_policy(policy):
     from .screening_selection import validate_selection
     validate_selection(policy)
-    return dict(required_anchors=sorted(policy['required_anchors']), match_mode=policy['match_mode'],
-                minimum_score=policy['minimum_score'])
+    result = dict(required_anchors=sorted(policy['required_anchors']), match_mode=policy['match_mode'],
+                  minimum_score=policy['minimum_score'])
+    if 'coarse_constraints' in policy:
+        result['coarse_constraints'] = copy.deepcopy(policy['coarse_constraints'])
+    return result
 
 
 def run_funnel(selection, output, **kwargs):
@@ -444,6 +476,10 @@ def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condit
             policy='All catalog conformers; one heuristic anchored-Gaussian pose per conformer, not all possible poses. No Top-K/Top-N membership truncation.',
             biological_quality='not_evaluated', candidate_top_k=None, gaussian_top_n=None)
         if condition:
+            result['coarse_eligibility'] = dict(
+                constraints=condition.get('coarse_constraints'),
+                scope='Explicit whole-ligand eligibility AND requested anchor necessary conditions before seeds; not receptor clash evaluation',
+                rejection_target=.9, rejection_target_status='Not guaranteed; measure actual counts')
             result['policy'] = 'All catalog conformers checked by necessary conditions; existing seed poses receive optimistic rule checks; only possible conformers receive unchanged Gaussian winner selection over ALL original seeds. No Top-K/Top-N. Feature counts are conditional on the requested rule.'
             if not pose_feasibility:
                 result['policy'] = 'Invariant necessary conditions only; survivors receive unchanged Gaussian winner selection. No Top-K/Top-N. Conditional feature counts.'

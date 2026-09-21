@@ -69,3 +69,12 @@ Measure the remaining seed-construction fraction after pose-feasibility rejectio
 Only then decide between cached query-independent frames, vectorized seed generation,
 selective persistent geometric indexes or cross-conformer GPU work queues. A broad
 necessary-condition index that retains everything is not a scalability solution.
+
+
+## E048 follow-up: pocket-aware geometry
+
+After measuring the joint coarse profile, evaluate prepared-receptor excluded
+volume on placed candidate poses and report pocket occupancy separately. Do not
+label ligand extents a receptor collision test. A precomputed batch-readable
+invariant index may reduce repeated I/O, but selectivity must first be measured
+under explicit scientifically interpretable criteria.

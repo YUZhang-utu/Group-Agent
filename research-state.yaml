@@ -1,9 +1,18 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E047-pose-feasibility-funnel
+current_experiment: E048-joint-coarse-eligibility
+joint_coarse_eligibility:
+  status: local_324_passed_3_skipped_workstation_selectivity_pending
+  protocol: experiments/E048-joint-coarse-protocol.md
+  guide: to_human/E048_JOINT_COARSE_SCREENING.md
+  chat_audit: /coarse
+  criteria: explicit_atom_ratio_shape_extents_typed_feature_coverage_AND_anchor_rule
+  receptor_clashes: not_implemented
+  rejection_90_percent: target_not_measured
+  default_thresholds: none
 pose_feasibility_funnel:
-  status: local_313_passed_3_skipped_workstation_pending
+  status: user_reported_288_rows_no_current_positives_scalability_gate_false
   protocol: experiments/E047-pose-feasibility-protocol.md
   guide: to_human/E047_SCALABLE_CONDITION_FUNNEL.md
   policy: all_original_seeds_check_selected_anchors_before_Gaussian

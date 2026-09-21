@@ -101,4 +101,9 @@ class NecessaryConditions:
 def pose_mask(arrays, columns, policy, objective):
     hits = (arrays[objective+'__anchor_scores'][:,columns] >= policy['minimum_score']) & (
         arrays[objective+'__anchor_assignments'][:,columns] >= 0)
-    return hits.all(axis=1) if policy['match_mode']=='all' else hits.any(axis=1)
+    passed = hits.all(axis=1) if policy['match_mode']=='all' else hits.any(axis=1)
+    if 'coarse_constraints' in policy:
+        if 'joint_eligible' not in arrays:
+            raise ValueError('Missing joint eligibility evidence')
+        passed &= arrays['joint_eligible']
+    return passed

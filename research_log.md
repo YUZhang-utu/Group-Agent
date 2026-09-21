@@ -1194,3 +1194,26 @@ nonselective invariant bounds was not built: it would not justify a speed claim.
 Real-library benefit of E047 remains pending a workstation pilot.
 
 E047 local regression: 313 passed, 3 dependency/GPU skips; English guard 255 files; skill validation passed. Passing actual E031 fixtures, same-pose ALL, threshold boundaries, preserved original seed competition, full ID coverage with skipped Gaussian rows, and false-rejection detection are covered. Workstation speedup and whole-library totals remain unmeasured.
+
+
+## 2026-09-21 - E048 joint coarse eligibility
+
+User clarified that shape, chemistry and crystal-derived anchors must jointly
+constrain membership before seed generation. E047 user-reported 288-row pilot
+retained all invariant rows; 199 reached Gaussian after seed feasibility.
+NumPy22 medians were 1.526214 s enabled and 1.580669 s disabled; current
+reference positives were zero and scalability_gate was false. This is not
+acceptance of the pre-seed funnel.
+
+Implemented explicit atom-ratio, principal-extent and typed-feature coverage
+criteria before existing anchor necessary bounds. These add eligibility rules;
+they do not preserve the old anchor-only pass set by definition. Threaded policy
+through chat preview, full funnel and reference comparison. Added /coarse for
+10000 spread IDs plus saved evidence, with no seed/Gaussian computation.
+Pocket-derived features can be requested; receptor collision/occupancy checks
+are not implemented. All reported new selectivity remains workstation-pending.
+
+E048 local validation: 324 passed, 3 dependency/GPU skips; English guard passed
+259 maintained files; repository search skill validated. Tests include joint
+predicate rigid invariance, explicit policy propagation, pre-seed rejection,
+full ID accounting, pose-free audit and session-bound /coarse routing.

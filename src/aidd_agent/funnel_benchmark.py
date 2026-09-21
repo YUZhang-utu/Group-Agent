@@ -48,7 +48,7 @@ def work(ids):
     reader, original, expanded, query = full._STATE
     started = time.perf_counter()
     records = [full._FILTER_READER.get(int(gid)) for gid in ids]
-    decisions = [full._BOUND.check(c) for c in records]
+    decisions, joint = full.coarse_decisions(ids, records)
     prefilter_seconds = time.perf_counter()-started
     keep = np.array([d[0] for d in decisions],dtype=bool)
     prepared = None
@@ -73,6 +73,8 @@ def work(ids):
         rigid[full.OBJECTIVE+'__anchor_assignments'] = np.empty((0,len(expanded['anchor_feature_indices'])),dtype=np.int32)
     columns = sorted({a['score_column'] for a in query['anchors'] if a['anchor_id'] in query['condition_policy']['required_anchors']})
     from .necessary_conditions import pose_mask
+    if 'coarse_constraints' in query['condition_policy']:
+        rigid['joint_eligible'] = joint[keep] if query.get('pose_feasibility') else joint
     rigid['condition_passed'] = pose_mask(rigid,columns,query['condition_policy'],full.OBJECTIVE)
     if not query.get('pose_feasibility'):
         full.ev.require(not np.any(rigid['condition_passed'] & ~keep),'Prefilter rejected a passing reference pose')
@@ -111,7 +113,7 @@ def compare_filtered(reference, actual):
     return result
 
 
-def _run(selection, output, *, count=256, repeats=2, include_gpu=True):
+def _run(selection, output, *, count=256, repeats=2, include_gpu=True, coarse_only=False):
     output=Path(output).resolve(); selection=Path(selection).resolve()
     selected=full.ev.read(selection)
     full.ev.require(selected.get('kind')=='selection_preview','Benchmark needs a saved selection preview')
@@ -149,6 +151,29 @@ def _run(selection, output, *, count=256, repeats=2, include_gpu=True):
         code=full.fingerprint(sorted(Path(__file__).parent.glob('*.py'))),e031_changes_ranking=False,
         numerical_policy='Float64 seed batches; CPU reference recheck of contenders within 1e-10 relative/absolute objective guard; sampled equivalence only',
         biological_quality='not_evaluated',timing_scope='Worker startup, sample reads, configured bounds/pose checks, required Gaussian evaluations, E031 and IPC; no full integrity scan or output serialization')
+    if coarse_only:
+        full.ev.require('coarse_constraints' in policy, 'Coarse audit needs explicit joint constraints in the selection preview')
+        tick = time.perf_counter()
+        full.initialize(q)
+        reasons = Counter()
+        kept = 0
+        for start in range(0, len(ids), 256):
+            batch = ids[start:start+256]
+            records = [full._FILTER_READER.get(int(gid)) for gid in batch]
+            decisions, _ = full.coarse_decisions(batch, records)
+            kept += int(sum(d[0] for d in decisions))
+            reasons.update(d[1] for d in decisions if not d[0])
+        report.update(status='complete', kind='coarse_audit', checked_conformers=len(ids),
+            retained_conformers=int(kept), rejected_conformers=len(ids)-int(kept),
+            rejection_fraction=1-kept/len(ids), rejection_reasons=dict(reasons),
+            seed_generation_count=0, gaussian_evaluated=0, wall_seconds=time.perf_counter()-tick,
+            target_rejection_fraction=.9, sample_rejection_target_met=(kept <= .1*len(ids)),
+            timing_scope='Single CPU process; reader initialization, sampled reads and joint/anchor coarse predicates only',
+            acceptance='Exploratory sampled selectivity only; positive retention, pose equivalence and full-library speed remain unvalidated')
+        full.check_hashes(report['sources'])
+        full._atomic_json(output/'report.json', report)
+        full._atomic_json(output/'RUN_STATUS.json', dict(status='complete', report_sha256=full.ev.sha(output/'report.json')))
+        return report
     if include_gpu:
         try:
             cp=array_module('cupy')
@@ -233,7 +258,8 @@ def main():
     p.add_argument('--count',type=int,default=256)
     p.add_argument('--repeats',type=int,default=2)
     p.add_argument('--no-gpu',action='store_true')
-    a=p.parse_args();result=run(a.selection,a.output,count=a.count,repeats=a.repeats,include_gpu=not a.no_gpu)
+    p.add_argument('--coarse-only',action='store_true')
+    a=p.parse_args();result=run(a.selection,a.output,count=a.count,repeats=a.repeats,include_gpu=not a.no_gpu,coarse_only=a.coarse_only)
     print(json.dumps(dict(status=result['status'],report=str(a.output/'report.json'))))
     return 0 if result['status']=='complete' else 1
 

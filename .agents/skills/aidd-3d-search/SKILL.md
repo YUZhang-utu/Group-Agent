@@ -8,6 +8,15 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For joint whole-ligand eligibility before seeds, read
+[E048](../../../to_human/E048_JOINT_COARSE_SCREENING.md). Create a NEW explicit
+selection with coarse_constraints, then `/coarse` for a pose-free sampled audit.
+Shape extents, atom ratio and typed-feature coverage are additional eligibility
+predicates, not necessary bounds on Gaussian scores. Never invent thresholds or
+force 90% rejection. Pocket-derived feature IDs are supported; receptor clash
+and pocket occupancy checks are not implemented by this change. Require current
+positive/reference validation before an uncapped run.
+
 Before another uncapped full-library run, read
 [E047](../../../to_human/E047_SCALABLE_CONDITION_FUNNEL.md) and use `/benchmark`.
 E046 workstation GPU matched arrays but was slower than NumPy; invariant bounds

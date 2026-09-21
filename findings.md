@@ -500,3 +500,13 @@ orientations. Survivors retain their full seed competition, so a nonpassing but
 Gaussian-optimal pose cannot be discarded to manufacture a match. Indexing broad
 necessary invariants alone cannot cure nonselectivity. Future larger-library
 claims require measurement of both query-dependent seed work and precise scoring.
+
+
+## E048 eligibility correction
+
+Anchor-only feasibility is not whole-ligand similarity: the reported pilot
+retained 288/288 before seeds. E048 adds user-explicit size, extent and chemical
+feature-count predicates before poses, alongside existing anchor constraints.
+Extent matching is a coarse invariant, not detailed Gaussian overlap or pocket
+fit. Pocket-derived anchor evidence remains distinct from evaluated receptor
+contacts. Selectivity and overall speedup require new workstation measurements.
