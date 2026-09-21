@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 [project.scripts]
 aidd-agent = "aidd_agent.cli:main"
 aidd-doctor = "aidd_agent.doctor:main"
+aidd-chat = "aidd_agent.chat_web:main"
 
 [project.optional-dependencies]
 chemistry = ["rdkit"]
@@ -25,3 +26,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+aidd_agent = ["web/*.html", "web/*.css", "web/*.js"]

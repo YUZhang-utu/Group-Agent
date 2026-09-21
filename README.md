@@ -10,6 +10,14 @@ libraries, and compute caches are shared; scientific state is isolated by user
 and Project. A Project must be activated before scientific work can begin.
 Campaigns are optional branches inside a Project.
 
+## Conversational workstation
+
+Start the persistent chat UI with `bash scripts/run_chat_agent.sh --allow-compute`.
+Select GPT or DeepSeek, submit tasks, ask for progress/results and attach existing
+owned runs. See [chat setup and acceptance](to_human/E041_CHAT_WORKBENCH.md).
+Generic protein/AF3 workflows are supported; calibrated full-library search remains
+WEE1-specific. Docking and new-target acceptance are explicit pending stages.
+
 ## Current capabilities
 
 Repository workflow skills cover 3D search, protein preparation, AlphaFold 3 and

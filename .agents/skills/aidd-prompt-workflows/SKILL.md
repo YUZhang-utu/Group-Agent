@@ -41,3 +41,16 @@ report locations, excluding credentials and sensitive user prompt content.
 Select `--provider gpt` or `--provider deepseek` using separate environment keys.
 See the [provider guide](../../../to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md).
 Provider changes create fresh plans; they do not silently replace sealed plans.
+
+## Persistent chat
+
+Use [the conversational workbench](../../../to_human/E041_CHAT_WORKBENCH.md) when
+users want ongoing dialogue, task progress or result lookup. The queue executes
+existing Project-scoped plans; status/results are read from reports. Keep task IDs
+session-scoped. Existing owned runs can be attached without new compute. A browser
+refresh must not submit the scientific request again. Cancellation retains outputs;
+resume remains bound to code/configuration and the original sealed plan.
+
+The router receives bounded recent dialogue and task summaries; do not claim it
+only receives the latest prompt or that it automatically sees all local files.
+Do not present unavailable docking/new-target stages as completed capabilities.

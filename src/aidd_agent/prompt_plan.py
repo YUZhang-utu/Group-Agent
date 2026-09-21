@@ -129,7 +129,8 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def chat_plan(prompt, profile, opener=None):
+def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
+              capabilities=CAPABILITIES, validator=validate_plan):
     if not isinstance(prompt, str) or not 1 <= len(prompt) <= 20000:
         raise ValueError("Prompt must contain 1–20000 characters")
     allowed = {"base_url", "model", "api_key_env", "json_mode", "timeout_seconds"}
@@ -154,7 +155,7 @@ def chat_plan(prompt, profile, opener=None):
     timeout = profile.get("timeout_seconds", 120)
     if type(timeout) not in (int, float) or not 1 <= timeout <= 300: raise ValueError("Invalid API timeout")
     payload = {"model": profile["model"], "messages": [
-        {"role": "system", "content": SYSTEM_PROMPT + "\n" + json.dumps(CAPABILITIES, ensure_ascii=False)},
+        {"role": "system", "content": system_prompt + "\n" + json.dumps(capabilities, ensure_ascii=False)},
         {"role": "user", "content": prompt}]}
     if profile.get("json_mode", True): payload["response_format"] = {"type": "json_object"}
     request = Request(url + "/chat/completions", data=json.dumps(payload).encode(), headers=headers)
@@ -170,7 +171,7 @@ def chat_plan(prompt, profile, opener=None):
         result = strict_json(raw.decode("utf-8"))
         choice = result["choices"][0]
         if choice.get("finish_reason") != "stop": raise ValueError("LLM output incomplete or refused")
-        plan = validate_plan(strict_json(choice["message"]["content"]))
+        plan = validator(strict_json(choice["message"]["content"]))
     except (KeyError, IndexError, TypeError, UnicodeError, json.JSONDecodeError):
         raise ValueError("Malformed LLM JSON response") from None
     return plan, {"provider": "openai-compatible", "model": profile["model"],

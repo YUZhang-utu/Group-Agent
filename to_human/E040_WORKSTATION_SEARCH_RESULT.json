@@ -16,7 +16,7 @@
     "cached_tokens": 640,
     "reasoning_tokens": 412
   },
-  "inner_search_metrics": "not_supplied",
+  "inner_search_metrics": "user_pasted_E036_markdown",
   "speedup": "not_established",
   "af3_raw_summary_followup": {
     "repeated_A_ids_present_in_raw_summary": true,
@@ -27,5 +27,23 @@
     ],
     "interpretation": "raw chain metadata dimension mismatch; repeated IDs do not establish multiple chains; token-level labeling is a hypothesis, not confirmed",
     "source_file": "wee1_summary_confidences.json"
-  }
+  },
+  "queries": [
+    {
+      "query_id": "8BJU:QT9:A:601",
+      "gaussian_seconds": 28.641,
+      "annotation_seconds": 1.696,
+      "execution_seconds": 32.859,
+      "fresh_compute": true
+    },
+    {
+      "query_id": "1X8B:824:A:901",
+      "gaussian_seconds": 62.087,
+      "annotation_seconds": 1.938,
+      "execution_seconds": 64.056,
+      "fresh_compute": true
+    }
+  ],
+  "equivalence": "user_reported_all_Gaussian_arrays_and_E031_scores_assignments_ranks_passed",
+  "timing_scope": "preflight_index_loading_and_final_equivalence_checks_excluded"
 }

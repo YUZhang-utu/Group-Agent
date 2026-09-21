@@ -45,3 +45,11 @@
 - What QC and induced-failure tests are required before unattended operation?
 - Which active-learning objective improves valid information per experiment
   over random, similarity, and expert-selection baselines?
+
+
+## 2026-09-21 - Next workflow integrations
+
+Bind trusted new-target ligand/site artifacts to generic search before expanding
+calibration claims. Probe installed Glide/PLANTS and specify receptor/grid/ligand
+preparation and reference-ligand docking acceptance before adding executable chat
+actions. Integrate existing aggregation/pocket QC with explicit artifact dependencies.

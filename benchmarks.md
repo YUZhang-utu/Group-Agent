@@ -193,3 +193,18 @@ supplied mount/argument semantics, prerequisites, failure preservation, reuse an
 image provenance. Provider tests verify explicit selection and credential isolation.
 This establishes software behavior under fixtures, not API reliability, AF3 quality
 or GPU runtime. English-content and shell syntax checks passed.
+
+
+## E041 conversational acceptance (2026-09-21)
+
+Full regression: 240 passed, two optional dependency skips. Ten chat tests passed
+again after final bounded-log/result-display changes. Tests cover persistent
+conversation clarification, owned task isolation, report-derived answers and timing,
+real child-process blocking, cancellation, restart recovery, existing-run attachment,
+HTTP authentication/origin handling and malformed router output. Existing prompt
+adapter test observes atomic running/completed progress while AF3 is simulated.
+JavaScript and shell syntax, English content and updated skill metadata passed.
+Desktop UI rendered in headless Edge and was visually inspected; no live provider
+or GPU inference was invoked by these tests. Local preview uses isolated fixtures.
+The initial sandboxed Edge renderer failed; approved headless execution produced
+the inspected screenshot under outputs/e041/chat-desktop.png.

@@ -137,6 +137,9 @@ def test_af3_compute_gate_and_real_adapter_compilation(tmp_path):
         @staticmethod
         def run_command(argv, log):
             commands.append(argv)
+            progress = ev.read(log.parent.parent / "report.json")
+            assert progress["steps"]["fold"]["status"] == "running"
+            assert progress["steps"]["prediction"]["status"] == "complete"
             output = Path(next(s.split("=", 1)[1] for s in argv if s.startswith("--output_dir=")))
             output.mkdir(parents=True)
             (output / "fixture_model.cif").write_text("data_fixture\n")

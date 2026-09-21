@@ -1,7 +1,25 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E040-container-af3-provider-selection
+current_experiment: E041-conversational-agent
+conversational_agent:
+  status: implemented_local_validation_workstation_chat_pending
+  protocol: experiments/E041-conversational-agent-protocol.md
+  protocol_commit: 6029142
+  guide: to_human/E041_CHAT_WORKBENCH.md
+  launcher: scripts/run_chat_agent.sh
+  execution: persistent_sessions_serial_background_jobs
+  generic_protein_af3: supported
+  calibrated_search_scope: WEE1_QT9_and_824
+  new_target_chat_query_preparation: pending
+  downstream_docking:
+    reported_installed: [Schrodinger_Maestro_module, PLANTS]
+    executable_license_grid_validation: pending_workstation_probe
+    probe: scripts/probe_docking_tools.sh
+  live_chat_model_gpu_tested: false
+  local_regression: 240_passed_2_dependency_skips
+  desktop_render: inspected_headless_Edge
+  continuity: repository_state_and_handoff_no_scheduler_tool_available
 container_af3_and_providers:
   status: user_reported_deepseek_uniprot_af3_and_calibrated_search_complete
   protocol: experiments/E040-container-af3-provider-selection-protocol.md
@@ -16,7 +34,7 @@ container_af3_and_providers:
   confidence_chain_metadata: repeated_A_confirmed_in_raw_AF3_summary_dimensions_inconsistent
   gpt_live_tested: false
   search_result: to_human/E040_WORKSTATION_SEARCH_RESULT.json
-  search_inner_metrics: not_yet_supplied
+  search_inner_metrics: user_reported_fresh_QT9_32_859s_824_64_056s_equivalence_passed
 english_workflow_skills:
   status: implemented_and_locally_validated
   protocol: experiments/E039-english-workflow-skills-protocol.md

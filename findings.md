@@ -425,3 +425,27 @@ our confidence importer, not that the model contains multiple chains. Token-leve
 labeling remains a hypothesis; preserve raw evidence without silently deduplicating.
 No AF3 rerun is needed solely to inspect metadata. See
  to_human/E040_WORKSTATION_SEARCH_RESULT.json. GPT and E037 timing remain pending.
+
+
+## 2026-09-21 - E041 conversational workbench
+
+Implemented loopback browser chat, persisted sessions/messages/jobs, separate model
+selection, a serialized background subprocess queue, report-derived status/results,
+process-tree cancellation, explicit receipt-based resume and owned-run attachment.
+Scientific reports now expose running/completed steps atomically while work proceeds.
+HTTP tests cover bearer authentication, origin checks and session task isolation.
+Provider router uses bounded recent dialogue and task summaries; raw local files
+are not automatically uploaded. Maintained UI and responses remain English.
+
+User supplied fresh search timings: QT9 32.859 s (Gaussian 28.641, E031 1.696),
+824 64.056 s (Gaussian 62.087, E031 1.938), all reported equivalence checks passed.
+Startup/index loading and final checks are separate; this is not an E037 speedup
+comparison. Updated the existing workstation evidence record without claiming a
+new independently executed benchmark.
+
+User reports Schrodinger/Maestro via modules and PLANTS installed. Added a read-only
+installation probe; actual docking CLI/license/grid/reference inputs remain pending.
+New-target query calibration, docking, rescoring and biological validation are not
+marked complete by adding a chat UI. The guide records stage-by-stage acceptance.
+No live model/GPU chat test was performed here. Repository checkpoints provide
+continuity because this environment exposes neither /loop nor a cron tool.

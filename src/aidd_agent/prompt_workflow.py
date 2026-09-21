@@ -271,8 +271,11 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     _atomic_json(directory / "result.json", result)
                     return result, sorted(p for p in directory.rglob("*") if p.is_file())
                 try:
+                    results[sid] = dict(status="running", action=step["action"])
+                    _atomic_json(execution / "report.json", report)
                     result = checked_stage(execution, sid, dependencies, operation)
                     results[sid] = dict(status="complete", action=step["action"], result=result)
+                    _atomic_json(execution / "report.json", report)
                 except Exception as exc:
                     status = "blocked" if isinstance(exc, Blocked) else "failed"
                     # Do not include arbitrary server response bodies or credentials in reports.
