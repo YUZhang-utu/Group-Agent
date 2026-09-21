@@ -113,7 +113,9 @@ def compare_filtered(reference, actual):
     return result
 
 
-def _run(selection, output, *, count=256, repeats=2, include_gpu=True, coarse_only=False):
+def _run(selection, output, *, count=256, repeats=2, include_gpu=True, coarse_only=False, validate_survivors=False):
+    if validate_survivors:
+        coarse_only = True
     output=Path(output).resolve(); selection=Path(selection).resolve()
     selected=full.ev.read(selection)
     full.ev.require(selected.get('kind')=='selection_preview','Benchmark needs a saved selection preview')
@@ -157,10 +159,13 @@ def _run(selection, output, *, count=256, repeats=2, include_gpu=True, coarse_on
         full.initialize(q)
         reasons = Counter()
         kept = 0
+        retained_ids, rejected_ids = [], []
         for start in range(0, len(ids), 256):
             batch = ids[start:start+256]
             records = [full._FILTER_READER.get(int(gid)) for gid in batch]
             decisions, _ = full.coarse_decisions(batch, records)
+            retained_ids.extend(int(gid) for gid,d in zip(batch,decisions) if d[0])
+            rejected_ids.extend(int(gid) for gid,d in zip(batch,decisions) if not d[0])
             kept += int(sum(d[0] for d in decisions))
             reasons.update(d[1] for d in decisions if not d[0])
         report.update(status='complete', kind='coarse_audit', checked_conformers=len(ids),
@@ -170,9 +175,14 @@ def _run(selection, output, *, count=256, repeats=2, include_gpu=True, coarse_on
             target_rejection_fraction=.9, sample_rejection_target_met=(kept <= .1*len(ids)),
             timing_scope='Single CPU process; reader initialization, sampled reads and joint/anchor coarse predicates only',
             acceptance='Exploratory sampled selectivity only; positive retention, pose equivalence and full-library speed remain unvalidated')
+        report['retained_ids'] = retained_ids
+        if validate_survivors:
+            from .survivor_validation import validate_survivors as validate
+            report['validation'] = validate(q,retained_ids,rejected_ids,output)
+            if report['validation']['status']=='failed': report['status']='failed'
         full.check_hashes(report['sources'])
         full._atomic_json(output/'report.json', report)
-        full._atomic_json(output/'RUN_STATUS.json', dict(status='complete', report_sha256=full.ev.sha(output/'report.json')))
+        full._atomic_json(output/'RUN_STATUS.json', dict(status=report['status'], report_sha256=full.ev.sha(output/'report.json')))
         return report
     if include_gpu:
         try:
@@ -259,7 +269,8 @@ def main():
     p.add_argument('--repeats',type=int,default=2)
     p.add_argument('--no-gpu',action='store_true')
     p.add_argument('--coarse-only',action='store_true')
-    a=p.parse_args();result=run(a.selection,a.output,count=a.count,repeats=a.repeats,include_gpu=not a.no_gpu,coarse_only=a.coarse_only)
+    p.add_argument('--validate-survivors',action='store_true',help='Rebuild coarse panel, audit survivors and synthetic crystal self-match')
+    a=p.parse_args();result=run(a.selection,a.output,count=a.count,repeats=a.repeats,include_gpu=not a.no_gpu,coarse_only=a.coarse_only,validate_survivors=a.validate_survivors)
     print(json.dumps(dict(status=result['status'],report=str(a.output/'report.json'))))
     return 0 if result['status']=='complete' else 1
 

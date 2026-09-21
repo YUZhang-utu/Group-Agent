@@ -1,7 +1,12 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E048-joint-coarse-eligibility
+current_experiment: E049-survivor-validation
+survivor_validation:
+  status: local_328_passed_3_skipped_workstation_pending
+  guide: to_human/E049_SURVIVOR_VALIDATION.md
+  entry: funnel_benchmark_validate_survivors
+  synthetic_control_is_library_positive: false
 joint_coarse_eligibility:
   status: local_324_passed_3_skipped_workstation_selectivity_pending
   protocol: experiments/E048-joint-coarse-protocol.md

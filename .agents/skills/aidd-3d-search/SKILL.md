@@ -8,6 +8,11 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For a zero-positive hardware panel, use the terminal
+[E049 survivor validation](../../../to_human/E049_SURVIVOR_VALIDATION.md).
+Rebuild the same coarse panel, audit all survivors and rejected controls, and
+separate synthetic query self-matches from actual library positive retention.
+
 For joint whole-ligand eligibility before seeds, read
 [E048](../../../to_human/E048_JOINT_COARSE_SCREENING.md). Create a NEW explicit
 selection with coarse_constraints, then `/coarse` for a pose-free sampled audit.

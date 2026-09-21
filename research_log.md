@@ -1217,3 +1217,17 @@ E048 local validation: 324 passed, 3 dependency/GPU skips; English guard passed
 259 maintained files; repository search skill validated. Tests include joint
 predicate rigid invariance, explicit policy propagation, pre-seed rejection,
 full ID accounting, pose-free audit and session-bound /coarse routing.
+
+
+## 2026-09-21 - E049 survivor validation
+
+User-reported E048 coarse audit retained 288/10032 in 3.674 s without seeds.
+The smaller hardware panel retained 41/288 before seeds, then zero for Gaussian;
+reference positives zero, scalability gate false. Added a terminal entry point
+that reconstructs the larger panel, saves IDs, compares every coarse survivor
+and sampled rejects, and reports per-anchor failures and synthetic query controls.
+This is not whole-library acceptance or an independent chemical positive control.
+
+E049 local regression: 328 passed, 3 skipped. English guard passed 263 files.
+Synthetic identity/Gaussian checks and detection of lost real-panel positives
+are fixture-tested; workstation control results remain pending.

@@ -1692,3 +1692,9 @@ shape extent, atom count and feature coverage predicates to the anchor rule.
 Use /coarse before pose pilots. Compare current positives and negative rows
 under the SAME joint rule. No default cutoff or forced rejection fraction.
 Workstation measurements are pending; no full-library acceptance claim.
+
+
+## E049 - survivor and query-control validation
+
+Protocol: experiments/E049-survivor-validation.md. Terminal guide:
+to_human/E049_SURVIVOR_VALIDATION.md. Workstation validation pending.
