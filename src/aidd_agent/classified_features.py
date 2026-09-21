@@ -146,6 +146,12 @@ def write_tables(report, output):
         '<style>body{font:15px system-ui;margin:32px;color:#16324a}table{border-collapse:collapse;width:100%}td,th{padding:9px;border:1px solid #ccd6df;text-align:left;overflow-wrap:anywhere}th{background:#eaf1f7}h2{margin-top:32px}</style>',
         '<h1>Crystal-derived 3D search evidence</h1><p>Reference geometry and candidate feature matching. No docking or candidate-complex interaction validation.</p>',
         '<p>Choose an anchor ID, then request a same-pose selection preview in chat. A feature shared by several contacts is not independent evidence for each contact.</p>']
+    if report.get('kind') == 'full_library_conditions':
+        pieces.append('<p><strong>Coverage status: '+html.escape(report['status'])+'</strong>. '
+            'Counts concern one heuristic pose per evaluated conformer; no Top-K or Top-N membership limit.</p>')
+        for q in report['queries']:
+            pieces.append('<p>'+html.escape(q['query_id'])+': '+str(q['counts']['evaluated_conformers'])+
+                ' / '+str(q['counts']['total_conformers'])+' conformers evaluated.</p>')
     for kind in CLASSES:
         matching=[r for r in records if r['category']==kind]
         pieces.append('<h2>'+html.escape(kind.replace('_',' ').title())+'</h2>')

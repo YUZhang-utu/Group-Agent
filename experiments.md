@@ -1646,3 +1646,12 @@ selection/export lineage, pocket translation and mocked reference redocking gate
 were checked. These are exploratory software checks, not chemistry acceptance.
 Workstation protocol and acceptance gaps are recorded in
 `to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md`.
+
+## E044 — uncapped condition evaluation
+
+Protocol: `experiments/E044-full-library-condition-counts-protocol.md`.
+Exploratory local engineering outcome: 272 passed, 2 skipped; final guard checks
+passed. Every catalog ID is scheduled without either ranking budget. Synthetic
+cross-chunk duplicates, last-chunk matches, interrupted/resumed counts and same-pose
+selection/export are covered. Full-library runtime, storage and chemistry acceptance
+remain pending. No inference of biological recall or all-orientation completeness.

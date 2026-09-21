@@ -460,3 +460,12 @@ scan cost belongs to query execution. Native crystal-derived feature categories
 make the available selection evidence visible without claiming candidate-protein
 contacts. Original E031 outputs are retained. Real-library timing and scientific
 classification acceptance remain pending; no PLIP dependency was introduced.
+
+## E044 membership correction
+
+E043 full descriptor coverage is not full feature-condition coverage: its Top-K
+and Top-N stages restrict the evaluated set. E044 explicitly removes both membership
+budgets and retains raw feature scores for later conditions. The remaining boundary
+is heuristic pose generation and selection, not catalog coverage. Full-library
+match totals are unknown until the workstation run completes; old counts must
+never be relabeled as the new totals.

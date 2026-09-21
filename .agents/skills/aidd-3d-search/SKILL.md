@@ -8,6 +8,14 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For counts over every library conformer under classified feature conditions, use
+the [E044 guide](../../../to_human/E044_FULL_LIBRARY_CONDITIONS.md) and chat
+`/full_count CLASSIFICATION_TASK_ID`. Do not substitute exhaustive descriptor
+Top-K retrieval: it does not evaluate all poses/features. E044 has no Top-K or
+Gaussian Top-N membership budget. It retains one heuristic pose per conformer,
+not all orientations/torsions. All/any selection is evaluated within a pose before
+molecule deduplication. Pilot/partial results are never full-library counts.
+
 For exhaustive descriptor coverage and classified crystal-derived query features,
 read the [E043 guide](../../../to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md).
 New chat searches default to exhaustive retrieval; the low-level CLI needs

@@ -21,6 +21,7 @@ ACTION_FIELDS = {
     "search_3d": ({"query"}, {"retrieval_mode"}),
     "review_screening": ({"source_run"}, set()),
     "classify_screening": ({"source_run"}, set()),
+    "full_library_screen": ({"source_run"}, set()),
     "select_screening": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules"}),
     "export_screening": ({"source_run"}, set()),
     "prepare_docking": ({"source_run"}, set()),

@@ -218,3 +218,12 @@ including ties and final-shard candidates. Classified-feature lineage and a
 mocked reference-pose gate are tested separately. Passing local tests does not
 establish real 25,813,808-conformer timing, category accuracy, or licensed docking
 compatibility. Exhaustive candidate sets are not required to equal old ANN sets.
+
+## E044 full-library conditions
+
+Coverage requires all contiguous catalog IDs plus accepted distinct molecule counts.
+Counts are deduplicated across chunks; all conditions must hold on one conformer
+pose before aggregation. Partial runs fail full-coverage acceptance. Local tests
+compare the worker's Gaussian transforms against the existing scoring path and
+exercise corruption/restart, last-chunk hits and export provenance. No full-library
+latency, storage or biological-quality number has been measured for this mode.

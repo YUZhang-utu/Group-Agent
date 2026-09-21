@@ -1,7 +1,18 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E043-exhaustive-classified-search
+current_experiment: E044-full-library-condition-counts
+full_library_conditions:
+  status: implemented_local_tests_passed_workstation_pending
+  protocol: experiments/E044-full-library-condition-counts-protocol.md
+  guide: to_human/E044_FULL_LIBRARY_CONDITIONS.md
+  chat_action: full_count
+  membership: every_catalog_conformer_no_TopK_no_TopN
+  pose_scope: one_heuristic_anchored_Gaussian_pose_per_conformer
+  condition_selection: same_pose_all_any_before_molecule_deduplication
+  persistence: bounded_NPZ_chunks_SQLite_counts_streamed_selection
+  full_workstation_timing_and_counts: pending
+  local_validation: 272_passed_2_dependency_skips
 exhaustive_classified_search:
   status: implemented_local_tests_workstation_acceptance_pending
   protocol: experiments/E043-exhaustive-contacts-docking-protocol.md

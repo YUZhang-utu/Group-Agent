@@ -1096,3 +1096,29 @@ Full-library timing, real crystal chemistry and licensed 2025-1 execution remain
 pending on the workstation. No activity or candidate pose-quality acceptance.
 Protocol: experiments/E043-exhaustive-contacts-docking-protocol.md.
 Guide: to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md.
+
+## 2026-09-21 — E044 uncapped condition evaluation
+
+User corrected the membership requirement: count the whole library under feature
+conditions, not the Top-10,000 descriptor candidates. E043 workstation evidence
+confirmed exhaustive descriptor coverage for both WEE1 queries, with 4,214/4,042
+retrieved molecules and 2,254/2,902 refined molecules (union 5,138). Classification
+also ran on the workstation, but these budgeted sets cannot answer full-library
+condition counts.
+
+Implemented a separate full_count chat action: persistent workers evaluate every
+catalog conformer with no descriptor Top-K or Gaussian Top-N; write score/assignment/
+pose chunks; merge molecule counts on disk. Existing diagnostic levels are shown
+without asking the user for another pre-compute threshold. Same-pose all/any
+selection streams the completed chunks and supports separately requested SDF/ID
+export. Partial runs never establish full coverage; changed/corrupt chunks fail.
+The algorithm still chooses one heuristic anchored-Gaussian pose per conformer,
+so no exhaustive orientation/torsion or biological recall claim is made.
+
+Exploratory engineering validation: 272 tests passed, 2 dependency skips; the
+final input-validation guard passed its 5 targeted tests. English guard: 240 files.
+New tests cover last-chunk hits, duplicate molecules across chunks, partial-to-full
+resume, corruption, same-pose conditions, zero/nonzero export, local chat routing
+and unchanged Gaussian pose computation. Licensed docking and actual uncapped
+full-library throughput/counts remain untested here. Guide:
+to_human/E044_FULL_LIBRARY_CONDITIONS.md.

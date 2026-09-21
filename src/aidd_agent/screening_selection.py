@@ -264,6 +264,9 @@ def select_rows(r, s, columns, policy, query_id):
 def preview(review_path, output, policy):
     validate_selection(policy)
     evidence = ev.read(review_path)
+    if evidence.get('kind') == 'full_library_conditions':
+        from .full_library_screen import preview as full_preview
+        return full_preview(review_path, output, policy)
     if evidence.get("kind") != "screening_evidence": raise ValueError("Expected screening evidence")
     check_hashes(evidence["sources"])
     available = {a["anchor_id"]: (q, a) for q in evidence["queries"] for a in q["anchors"]}
@@ -298,6 +301,9 @@ def export(preview_path, output):
     from .predocking_qc import _chemical_sdf
     selected = ev.read(preview_path)
     if selected.get("kind") != "selection_preview": raise ValueError("Expected a selection preview")
+    if selected.get('representatives_jsonl'):
+        from .full_library_screen import export as full_export
+        return full_export(preview_path, output)
     check_hashes(selected["sources"])
     q = selected["query"]
     # Recompute selection from sealed inputs before writing an export.
