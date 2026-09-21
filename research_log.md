@@ -1245,3 +1245,14 @@ Wall-time completion overnight remains unmeasured.
 Overnight orchestration regression: 331 passed, 3 skipped; English guard 266 files.
 Tests reject incomplete coverage, keep uncapped execution parameters, report
 missing positives, and deterministically sample across final result lists.
+
+
+## 2026-09-21 - workstation run started; overnight handoff
+
+User confirms the full-library validation is now running and appears much faster.
+This is user-reported progress, not observed completion or a measured speedup.
+Expected code is 1533883; actual PID, exact output directory, command and current
+coverage have not been supplied. Do not launch a duplicate or update running code.
+Tomorrow inspect suite-report.json, full-library/progress.json, run.log and final
+coverage/counts. Keep scientific acceptance pending until reports are available.
+Handoff: to_human/20260921_OVERNIGHT_HANDOFF.md.

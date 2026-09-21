@@ -523,9 +523,13 @@ implementation_status:
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending
 
 overnight_full_validation:
-  status: local_331_passed_3_skipped_workstation_pending
+  status: user_reported_workstation_running_2026_09_21
   entry: scripts/run_e049_full_validation.sh
   scope: full_library_current_explicit_query_rule
   candidate_budget: null
   final_hit_reference_sample: 128
   completion_time: not_guaranteed
+  user_observation: appears_much_faster_no_measured_speedup_yet
+  running_code_expected: 1533883
+  actual_output_directory: not_supplied
+  handoff: to_human/20260921_OVERNIGHT_HANDOFF.md
