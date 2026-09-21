@@ -3,7 +3,7 @@ objective: Build a local-first, resumable AIDD workflow beginning with batch MOL
 stage: ligand_comparison_and_similarity_search
 current_experiment: E040-container-af3-provider-selection
 container_af3_and_providers:
-  status: implemented_mock_validated_workstation_pending
+  status: user_reported_deepseek_uniprot_af3_live_complete
   protocol: experiments/E040-container-af3-provider-selection-protocol.md
   protocol_commit: e3cbad4
   guide: to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md
@@ -11,7 +11,10 @@ container_af3_and_providers:
   models: [gpt-5.6-terra, deepseek-flash]
   af3_execution: apptainer_nv_xla_user_supplied_paths
   validation: 230_passed_2_dependency_skips
-  live_api_and_gpu_tested: false
+  live_api_and_gpu_tested: user_reported_deepseek_and_af3_passed
+  workstation_result: to_human/E040_WORKSTATION_AF3_RESULT.json
+  confidence_chain_metadata: repeated_ids_pending_raw_output_inspection
+  gpt_live_tested: false
 english_workflow_skills:
   status: implemented_and_locally_validated
   protocol: experiments/E039-english-workflow-skills-protocol.md

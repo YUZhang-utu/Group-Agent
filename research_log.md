@@ -994,3 +994,16 @@ cover command mapping, missing host inputs, failed/retried/reused execution, cha
 image rejection and provider credential isolation. No live API or GPU run performed.
 Official current DeepSeek setup uses deepseek-flash; GPT profile uses gpt-5.6-terra.
 See to_human/AF3_CONTAINER_AND_LLM_PROVIDERS.md for workstation commands and sources.
+
+
+## 2026-09-21 - E040 user-reported live AF3 completion
+
+DeepSeek Flash planned live retrieval of human WEE1 P30291 (646 residues), AF3
+preparation and installed Apptainer GPU prediction. All three steps completed;
+RTX 5090, seed 1, five samples. Data pipeline 420.33 s (MSA 412.50 s); inference
+66.27 s. These are nested stages, not an independently measured total latency.
+pTM 0.51, ranking score 0.79, fraction_disordered 0.56; no pose-quality acceptance.
+Confidence JSON reports seven repeated A IDs despite single-chain arrays; the
+local adapter copies that JSON unchanged, so raw summary/CIF inspection is pending.
+Evidence is user-pasted report/log; see to_human/E040_WORKSTATION_AF3_RESULT.json.
+E037 performance, prompt-driven search, GPT and workstation reuse remain pending.

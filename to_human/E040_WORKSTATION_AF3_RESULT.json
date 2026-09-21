@@ -1,0 +1,59 @@
+{
+  "date": "2026-09-21",
+  "evidence": "user_supplied_report_and_log_not_independent_remote_audit",
+  "run": "/mnt/local/hand/yuzhang/aidd/prompt-workspace/users/workstation/projects/prj-252fa94197d6-prompt-aidd/runs/PROMPT-184f88ad866840d7",
+  "status": "complete",
+  "provider_model": "deepseek-flash",
+  "accession": "P30291",
+  "residues": 646,
+  "sequence_sha256": "5ef1f29ae6c48b186caa6e996c42991c0077374bda1649603ab90d4cbe9752aa",
+  "structure_sha256": "954a8db1ab38fea45cc9592a4238a164bfc021af54b54dc648cf0b8bf4278ceb",
+  "steps": [
+    "protein_fetch",
+    "af3_prepare",
+    "af3_run"
+  ],
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "seed": 1,
+  "samples": 5,
+  "timings_seconds": {
+    "msa": 412.5,
+    "data_pipeline": 420.33,
+    "featurisation_all_seeds": 7.71,
+    "inference": 66.27,
+    "inference_and_extraction": 66.69
+  },
+  "timing_scope": "nested stage timings; total wall time not reported",
+  "confidence": {
+    "ptm": 0.51,
+    "ranking_score": 0.79,
+    "fraction_disordered": 0.56,
+    "has_clash": 0.0,
+    "iptm": null,
+    "chain_ids": [
+      "A",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ]
+  },
+  "confidence_issue": "Seven repeated chain IDs versus single-chain metric arrays; raw AF3 summary and CIF need inspection; adapter copies confidence JSON directly",
+  "usage": {
+    "prompt_tokens": 888,
+    "completion_tokens": 540,
+    "total_tokens": 1428,
+    "cached_tokens": 640,
+    "reasoning_tokens": 394
+  },
+  "remaining": [
+    "E037 workstation speed/equivalence report",
+    "prompt-driven calibrated search",
+    "GPT live planner",
+    "completed-stage reuse on workstation",
+    "structure confidence inspection"
+  ],
+  "biological_quality": "not_evaluated"
+}
