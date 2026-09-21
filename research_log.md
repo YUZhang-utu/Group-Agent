@@ -1231,3 +1231,17 @@ This is not whole-library acceptance or an independent chemical positive control
 E049 local regression: 328 passed, 3 skipped. English guard passed 263 files.
 Synthetic identity/Gaussian checks and detection of lost real-panel positives
 are fixture-tested; workstation control results remain pending.
+
+
+## 2026-09-21 - user-authorized overnight full-library validation
+
+Added an orchestration entry point for pre-run controls, uncapped current-rule
+whole-library evaluation, complete molecule enumeration, and sampled final-hit
+reference reproduction. Uses 22 CPU workers, bounded chunks, no Top-K/Top-N.
+Current scope is the explicitly selected QT9 query; no 824 rule is invented.
+Full-library stage resumes verified chunks with unchanged code/inputs/settings.
+Wall-time completion overnight remains unmeasured.
+
+Overnight orchestration regression: 331 passed, 3 skipped; English guard 266 files.
+Tests reject incomplete coverage, keep uncapped execution parameters, report
+missing positives, and deterministically sample across final result lists.

@@ -521,3 +521,11 @@ implementation_status:
   reduce_output_validator: explicit_db_hotfix_ready_linux_revalidation_pending
   reduce_ccd_het_dictionary: implemented_qt9_76_atoms_34_hydrogens
   qt9_anchor_snapshot: exploratory_three_distance_supported_angle_pending
+
+overnight_full_validation:
+  status: local_331_passed_3_skipped_workstation_pending
+  entry: scripts/run_e049_full_validation.sh
+  scope: full_library_current_explicit_query_rule
+  candidate_budget: null
+  final_hit_reference_sample: 128
+  completion_time: not_guaranteed

@@ -1,5 +1,33 @@
 # Validate coarse survivors and the rule itself
 
+## Overnight whole-library suite
+
+The full suite is `scripts/run_e049_full_validation.sh --selection PATH --output DIR`.
+It performs the 10000-row pre-run correctness audit, then processes EVERY library
+ID under the same explicit joint rule with 22 NumPy CPU workers. No Top-K, Top-N,
+max-chunks, or molecule export cap is supplied. Gaussian scoring applies to all
+survivors of the declared coarse and seed-feasibility conditions, not every ID.
+
+It validates full conformer/molecule coverage and verified chunk receipts, writes
+the complete deduplicated representative list, and samples up to 128 final matching
+molecules across that list for fresh reference reproduction. This final reference
+audit is sampled; it is not a duplicate reference scoring of 25 million conformers.
+Zero library hits remain explicitly unvalidated for positive retention.
+
+Use `nohup bash scripts/run_e049_full_validation.sh ... > run.log 2>&1 &` in the
+activated workstation environment. Inspect `suite-report.json`, `run.log`, and
+`full-library/progress.json`. Final counts are in `full-library/report.json` and
+the complete matching molecule list is `all-matches/representatives.jsonl`.
+No SDF export or docking runs automatically. Duration is not guaranteed overnight.
+
+For an interrupted run, stop any still-running original process, then rerun the
+same command with the SAME output, code, inputs, worker and chunk settings.
+Verified full-library chunks resume; small audits rerun into separate directories.
+Do not update code while the job runs. A failed scientific check stops the suite;
+zero-hit but equivalent exploratory panels do not prevent the requested full scan.
+
+## Bounded survivor-only validation
+
 Use the NEW selection preview report that contains `coarse_constraints`, not a
 search, coarse audit or execution wrapper report. Its JSON kind must be
 `selection_preview`. Reuse the same policy and unchanged source artifacts.
