@@ -1048,3 +1048,7 @@ continuity because this environment exposes neither /loop nor a cron tool.
 E041 validation: full regression 240 passed, two dependency skips; final chat
 tests 10 passed; desktop screenshot visually inspected. Scientific computations
 were not repeated. Remaining live chat and docking discovery steps are documented.
+
+### 2026-09-21 Docking installation handoff
+Operator supplied Schrodinger 2025-1 paths and a PLANTS home directory. Added a separate trusted discovery profile, home expansion, permission checks and explicit-path precedence. Three local fixture tests passed. No binaries were executed; licenses, receptor/grid inputs, live docking and chat docking integration remain pending. See to_human/DOCKING_INSTALLATION.md.
+Full local regression: 243 passed, 2 optional-dependency skips; English guard and Bash syntax checks passed.

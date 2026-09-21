@@ -14,7 +14,11 @@ conversational_agent:
   new_target_chat_query_preparation: pending
   downstream_docking:
     reported_installed: [Schrodinger_Maestro_module, PLANTS]
-    executable_license_grid_validation: pending_workstation_probe
+    executable_license_grid_validation: paths_reported_permissions_licenses_grids_pending
+    schrodinger_root: /site/app9/schrodinger/2025-1
+    plants_executable_provisional: ~/PLANTS1.2/PLANTS1.2_64bit
+    profile_template: configs/docking/workstation.example.json
+    installation_guide: to_human/DOCKING_INSTALLATION.md
     probe: scripts/probe_docking_tools.sh
   live_chat_model_gpu_tested: false
   local_regression: 240_passed_2_dependency_skips

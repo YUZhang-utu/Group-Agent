@@ -6,15 +6,9 @@ if [[ $# -eq 1 ]]; then
   if ! type module >/dev/null 2>&1; then printf 'The module command is unavailable in this shell. Load your site environment first.\n' >&2; exit 2; fi
   module load "$1"
 fi
-"${AIDD_PY:-python}" - <<'PY'
-import json, os, shutil
-from pathlib import Path
-root = os.environ.get('SCHRODINGER')
-commands = {}
-for name in ('maestro', 'glide', 'ligprep', 'prepwizard', 'structconvert', 'PLANTS', 'plants'):
-    found = shutil.which(name)
-    candidates = [Path(root)/name, Path(root)/'utilities'/name] if root else []
-    commands[name] = found or next((str(p) for p in candidates if p.is_file()), None)
-print(json.dumps(dict(schrodinger_root=root, commands=commands,
-    scope='Read-only installation discovery; licenses, grids, docking execution and quality not tested'), indent=2))
-PY
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+PROFILE="${AIDD_DOCKING_PROFILE:-${AIDD_CONFIG_DIR:-/mnt/local/hand/yuzhang/aidd/config}/docking.local.json}"
+ARGS=()
+if [[ -n "${AIDD_DOCKING_PROFILE:-}" || -f "$PROFILE" ]]; then ARGS+=(--profile "$PROFILE"); fi
+"${AIDD_PY:-python}" -m aidd_agent.docking_discovery "${ARGS[@]}"
