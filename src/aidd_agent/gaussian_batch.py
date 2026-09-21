@@ -247,7 +247,8 @@ def prepare_gaussian_query(mmcif: Path, ccd: Path, query_manifest: Path,
                 "ccd": str(ccd.resolve()), "ccd_sha256": _sha256(ccd),
                 "query_manifest": str(query_manifest.resolve()),
                 "query_manifest_sha256": _sha256(query_manifest),
-                "query_id": document["query_id"], "anchor_mapping": anchor_mapping})
+                "query_id": document["query_id"], "anchor_mapping": anchor_mapping,
+                "feature_atom_indices": [list(row[2]) for row in feature_rows]})
 
 
 def _load_query(path: Path) -> tuple[dict, dict[str, np.ndarray]]:

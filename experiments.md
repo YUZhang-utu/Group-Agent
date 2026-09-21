@@ -1637,3 +1637,12 @@ real-library export and manual crystal/pose review remain workstation acceptance
 PLANTS executable permission success is user-reported; no docking was run here.
 Guide: to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md. No AF3 or library search was
 repeated locally. No continuity scheduler is exposed; repository checkpoints retain state.
+
+## E043 validation checkpoint
+
+Local suite: 267 passed, 2 skipped. Dense-versus-streamed exact descriptor Top-K,
+last-shard coverage, tie order, category geometry, HTML escaping, classified
+selection/export lineage, pocket translation and mocked reference redocking gates
+were checked. These are exploratory software checks, not chemistry acceptance.
+Workstation protocol and acceptance gaps are recorded in
+`to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md`.

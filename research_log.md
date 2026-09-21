@@ -1080,3 +1080,19 @@ repeated locally. No continuity scheduler is exposed; repository checkpoints ret
 
 ### 2026-09-21 E042 workstation ID representation fix
 User-reported evidence review failed at retrieval/refinement molecule identity comparison. Production retrieval stores S16 byte IDs; Gaussian stores U16 text IDs. str(bytes) introduced a false mismatch. Normalize identifier arrays with strict UTF-8 decoding on read, preserving scientific arrays and genuine mismatch checks. Updated fixtures to production byte retrieval IDs, plus genuine mismatch and invalid encoding tests. Full regression: 260 passed, 2 skips; English guard and diff checks passed. Keep completed search artifacts; restart updated chat and create a fresh evidence task rather than resuming an old code-bound review. Live retry pending.
+
+## 2026-09-21 — E043 exhaustive screening and classified query evidence
+
+Implemented exact chunked descriptor Top-K over all catalog conformers, a native
+crystal-query feature classification report (HTML/CSV/JSON), and classified
+selection/export provenance. PLIP and candidate complexes are not prerequisites.
+Seven interaction hypothesis categories are represented; halogen-specific matching
+is explicitly unsupported by the current feature schema. Original E031 ranking
+is unchanged. Added reference-ligand pocket derivation and separate PrepWizard /
+LigPrep / Glide commands with a reference redocking gate before candidate docking.
+
+Local exploratory engineering validation: 267 tests passed, 2 dependency skips.
+Full-library timing, real crystal chemistry and licensed 2025-1 execution remain
+pending on the workstation. No activity or candidate pose-quality acceptance.
+Protocol: experiments/E043-exhaustive-contacts-docking-protocol.md.
+Guide: to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md.

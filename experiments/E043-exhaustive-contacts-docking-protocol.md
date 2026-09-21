@@ -23,3 +23,13 @@ and failure handling using mocked executables. Live whole-library, PLIP and lice
 docking checks remain workstation work. No service SLA or biological claim.
 
 Continuity uses repository checkpoints; this environment has no scheduler tool.
+
+## User correction before implementation of contact classification
+
+The user clarified that this is ligand-based 3D query matching, not per-candidate
+complex/docking interaction analysis. PLIP is not installed and must not become a
+default dependency. Implement native crystal-derived contact hypotheses for the
+existing indexed feature families, then match these features in stored candidate
+poses. Keep unsupported classes explicit rather than calling all features verified
+contacts. Derive pocket center/extent from the selected crystal ligand; generate
+reviewable protein/ligand preparation jobs before docking. No prepared inputs exist.

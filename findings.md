@@ -451,3 +451,12 @@ No live model/GPU chat test was performed here. Repository checkpoints provide
 continuity because this environment exposes neither /loop nor a cron tool.
 
 E042 separates crystal-contact evidence, candidate feature matching and explicit human selection. Tests demonstrate that separate conformers cannot jointly satisfy an ALL policy. A docking handoff is not prepared docking input or pose acceptance. See to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md.
+
+## E043 coverage and interpretation
+
+Chat retrieval now defaults to an exhaustive descriptor pass over the catalog;
+Gaussian refinement still receives a bounded candidate set. Actual exhaustive
+scan cost belongs to query execution. Native crystal-derived feature categories
+make the available selection evidence visible without claiming candidate-protein
+contacts. Original E031 outputs are retained. Real-library timing and scientific
+classification acceptance remain pending; no PLIP dependency was introduced.

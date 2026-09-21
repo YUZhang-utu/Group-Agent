@@ -10,6 +10,12 @@ not establish live provider, protein API, AF3 or real-library success.
 
 ## Planning contract
 
+Use the [E043 guide](../../../to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md) for
+chat search, classified evidence, manual selection, crystal-pocket preparation and
+Glide execution. Source-task actions are constructed by the trusted local chat
+coordinator, not accepted as arbitrary provider-generated plans. Classification
+requires no PLIP. Docking is a separate explicitly requested stage.
+
 The provider profile selects an actual endpoint/model and an API-key environment
 variable. Never put the secret in configuration JSON, logs, plans or Git. JSON mode
 can be disabled for compatible providers that lack it; local validation still

@@ -8,6 +8,15 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For exhaustive descriptor coverage and classified crystal-derived query features,
+read the [E043 guide](../../../to_human/E043_EXHAUSTIVE_CLASSIFIED_SEARCH.md).
+New chat searches default to exhaustive retrieval; the low-level CLI needs
+`--exhaustive`. Its actual scan belongs to online execution time. Classification
+uses native feature hypotheses, requires no PLIP and does not validate candidate
+protein contacts. Halogen-specific matching remains unsupported. Preserve original
+E031 rankings. Pocket preparation and reference-gated Glide execution are separate
+explicit tasks; real chemistry and licensed execution require workstation checks.
+
 - For a single calibrated search, use `scripts/run_e036_fast_3d.sh` or the
   `search_3d` prompt action. Read the [E036 guide](../../../to_human/E036_FAST_3D_RUN.md).
 - To compare scheduling and bounded seed generation, use

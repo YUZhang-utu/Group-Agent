@@ -145,14 +145,22 @@ def load_runtime(path):
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     action, params = step["action"], step["params"]
-    if action in {"review_screening", "select_screening", "export_screening"}:
+    if action in {"review_screening", "classify_screening", "select_screening", "export_screening", "prepare_docking", "run_docking"}:
         from .screening_selection import upstream, review, preview, export
-        source_action = {"review_screening": "search_3d", "select_screening": "review_screening",
-                         "export_screening": "select_screening"}[action]
+        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "select_screening": ("review_screening","classify_screening"),
+                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking"}[action]
         source, _ = upstream(execution, params["source_run"], source_action)
         output = directory / "screening"
         if action == "review_screening": summary = review(source, output)
+        elif action == "classify_screening":
+            if not allow_compute: raise Blocked("Enable --allow-compute to score expanded 3D features")
+            from .classified_features import classify
+            summary = classify(source, output)
         elif action == "select_screening": summary = preview(source, output, {k:v for k,v in params.items() if k != "source_run"})
+        elif action in {'prepare_docking','run_docking'}:
+            from .docking_preparation import prepare, run
+            if action=='run_docking' and not allow_compute:raise Blocked('Enable --allow-compute for licensed preparation and docking')
+            summary=(prepare if action=='prepare_docking' else run)(source,output)
         else: summary = export(source, output)
         return dict(status=summary["kind"], report=str(output / "report.json"),
                     e031_changes_ranking=False, biological_quality="not_evaluated")
@@ -236,6 +244,7 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
                    "--workers", str(search["workers"]), "--coarse-chunk", str(search["coarse_chunk"]),
                    "--refine-chunk", str(search["refine_chunk"]), "--fresh-retrieval"]
         if search["bounded_pair_seeds"]: command.append("--bounded-pair-seeds")
+        if params.get("retrieval_mode", "exhaustive") == "exhaustive": command.append("--exhaustive")
         if output.exists(): command.append("--resume")
         _atomic_json(directory / "command.json", dict(argv=command, source="allowlisted_search_adapter"))
         services.run_command(command, directory / "execution.log")
@@ -295,10 +304,13 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     _atomic_json(execution / "report.json", report)
                     if "source_run" in step["params"]:
                         from .screening_selection import upstream
-                        source_action = {"review_screening": "search_3d", "select_screening": "review_screening",
-                                         "export_screening": "select_screening"}[step["action"]]
+                        source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "select_screening": ("review_screening","classify_screening"),
+                                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking"}[step["action"]]
                         _, source_files = upstream(execution, step["params"]["source_run"], source_action)
                         dependencies.extend(source_files)
+                        if step['action']=='prepare_docking':
+                            from .docking_preparation import profile_path
+                            dependencies.append(profile_path())
                         for source_file in source_files:
                             if source_file.name == "report.json":
                                 dependencies.extend(map(Path, ev.read(source_file).get("sources", {})))

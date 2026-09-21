@@ -20,16 +20,16 @@ from .language_policy import contains_han
 WORKFLOWS = [
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
     {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein and optional CCD ligands; installed native or Apptainer profile."},
-    {"name": "3D screening", "status": "calibrated WEE1 only", "scope": "USRCAT retrieval, Gaussian rigid refinement and annotation-only E031 for QT9/824."},
+    {"name": "3D screening", "status": "WEE1 templates; exhaustive coarse retrieval by default", "scope": "All conformer descriptors compared before budgeted Gaussian refinement. Approximate mode requires explicit selection. New exhaustive runs are not claimed equivalent to old ANN candidate sets."},
     {"name": "Screening evidence and human selection", "status": "available", "scope": "Review a completed search, preview explicit same-pose anchor conditions, then separately request SDF/ID export for docking preparation."},
     {"name": "New-target query preparation", "status": "not exposed in chat", "scope": "Requires reference ligand/site, query preparation and independent retrieval calibration."},
     {"name": "Molecule aggregation and pocket QC", "status": "CLI components; chat integration pending", "scope": "Requires validated query poses, receptor/site definitions and aggregation artifacts."},
-    {"name": "Flexible docking and rescoring", "status": "not implemented as a validated executor", "scope": "Schrodinger/Maestro and PLANTS reported installed; CLI/license/grid discovery, receptor/ligand preparation and redocking/cross-docking remain pending."},
+    {"name": "Flexible docking", "status": "Glide preparation/execution adapter; workstation validation pending", "scope": "Derive pocket from crystal ligand, prepare inputs, explicitly run licensed preparation and reference-gated docking. PLANTS execution and cross-docking validation remain pending."},
     {"name": "Biological enrichment and final selection", "status": "not validated", "scope": "Requires held-out active/decoy labels, diversity/property criteria and experimental evidence."},
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
 intent, message, task_id, request, and ONLY for select a selection object.
-intent is run/status/results/resume/cancel/capabilities/clarify/evidence/select/export.
+intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/select/export/prepare_docking/run_docking.
 Write message in English. task_id is an existing task ID from this session or null (latest).
 request is a self-contained scientific request only for run, otherwise empty.
 Use conversation context to resolve follow-up clarifications. Never invent biological sequences,
@@ -40,6 +40,16 @@ not substitute WEE1 for another target. AF3 prediction cannot automatically crea
 search query. Missing organism/construct/reference information requires clarification. Do not
 claim a task is queued or complete: the local executor reports its actual status.
 Use evidence to classify anchors and counts from a completed search task; no new search.
+Use classify on a completed evidence task to derive broader crystal-based query features
+(hydrophobic, aromatic, charge, water and metal hypotheses) and match stored 3D poses.
+This requires no PLIP or docking. Halogen-specific features are not indexed.
+Use prepare_docking after a completed export to derive the pocket from the crystal
+ligand and generate reviewed Glide preparation/grid/redocking commands. No prepared
+grid is needed in advance. Use run_docking only on an existing preparation task when
+the user explicitly requests execution. This runs PrepWizard/LigPrep, grid generation,
+reference redocking, then candidate docking only if the reference RMSD gate passes.
+Do not run these during 3D feature classification. Local licenses/version compatibility
+and preparation chemistry must be reviewed; PLANTS execution is not supported yet.
 Use select for a selection preview from a completed evidence task. selection must contain
 required_anchors (exact full IDs from that task), match_mode (all or any), minimum_score
 (explicit user threshold in (0,1]), and optional max_molecules (explicit user cap).
@@ -56,7 +66,7 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 def validate_route(value):
     if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "select", "export"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "select", "export", "prepare_docking", "run_docking"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -85,12 +95,18 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
-        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "select_screening", "export_screening"}: continue
+        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "select_screening", "export_screening", "prepare_docking", "run_docking"}: continue
         path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
         child = read_json(path) or {}
+        if child.get('kind') in {'docking_preparation','docking_execution'}:
+            return {k:child[k] for k in ('kind','status','engine','geometry','preparation_status','policy','reference_validation','pose_quality') if k in child}
         summary = {k:child[k] for k in ("kind", "library", "refined_molecule_union", "retrieved_molecule_union", "retrieved_conformer_union", "counts", "policy", "approval", "sdf", "ids", "preparation", "docking_status") if k in child}
         if child.get("kind") == "screening_evidence":
-            summary["queries"] = [dict(query_id=q["query_id"], counts=q["counts"], anchors=[
+            if child.get('classification'):
+                summary['classification']=child['classification'];summary['interaction_table']=str(path.parent/'interactions.html')
+                summary['class_counts']={k:len(v) for k,v in child['classes'].items()}
+                summary['unsupported_classes']=child['unsupported_classes']
+            summary["queries"] = [dict(query_id=q["query_id"], counts=q["counts"], retrieval=q.get('retrieval',{}), anchors=[
                 {k:a[k] for k in ("anchor_id", "feature_class", "ligand_atom_indices", "evidence_class", "evidence", "diagnostic_counts")} for a in q["anchors"]]) for q in child["queries"]]
             summary["interpretation"] = "Feature-match hypotheses, not validated candidate hydrogen bonds; diagnostic score thresholds are not probabilities or accepted cutoffs."
         return summary
@@ -99,11 +115,15 @@ def screening_summary(job):
 
 def screening_feedback(summary):
     lines = [summary["kind"].replace("_", " ").capitalize()]
+    if summary['kind'] in {'docking_preparation','docking_execution'}:return json.dumps(summary,indent=2)
     if summary.get("library"):
         lines.append(f"Library: {summary['library']['library_conformers']:,} conformers / {summary['library']['library_molecules']:,} source-grouped molecules.")
     for q in summary.get("queries", []):
         c = q["counts"]
         lines.append(f"{q['query_id']}: retrieved {c['retrieved_conformers']:,} conformers / {c['retrieved_molecules']:,} molecules; refined {c['refined_conformers']:,} conformers / {c['refined_molecules']:,} molecules.")
+        retrieval=q.get('retrieval',{})
+        if retrieval.get('mode')=='exhaustive':lines.append(f"Exhaustive coarse coverage: {retrieval['compared_conformers']:,}/{retrieval['total_conformers']:,} conformers compared.")
+        else:lines.append('This source search does not establish exhaustive descriptor coverage.')
         for a in q["anchors"]:
             evd = a["evidence"]
             partner = evd.get("protein_partner", {})
@@ -112,7 +132,12 @@ def screening_feedback(summary):
             lines.append("Diagnostic molecule counts: " + "; ".join(f"score >= {d['minimum_score']}: {d['molecules']}" for d in a["diagnostic_counts"]))
     if "refined_molecule_union" in summary:
         lines.append(f"Across queries: {summary['retrieved_molecule_union']:,} retrieved / {summary['refined_molecule_union']:,} refined distinct source-grouped molecules. Do not sum per-query molecule counts.")
-        lines.append("HBA = ligand acceptor; HBD = ligand donor. These are crystal-derived feature hypotheses, not verified candidate hydrogen bonds. Other interaction classes are unassessed.")
+        lines.append("HBA = ligand acceptor; HBD = ligand donor. These are crystal-derived feature hypotheses, not verified candidate-protein contacts.")
+        if summary.get('classification'):
+            lines.append('Class counts: '+json.dumps(summary['class_counts']))
+            lines.append('Classification table: '+summary['interaction_table'])
+            lines.append('Unassessed classes: '+', '.join(summary['unsupported_classes']))
+        else: lines.append('Other interaction classes are unassessed. Use /classify REVIEW_TASK_ID for broader crystal-derived feature hypotheses.')
         lines.append("Next: specify exact anchor IDs from one query, all/any mode and a minimum score in (0,1]. Diagnostic thresholds are illustrative, not validated cutoffs. Request a preview first.")
     if "counts" in summary:
         lines.extend(f"{k}: {v:,}" for k,v in summary["counts"].items())
@@ -255,7 +280,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/export"}:
+            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/export", "/prepare_docking", "/run_docking"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
             else:
@@ -269,6 +294,10 @@ class ChatAgent:
                 # no library structures, raw arrays, logs or credentials are uploaded.
                 for item in context["tasks"][-3:]:
                     item["screening_evidence"] = screening_summary(self.task(sid, item["id"]))
+                    for q in item['screening_evidence'].get('queries',[]):
+                        q['total_anchors']=len(q['anchors'])
+                        q['anchors']=[{k:a[k] for k in ('anchor_id','feature_class')} for a in q['anchors'][:64]]
+                        q['context_note']='At most 64 anchor IDs per query shown; ask for exact IDs from the full table if missing.'
                 context["latest_message"] = text
                 prompt = json.dumps(context, ensure_ascii=False)
                 if len(prompt) > 20000: context["conversation"] = context["conversation"][-4:]; prompt = json.dumps(context, ensure_ascii=False)
@@ -279,19 +308,19 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent in {"evidence", "select", "export"}:
+            if intent in {"evidence", "classify", "select", "export", "prepare_docking", "run_docking"}:
                 job = self.task(sid, decision["task_id"])
                 if job["status"] != "complete" or not job["plan"]:
                     raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":"search_3d", "select":"review_screening", "export":"select_screening"}[intent]
+                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "select":{"review_screening","classify_screening"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
                 details = read_json(job["report"]) or {}
-                if sum(s.get("action") == expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
-                    raise ValueError("Choose a completed " + expected + " task")
-                action = {"evidence":"review_screening", "select":"select_screening", "export":"export_screening"}[intent]
+                if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
+                    raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
+                action = {"evidence":"review_screening", "classify":"classify_screening", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
                 params = dict(source_run=Path(job["plan"]).parent.name)
                 if intent == "select": params.update(decision["selection"])
-                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts",
-                    "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation"}[intent],
+                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses",
+                    "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
                     clarifications=[], steps=[dict(id="screening", action=action, params=params)])
                 ctx = self.context
                 plan = create_plan(Path(ctx["db"]), ctx["user_id"], ctx["project_id"], text, local_plan=local_plan)
@@ -300,6 +329,7 @@ class ChatAgent:
                     db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
                         (jid,sid,local_plan["summary"],provider,"","queued",str(plan),str(plan.parent / "execution/report.json"),str(self.root / (jid+".log")),time.time()))
                 answer = f"Task {jid} queued: {local_plan['summary']}. Source task: {job['id']}. No new search or docking job is launched."
+                if intent=='run_docking':answer=f"Task {jid} queued for preparation, reference redocking and gated candidate docking. Source task: {job['id']}."
             elif intent == "run":
                 jid = uuid.uuid4().hex[:16]
                 log = str(self.root / (jid + ".log"))

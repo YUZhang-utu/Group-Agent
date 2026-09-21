@@ -210,3 +210,11 @@ The initial sandboxed Edge renderer failed; approved headless execution produced
 the inspected screenshot under outputs/e041/chat-desktop.png.
 
 E042: 258 local tests passed, 2 optional-dependency skips; 15 evidence/selection tests passed after final fixture portability adjustment. Fixture evidence only; live model routing, library exports and manual review pending.
+
+## E043 engineering benchmarks
+
+Exhaustive retrieval is compared to dense exact Top-K on a multi-shard fixture,
+including ties and final-shard candidates. Classified-feature lineage and a
+mocked reference-pose gate are tested separately. Passing local tests does not
+establish real 25,813,808-conformer timing, category accuracy, or licensed docking
+compatibility. Exhaustive candidate sets are not required to equal old ANN sets.

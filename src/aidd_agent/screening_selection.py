@@ -58,7 +58,8 @@ def upstream(execution, run_id, action):
     report, marker = ev.read(report_path), ev.read(report_path.parent / "RUN_STATUS.json")
     if report.get("status") != "complete" or marker != dict(status="complete", report_sha256=ev.sha(report_path)):
         raise ValueError("Source task must have a completed report receipt")
-    steps = [(sid, s) for sid, s in report["steps"].items() if s["action"] == action and s["status"] == "complete"]
+    allowed = {action} if isinstance(action,str) else set(action)
+    steps = [(sid, s) for sid, s in report["steps"].items() if s["action"] in allowed and s["status"] == "complete"]
     if len(steps) != 1:
         raise ValueError("Source task must contain exactly one matching completed step")
     sid, step = steps[0]
@@ -140,7 +141,12 @@ def review(search_report, output):
     protocol = ev.read(paths[-1])
     queries, union, retrieval_union, retrieved_ids = [], set(), set(), set()
     for row in report["queries"]:
-        if not row["gaussian_equivalence"]["passed"] or not row["annotation_equivalence"]["passed"]:
+        exhaustive = row.get("retrieval", {}).get("mode") == "exhaustive"
+        if exhaustive:
+            retrieval = row["retrieval"]
+            if not protocol.get("exhaustive") or retrieval.get("coverage_fraction") != 1.0 or retrieval.get("compared_conformers") != retrieval.get("total_conformers"):
+                raise ValueError("Incomplete exhaustive coverage")
+        elif not row["gaussian_equivalence"]["passed"] or not row["annotation_equivalence"]["passed"]:
             raise ValueError("Search equivalence did not pass")
         cfg = row["gaussian"]["config"]
         rigid_path = ensure_within(Path(row["gaussian"]["final_result"]), search_report.parent)
@@ -189,7 +195,7 @@ def review(search_report, output):
             assigned = s[OBJECTIVE + "__anchor_assignments"][:, a["score_column"]] >= 0
             a["diagnostic_counts"] = [{"minimum_score": t, "conformers": int(np.sum(assigned & (values >= t))),
                 "molecules": len(set(map(str, r["molecule_ids"][assigned & (values >= t)])))} for t in (.25, .5, .75)]
-        queries.append(dict(query_id=row["query_id"], anchors=anchors,
+        queries.append(dict(query_id=row["query_id"], anchors=anchors, retrieval=row.get("retrieval", {}),query_npz=str(query_path),
             counts=dict(retrieved_conformers=len(schedule["global_ids"]), retrieved_molecules=len(set(map(str, schedule["molecule_ids"]))),
                         refined_conformers=len(r["global_ids"]), refined_molecules=len(set(map(str, r["molecule_ids"])))),
             rigid=str(rigid_path), sidecar=str(side_path),
@@ -211,6 +217,9 @@ def review(search_report, output):
         unsupported_classes=["hydrophobic_contacts", "pi_stacking", "salt_bridges", "water_bridges", "metal_coordination"],
         e031_changes_ranking=False, biological_quality="not_evaluated",
         policy="Diagnostic threshold counts only; no candidates selected. Anchor columns shared by mapped anchors are not independent evidence.")
+    for q in queries:
+        if q['retrieval'].get('mode')=='exhaustive' and (not library or q['retrieval']['compared_conformers']!=library['library_conformers']):
+            raise ValueError('Exhaustive compared count differs from accepted library')
     result["classes"] = {kind: [a["anchor_id"] for q in queries for a in q["anchors"] if a["feature_class"] == kind]
                          for kind in sorted({a["feature_class"] for q in queries for a in q["anchors"]})}
     _atomic_json(output / "report.json", result)
@@ -268,7 +277,7 @@ def preview(review_path, output, policy):
     matched = len(rows)
     if "max_molecules" in policy: rows = rows[:policy["max_molecules"]]
     output = Path(output); output.mkdir(parents=True, exist_ok=True)
-    result = dict(status="complete", kind="selection_preview", policy=policy, query=q,
+    result = dict(status="complete", kind="selection_preview", policy=policy, query=q,evidence_report=str(Path(review_path).resolve()),
         counts=dict(**q["counts"], matching_conformers=conformers, matching_molecules=matched,
                     selected_molecules=len(rows), selected_representatives=len(rows)), representatives=rows,
         sources={**evidence["sources"], **fingerprint([review_path])}, e031_changes_ranking=False,
@@ -293,7 +302,9 @@ def export(preview_path, output):
     q = selected["query"]
     # Recompute selection from sealed inputs before writing an export.
     with tempfile.TemporaryDirectory() as tmp:
-        review_paths = [Path(p) for p in selected["sources"] if Path(p).name == "report.json" and ev.read(p).get("kind") == "screening_evidence"]
+        review_paths = ([Path(selected['evidence_report'])] if selected.get('evidence_report') else
+            [Path(p) for p in selected["sources"] if Path(p).name == "report.json" and ev.read(p).get("kind") == "screening_evidence"])
+        if any(str(p.resolve()) not in selected['sources'] for p in review_paths): raise ValueError('Unsealed selection evidence')
         if len(review_paths) != 1: raise ValueError("Ambiguous evidence lineage")
         expected = preview(review_paths[0], Path(tmp), selected["policy"])
     if expected["representatives"] != selected["representatives"] or expected["counts"] != selected["counts"]:
@@ -319,7 +330,7 @@ def export(preview_path, output):
             f.write(text)
     _atomic_json(output / "selected-ids.json", rows)
     check_hashes(selected["sources"])
-    result = dict(status="complete", kind="docking_handoff", counts=selected["counts"], policy=selected["policy"],
+    result = dict(status="complete", kind="docking_handoff", counts=selected["counts"], policy=selected["policy"],query=q,
         sdf=str(output / "selected-poses.sdf"), ids=str(output / "selected-ids.json"),
         sources={**selected["sources"], **fingerprint([preview_path])},
         outputs=fingerprint([output / "selected-poses.sdf", output / "selected-ids.json"]),
