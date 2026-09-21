@@ -65,7 +65,7 @@ def compute_chunk(task):
     if _BOUND is not None:
         return compute_funnel_chunk(task, ids, started)
     # No descriptor Top-K and no Gaussian Top-N: every supplied ID is evaluated.
-    rigid = _score_ids(reader, original, ids, **POSE_PARAMETERS)
+    rigid = _score_ids(reader, original, ids, backend=query.get('pose_backend','reference'), **POSE_PARAMETERS)
     _, assignments, scores = score_batched(Path(query['artifact_catalog']),
         Path(query['chemical_companion']), expanded, ids, rigid['molecule_ids'],
         rigid['conformer_ids'], [OBJECTIVE], {OBJECTIVE: rigid[OBJECTIVE+'__transform']},
@@ -102,6 +102,7 @@ def compute_funnel_chunk(task, ids, started):
         OBJECTIVE+'__transform':np.tile(np.eye(4).reshape(1,16),(n,1)),
         OBJECTIVE+'__anchor_scores':np.zeros((n,width)),
         OBJECTIVE+'__anchor_assignments':np.full((n,width),-2,dtype=np.int32)})
+    pose_seconds = annotation_seconds = 0.
     reused = False
     if query.get('reuse_directory'):
         legacy = Path(query['reuse_directory'])/f"chunk-{start//query['reuse_chunk_size']:08d}.npz"
@@ -118,12 +119,16 @@ def compute_funnel_chunk(task, ids, started):
             arrays['pose_evaluated'] = np.ones(n,dtype=bool)
             reused = True
     if keep.any() and not reused:
-        rigid = _score_ids(reader,original,ids[keep],**POSE_PARAMETERS)
+        stage_started = time.perf_counter()
+        rigid = _score_ids(reader,original,ids[keep],backend=query.get('pose_backend','reference'),**POSE_PARAMETERS)
         ev.require(np.array_equal(rigid['molecule_ids'],arrays['molecule_ids'][keep]) and
                    np.array_equal(rigid['conformer_ids'],arrays['conformer_ids'][keep]), 'Prefilter/pose identity mismatch')
+        pose_seconds = time.perf_counter()-stage_started
+        stage_started = time.perf_counter()
         _, assignments, scores = score_batched(Path(query['artifact_catalog']),Path(query['chemical_companion']),
             expanded,ids[keep],rigid['molecule_ids'],rigid['conformer_ids'],[OBJECTIVE],
             {OBJECTIVE:rigid[OBJECTIVE+'__transform']},sigma=1.,cutoff=4.5,angular_power=2.)
+        annotation_seconds = time.perf_counter()-stage_started
         arrays[OBJECTIVE+'__objective'][keep] = rigid[OBJECTIVE+'__objective']
         arrays[OBJECTIVE+'__transform'][keep] = rigid[OBJECTIVE+'__transform'].reshape(-1,16)
         arrays[OBJECTIVE+'__anchor_scores'][keep] = scores[OBJECTIVE]
@@ -131,7 +136,7 @@ def compute_funnel_chunk(task, ids, started):
     arrays['condition_passed'] = pose_mask(arrays,columns,policy,OBJECTIVE)
     _atomic_savez(Path(target),arrays)
     receipt = dict(start=start,stop=stop,sha256=ev.sha(target),wall_seconds=time.perf_counter()-started,
-        prefilter_seconds=prefilter_seconds,prefilter_passed=int(keep.sum()),
+        prefilter_seconds=prefilter_seconds,pose_seconds=pose_seconds,annotation_seconds=annotation_seconds,pose_backend=query.get('pose_backend','reference'),prefilter_passed=int(keep.sum()),
         prefilter_rejected=int((~keep).sum()),rejection_reasons=dict(reasons),
         matching_conformers=int(arrays['condition_passed'].sum()))
     receipt['legacy_chunk_reused'] = reused
@@ -332,8 +337,12 @@ def run_funnel(selection, output, **kwargs):
     return run(source,output,condition=normalize_policy(selected['policy']),selection_source=selection,**kwargs)
 
 
-def run(source, output, *, workers=8, chunk_size=2048, max_chunks=None, condition=None, selection_source=None, reuse=None):
+def run(source, output, *, workers=None, chunk_size=256, max_chunks=None, condition=None, selection_source=None, reuse=None, backend=None):
     from .prompt_workflow import file_lock
+    from .pose_acceleration import hardware_options, array_module
+    backend, workers = hardware_options(backend,workers)
+    if backend == 'cupy': array_module(backend)
+    ev.log(f'Pose backend: {backend}; workers: {workers}; chunk size: {chunk_size}')
     source, output = Path(source).resolve(), Path(output).resolve()
     ev.require(workers > 0 and chunk_size > 0 and (max_chunks is None or max_chunks > 0), 'Invalid scheduling')
     evidence = ev.read(source)
@@ -349,6 +358,7 @@ def run(source, output, *, workers=8, chunk_size=2048, max_chunks=None, conditio
         ev.require(len(selected_queries) == 1, 'A funnel rule must use one crystal query')
         evidence['queries'] = [q for q in evidence['queries'] if q['query_id'] in selected_queries]
         for q in evidence['queries']: q['condition_policy'] = condition
+    for q in evidence['queries']: q['pose_backend'] = backend
     for q in evidence['queries']:
         for protected in (source.parent, Path(q['artifact_catalog']).resolve().parent,
                           Path(q['chemical_companion']).resolve().parent):
@@ -397,7 +407,7 @@ def run(source, output, *, workers=8, chunk_size=2048, max_chunks=None, conditio
                         sources[str((directory/filename).resolve())] = record['sha256']
                     sources.update(fingerprint([manifest]))
         protocol = dict(source_hashes=sources, code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))),
-                        chunk_size=chunk_size, pose_parameters=POSE_PARAMETERS, thresholds=THRESHOLDS,
+                        chunk_size=chunk_size, pose_parameters=POSE_PARAMETERS, thresholds=THRESHOLDS, pose_backend=backend,
                         numpy=np.__version__, candidate_top_k=None, gaussian_top_n=None,condition_policy=condition,
                         reuse=str(Path(reuse).resolve()) if reuse else None)
         # JSON normalizes tuple values, including thresholds.
@@ -407,7 +417,7 @@ def run(source, output, *, workers=8, chunk_size=2048, max_chunks=None, conditio
         _atomic_json(path, protocol)
         started = time.perf_counter()
         result = dict(kind='condition_funnel' if condition else 'full_library_conditions', condition_policy=condition,
-            status='running', queries=[], sources=sources,
+            status='running', queries=[], sources=sources, hardware=dict(pose_backend=backend,workers=workers,chunk_size=chunk_size),
             library=evidence['library'], classification=evidence['classification'], classes=evidence['classes'],
             unsupported_classes=evidence['unsupported_classes'], e031_changes_ranking=False,
             policy='All catalog conformers; one heuristic anchored-Gaussian pose per conformer, not all possible poses. No Top-K/Top-N membership truncation.',
@@ -452,10 +462,23 @@ def run(source, output, *, workers=8, chunk_size=2048, max_chunks=None, conditio
                 result['queries'].append(q)
                 _atomic_json(output/'report.json', result)
                 try:
-                    # Persistent workers reuse the mapped library and query across chunks.
-                    with ProcessPoolExecutor(max_workers=workers, initializer=initialize, initargs=(q,)) as pool:
-                        for _, receipt in bounded_results(pool, compute_chunk, tasks(), workers*2):
+                    # One CUDA owner; CPU execution uses persistent mapped workers.
+                    from contextlib import nullcontext
+                    gpu = backend == 'cupy'
+                    if gpu: initialize(q)
+                    context = nullcontext(None) if gpu else ProcessPoolExecutor(max_workers=workers, initializer=initialize, initargs=(q,))
+                    with context as pool:
+                        results = ((task,compute_chunk(task)) for task in tasks()) if gpu else bounded_results(pool, compute_chunk, tasks(), workers*2)
+                        for _, receipt in results:
                             update_progress(receipt,False)
+                            elapsed = time.perf_counter()-started
+                            progress['elapsed_seconds'] = elapsed
+                            progress['checked_per_second'] = progress['checked_this_invocation']/max(elapsed,1e-9)
+                            progress['prefilter_survival_fraction'] = progress['prefilter_passed']/max(progress['checked_conformers'],1)
+                            _atomic_json(output/'progress.json',progress)
+                            if condition and progress['checked_conformers'] >= chunk_size*workers and progress['prefilter_rejected'] == 0:
+                                if progress['checked_conformers'] == chunk_size*workers:
+                                    ev.log('Prefilter has rejected zero rows so far; the necessary rule is nonselective on this sample. Final matches are separate. Benchmark before committing to a full run.')
                             detail = (f"; prefilter kept {receipt['prefilter_passed']}/{receipt['stop']-receipt['start']}; "
                                       f"matches {receipt['matching_conformers']}" if condition else '')
                             ev.log(f"{q['query_id']}: checked {progress['checked_conformers']} / {total}; "
@@ -514,11 +537,12 @@ def main():
     source.add_argument('--selection', type=Path, help='Explicit rule preview for conservative full-library funnel')
     p.add_argument('--reuse', type=Path, help='Optional stopped E044 output with compatible verified chunks')
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--workers', type=int, default=8)
-    p.add_argument('--chunk-size', type=int, default=2048)
+    p.add_argument('--workers', type=int, help='CPU default: affinity minus two, capped at 24; GPU: one')
+    p.add_argument('--backend', choices=['reference','numpy','cupy'], help='Default: AIDD_POSE_BACKEND or numpy')
+    p.add_argument('--chunk-size', type=int, default=256)
     p.add_argument('--max-chunks', type=int, help='Explicit pilot limit per query; incomplete coverage is labeled partial')
     a = p.parse_args()
-    options = dict(workers=a.workers,chunk_size=a.chunk_size,max_chunks=a.max_chunks,reuse=a.reuse)
+    options = dict(workers=a.workers,chunk_size=a.chunk_size,max_chunks=a.max_chunks,reuse=a.reuse,backend=a.backend)
     result = run_funnel(a.selection,a.output,**options) if a.selection else run(a.classification,a.output,**options)
     print(json.dumps(dict(status=result['status'], report=str(a.output/'report.json'))))
 

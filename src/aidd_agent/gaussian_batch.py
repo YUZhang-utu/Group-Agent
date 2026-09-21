@@ -333,7 +333,8 @@ def _query_self_overlaps(query: Mapping[str, np.ndarray], sigma: float,
 def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
                ids: np.ndarray, *, sigma: float, cutoff: float | None,
                pair_tolerance: float, axial_samples: int,
-               max_pair_seeds: int, bounded_pair_seeds: bool = False) -> dict[str, np.ndarray]:
+               max_pair_seeds: int, bounded_pair_seeds: bool = False,
+               backend: str = 'reference') -> dict[str, np.ndarray]:
     """Score a locked ID slice while caching every rigid-invariant self overlap."""
     query_shape = query["shape_points"]
     query_features = query["feature_points"]
@@ -373,7 +374,15 @@ def _score_ids(reader: ArtifactCatalogReader, query: Mapping[str, np.ndarray],
                 types=candidate.feature_types),
         }
         best = {name: None for name in OBJECTIVES}
-        for seed_index, seed in enumerate(seeds):
+        accelerated = backend != 'reference'
+        if accelerated:
+            from .pose_acceleration import cross_overlaps, winner_indices
+            cross = cross_overlaps(query,candidate,seeds,sigma=sigma,cutoff=cutoff,backend=backend)
+            selected_seeds = winner_indices(cross,query_self,candidate_self,contenders=True)
+        else:
+            selected_seeds = range(len(seeds))
+        for seed_index in selected_seeds:
+            seed = seeds[seed_index]
             moved_shape = apply_transform(candidate.shape_points, seed.transform_matrix)
             moved_features = apply_transform(candidate.feature_points, seed.transform_matrix)
             shape_cross = gaussian_overlap(

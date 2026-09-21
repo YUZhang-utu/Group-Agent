@@ -15,3 +15,12 @@ FAISS official wiki: https://github.com/facebookresearch/faiss/wiki/How-to-make-
 
 ## E038 engineering API references — 2026-09-19
 Official API documentation (not research papers): OpenAI Chat Completions https://developers.openai.com/api/reference/resources/chat ; UniProt REST query help https://www.uniprot.org/help/api_queries ; RCSB Data API https://data.rcsb.org/ ; AlphaFold3 inputs https://github.com/google-deepmind/alphafold3/blob/main/docs/input.md . Used for provider-neutral JSON chat, public sequence/structure evidence, and basic AF3 dialect-v1 protein/CCD inputs compatible with existing local installations. No new biological findings from these API references.
+
+
+## E046 implementation references - 2026-09-21
+
+CuPy official installation: https://docs.cupy.dev/en/stable/install.html ; CUDA
+runtime component wheels and version-specific distributions. CuPy official
+performance guidance: https://docs.cupy.dev/en/stable/user_guide/performance.html ;
+asynchronous execution, synchronization and first-use costs. Engineering sources,
+not evidence of biological screening quality or measured RTX 5090 acceleration.

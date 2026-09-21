@@ -1,9 +1,22 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E045-necessary-condition-funnel
+current_experiment: E046-batched-pose-hardware
+hardware_pose_acceleration:
+  status: local_300_passed_3_skipped_workstation_pending
+  protocol: experiments/E046-batched-pose-protocol.md
+  guide: to_human/E046_HARDWARE_FUNNEL.md
+  chat_pilot: /benchmark
+  user_stopped_e045: true
+  displayed_e045_checked: 55296
+  displayed_e045_prefilter_survival: 1.0
+  backend_default: numpy_seed_batches
+  gpu_backend: optional_cupy_float64_single_owner_not_locally_validated
+  local_synthetic_cpu_speedup: 4.0377722354447645
+  local_synthetic_arrays_exact: true
+  full_library_speedup_and_counts: pending
 necessary_condition_funnel:
-  status: implemented_local_tests_passed_workstation_speedup_pending
+  status: workstation_prefix_nonselective_user_stopped_replaced_by_E046
   protocol: experiments/E045-necessary-condition-funnel-protocol.md
   guide: to_human/E045_NECESSARY_CONDITION_FUNNEL.md
   source: explicit_selection_rule_not_budgeted_candidate_ids
@@ -11,7 +24,7 @@ necessary_condition_funnel:
   bounds: type_direction_kind_injective_assignment_rigid_pair_distance
   baseline_qt9_observed_conformers_per_second: 85.93006993006993
   baseline_rate_scope: user_log_36864_rows_in_429_seconds_not_full_runtime
-  real_prefilter_survival_and_speedup: pending
+  real_prefilter_survival_and_speedup: displayed_55296_rows_all_survived_no_pruning_gain
   local_validation: 279_passed_2_dependency_skips
 full_library_conditions:
   status: implemented_local_tests_passed_workstation_pending

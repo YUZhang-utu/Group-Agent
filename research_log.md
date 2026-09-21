@@ -1151,3 +1151,22 @@ random rigid-transform retention at four thresholds, boundary cases, source-task
 routing, and legacy contradiction detection. Real necessary-condition survivor
 rates and end-to-end speedup are pending. Guide:
 to_human/E045_NECESSARY_CONDITION_FUNNEL.md.
+
+
+## 2026-09-21 - E046 after a nonselective E045 workstation pilot
+
+User stopped the run. Displayed 55,296 conformers all survived necessary bounds;
+final matches were sparse. This falsifies practical pruning efficiency on that
+prefix, not correctness or final specificity. Protocol was written before tests.
+Implemented seed-batched float64 Gaussian overlaps with shared color kernels and
+reference recomputation of near winners. Added conservative relative-direction
+bounds, affinity-sized CPU pools, optional one-owner CuPy, timing diagnostics and
+a session-bound /benchmark action. The pilot scores even rejected sample rows and
+checks all Gaussian/E031 arrays and actual condition membership against reference.
+Local five-conformer exploratory fixture: complete arrays exact; median 4.04x CPU
+scoring speedup, excluding library I/O and E031. GPU unavailable locally. No full
+library acceptance, CUDA performance or improved biological discrimination claim.
+Guide: to_human/E046_HARDWARE_FUNNEL.md. Larger cross-conformer GPU batching and
+quantified real-library pruning remain open if this pilot is insufficient.
+
+E046 regression: 300 passed, 3 dependency/GPU skips. English guard: 250 maintained files passed. No physical CUDA device was exercised in this environment.

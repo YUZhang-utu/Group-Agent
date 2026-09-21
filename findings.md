@@ -478,3 +478,14 @@ conjunctive feature rules admit rigid-invariant necessary bounds; unconstrained
 single-feature statistics often do not. Speed and recall claims must be attached
 to an explicit rule and pose protocol. E045 retains the old pose computation for
 survivors and labels conditional counts; runtime validation is still pending.
+
+
+## E046: necessary conditions can be nonselective
+
+The stopped E045 prefix retained all 55,296 displayed rows before precise scoring.
+Two broad feature requirements may admit most conformers under loose rigid
+necessary bounds. It is invalid to impose extra contacts or a tighter threshold
+silently. Speed work must preserve the user rule and optimize the scoring cost.
+Seed batching locally reduced repeated validation, kernel and Python record work;
+workstation CPU/CUDA pilots now compare outputs as well as timing. Richer feature
+classification does not itself prove better discrimination than pharmacophores.

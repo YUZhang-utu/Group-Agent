@@ -125,3 +125,30 @@ def test_funnel_skips_impossible_rows_and_preserves_uncapped_pass_set(tmp_path,m
     _atomic_savez(old,arrays);_atomic_json(old.with_suffix('.receipt.json'),dict(start=0,stop=2,sha256=full.ev.sha(old)))
     with pytest.raises(ValueError,match='rejected an existing passing pose'):
         full.compute_chunk((0,2,str(tmp_path/'invalid.npz')))
+
+
+@pytest.mark.parametrize('kinds',[[1,1],[2,2],[1,2]])
+@pytest.mark.parametrize('threshold',[.25,.5,.75,1.])
+def test_direction_bounds_preserve_true_rigid_matches(kinds,threshold):
+    rng=np.random.default_rng(462)
+    for _ in range(30):
+        points=rng.normal(size=(2,3))
+        directions=rng.normal(size=(2,3));directions/=np.linalg.norm(directions,axis=1)[:,None]
+        q=query(points,[1,2],kinds);q['feature_directions']=directions
+        rot,_=np.linalg.qr(rng.normal(size=(3,3)))
+        c=candidate(points@rot,[1,2],kinds);c.feature_directions=directions@rot
+        assert NecessaryConditions(q,[0,1],'all',threshold).check(c)[0]
+        # Perturb both directions within the score's angular cone.
+        perturbed=directions+rng.normal(size=(2,3))*.1
+        perturbed/=np.linalg.norm(perturbed,axis=1)[:,None]
+        c.feature_directions=perturbed@rot
+        scores=interaction_match(points,[1,2],directions,kinds,[1,1],points,[1,2],perturbed,kinds)['anchor_scores']
+        if np.all(np.array(scores)>=threshold):
+            assert NecessaryConditions(q,[0,1],'all',threshold).check(c)[0]
+
+
+def test_direction_pair_can_reject_geometry_that_distance_alone_retains():
+    q=query([[0,0,0],[2,0,0]],[1,2],[1,1]);q['feature_directions']=np.array([[1.,0,0],[1.,0,0]])
+    c=candidate([[0,0,0],[2,0,0]],[1,2],[1,1]);c.feature_directions=np.array([[1.,0,0],[-1.,0,0]])
+    assert not NecessaryConditions(q,[0,1],'all',.75).check(c)[0]
+    assert NecessaryConditions(q,[0,1],'any',.75).check(c)[0]

@@ -1664,3 +1664,13 @@ rule now controls cheap necessary-condition rejection before uncapped refinement
 No claim of real-library acceleration is made until survivor-rate and wall-time
 measurements exist. E044 user log established about 86 conformers/s for one QT9
 window, motivating this correction; it did not establish full-library counts.
+
+
+## E046 - hardware-aware equivalent pose scoring
+
+Protocol: experiments/E046-batched-pose-protocol.md. Exploratory local CPU fixture:
+all arrays identical, 4.04x median scoring speedup on five synthetic conformers.
+Workstation experiment: /benchmark on the saved selection rule, spread global IDs,
+reference / batched CPU / available CUDA, exact arrays and membership comparison.
+Reject acceleration acceptance on any discrete disagreement. Full-library work
+must follow an acceptable pilot, not be inferred from local synthetic throughput.

@@ -1,0 +1,17 @@
+{
+  "scope": "Five synthetic conformers; single process; includes seed construction and all Gaussian outputs; excludes library IO and E031",
+  "timings": {
+    "reference": [
+      0.05938819999573752,
+      0.05278620001627132,
+      0.050659600005019456
+    ],
+    "numpy": [
+      0.013352799986023456,
+      0.012952100019901991,
+      0.013073099951725453
+    ]
+  },
+  "all_arrays_exact": true,
+  "median_speedup": 4.0377722354447645
+}

@@ -53,3 +53,11 @@ Bind trusted new-target ligand/site artifacts to generic search before expanding
 calibration claims. Probe installed Glide/PLANTS and specify receptor/grid/ligand
 preparation and reference-ligand docking acceptance before adding executable chat
 actions. Integrate existing aggregation/pocket QC with explicit artifact dependencies.
+
+
+## E046 follow-up
+
+If seed-batched CuPy loses to multicore NumPy, investigate a CPU producer / single
+GPU consumer with cross-conformer buckets and pinned buffers; do not multiply GPU
+contexts. Profile seed generation separately. Assess stronger necessary bounds
+without adding unrequested interactions or rejecting uncertain geometry.

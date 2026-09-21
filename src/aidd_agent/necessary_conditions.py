@@ -35,6 +35,9 @@ class NecessaryConditions:
         if cutoff is not None: radius = min(radius,cutoff)
         self.pair_slack = 2*radius
         self.mode = mode
+        self.threshold = threshold
+        self.directions = (np.asarray(query['feature_directions'][indices],dtype=float)
+                           if 'feature_directions' in query else None)
 
     def check(self, candidate):
         points = np.asarray(candidate.feature_points,dtype=float)
@@ -50,6 +53,29 @@ class NecessaryConditions:
         if not distinct_assignment(domains): return False, 'distinct_assignment'
         if len(domains) == 1: return True, 'possible'
         distances = np.linalg.norm(points[:,None]-points[None,:],axis=2)
+        direction_compatibility = {}
+        if self.directions is not None and hasattr(candidate,'feature_directions'):
+            qd = self.directions
+            cd = np.asarray(candidate.feature_directions,dtype=float)
+            qnorm = np.linalg.norm(qd,axis=1)
+            cnorm = np.linalg.norm(cd,axis=1)
+            if not np.isfinite(cd).all() or cd.shape != points.shape:
+                raise ValueError('Invalid candidate directions')
+            q_unit = qd/np.maximum(qnorm[:,None],1e-12)
+            c_unit = cd/np.maximum(cnorm[:,None],1e-12)
+            ccos = np.clip(c_unit@c_unit.T,-1,1)
+            for i in range(len(domains)):
+                for j in range(len(domains)):
+                    if i == j or not self.kinds[i] or not self.kinds[j]: continue
+                    # score >= t implies angular agreement >= sqrt(t). Account
+                    # for allowed nonunit query vectors and normalize candidate
+                    # vectors exactly as the batched E031 geometry does.
+                    cones = np.arccos(np.clip(np.sqrt(self.threshold)/np.maximum(qnorm[[i,j]],1e-12),0,1))
+                    qc = np.clip(q_unit[i]@q_unit[j],-1,1)
+                    axis = self.kinds[i] == 2 or self.kinds[j] == 2
+                    qa = np.arccos(abs(qc) if axis else qc)
+                    ca = np.arccos(np.abs(ccos) if axis else ccos)
+                    direction_compatibility[i,j] = np.abs(ca-qa) <= cones.sum()+1e-5
         changed = True
         while changed:
             changed = False
@@ -59,10 +85,12 @@ class NecessaryConditions:
                     # An expanded margin makes floating-point uncertainty retain a row.
                     margin = 1e-5*(1+self.distances[i,j]+distances)
                     compatible = np.abs(distances-self.distances[i,j]) <= self.pair_slack+margin
+                    if (i,j) in direction_compatibility:
+                        compatible &= direction_compatibility[i,j]
                     np.fill_diagonal(compatible,False)
                     supported = (compatible & domains[j][None,:]).any(axis=1)
                     reduced = domains[i] & supported
-                    if not reduced.any(): return False, 'pair_distance'
+                    if not reduced.any(): return False, 'pair_distance_or_direction' if (i,j) in direction_compatibility else 'pair_distance'
                     if not np.array_equal(reduced,domains[i]):
                         domains[i] = reduced
                         changed = True

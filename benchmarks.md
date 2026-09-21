@@ -237,3 +237,14 @@ rigid fixtures under random transforms and boundary radii, reject impossible
 assignment graphs, and compare final pass IDs with an unfiltered small fixture.
 Legacy passing-pose contradictions stop a run. Workstation prefilter retention,
 wall-time speedup and scalability have not yet been measured.
+
+
+## E046 validation scope
+
+Measure necessary survival separately from final condition passage. All sampled
+rows, including rejects, receive reference scoring to audit false rejection.
+Compare complete Gaussian arrays, winning seeds/transforms, E031 assignments,
+per-anchor scores and selected membership. Record worker count, backend, sample
+IDs, code and input hashes. GPU absence is not GPU acceptance. Summed worker
+stage times differ from elapsed time. Small-pilot startup/I/O costs and source
+integrity checks must not be extrapolated as a production SLA.

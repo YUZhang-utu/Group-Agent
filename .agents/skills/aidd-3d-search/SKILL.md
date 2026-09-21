@@ -8,6 +8,15 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+Before another uncapped full-library run, use `/benchmark` on the latest saved
+selection preview and read [E046](../../../to_human/E046_HARDWARE_FUNNEL.md).
+The user stopped E045 after all displayed 55,296 rows survived the prefilter.
+CPU seed batching is locally tested; CuPy requires workstation equivalence and
+speed measurements. A pilot is not full-library acceptance. Do not promise GPU
+speedup or tighten conditions to manufacture pruning. No-ID `/benchmark` and
+`/funnel` resolve the latest completed selection preview in the same conversation.
+
+
 For a condition-driven full-library funnel use the
 [E045 guide](../../../to_human/E045_NECESSARY_CONDITION_FUNNEL.md) and
 `/funnel SELECTION_TASK_ID`. The source preview supplies the explicit rule only;
