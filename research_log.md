@@ -1414,3 +1414,16 @@ excluded. Arbitrary RuntimeError messages remain hidden. Thirty-four focused
 tests passed, including the real workflow error-reporting path for HTTP/context,
 timeout and connection failures. This repairs observability, not a verified
 workstation provider fault; a new recommendation request is needed to diagnose it.
+
+## 2026-09-22: Overnight checkpoint requested by user
+
+The user plans to verify tomorrow and requested a durable progress record.
+Created to_human/20260922_E053_OVERNIGHT_HANDOFF.md with workstation paths,
+environment/dependency history, branch/worktree resolution, exact failure chain,
+commit IDs, tested evidence, unresolved limitations and restart/recommend steps.
+Latest executable fix f64bbb8 is pushed but not yet confirmed tested remotely.
+The current blocker is the live recommendation RuntimeError with unknown cause;
+no E053 full-library run is confirmed. Reuse completed consensus in the same
+conversation; do not repeat discovery, resume changed-code failed tasks, erase
+untracked k or restart the explicitly stopped E050 job. No new experiment was
+launched for this documentation checkpoint.
