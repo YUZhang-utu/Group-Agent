@@ -1401,3 +1401,16 @@ path with a mock HTTP response, and verifies the normal planner still rejects
 oversized prompts. Thirty focused tests and the English-content guard passed.
 No live provider success is claimed. Existing completed structure/cohort tasks
 remain reusable; start a new recommendation task after restarting updated Chat.
+
+## 2026-09-22: Preserve safe LLM transport diagnostics
+
+The workstation recommendation still failed with only RuntimeError reported.
+The underlying provider/transport cause is not identifiable from that saved
+report. Introduced LLMRequestError for locally generated safe diagnostics and
+preserved that specific type through workflow reporting. Reports now distinguish
+HTTP status, allowlisted provider codes, timeout and connection failure, with
+prompt size and configured timeout; raw response bodies and credentials remain
+excluded. Arbitrary RuntimeError messages remain hidden. Thirty-four focused
+tests passed, including the real workflow error-reporting path for HTTP/context,
+timeout and connection failures. This repairs observability, not a verified
+workstation provider fault; a new recommendation request is needed to diagnose it.

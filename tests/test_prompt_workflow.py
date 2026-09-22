@@ -97,6 +97,31 @@ def test_chat_errors_redact_body_and_reject_truncated_output(monkeypatch):
         chat_plan("hello", dict(base_url="http://public.example/v1", model="test"))
 
 
+@pytest.mark.parametrize('failure', ['http', 'timeout', 'connection', 'unknown'])
+def test_model_transport_diagnostics_survive_workflow_report(tmp_path,monkeypatch,failure):
+    from urllib.error import URLError
+    from aidd_agent import prompt_workflow as workflow
+    context,path=make_plan(tmp_path)
+    class Opener:
+        def open(self,request,timeout):
+            if failure=='http':
+                raise HTTPError(request.full_url,400,'SECRET',{},io.BytesIO(json.dumps(
+                    dict(error=dict(code='context_length_exceeded',message='SECRET'))).encode()))
+            if failure=='timeout':raise TimeoutError('SECRET')
+            if failure=='connection':raise URLError('SECRET')
+            raise RuntimeError('SECRET')
+    def operation(*args,**kwargs):
+        return chat_plan('evidence',dict(base_url='https://example.org/v1',model='test'),Opener())
+    monkeypatch.setattr(workflow,'execute_step',operation)
+    result,_=run_plan(Path(context['db']),context['user_id'],context['project_id'],path,services=OfflineServices())
+    error=next(iter(result['steps'].values()))['error']
+    assert 'SECRET' not in error
+    expected={'http':'LLM HTTP 400; provider code=context_length_exceeded','timeout':'LLM request timed out',
+              'connection':'LLM connection failed','unknown':'RuntimeError'}
+    assert expected[failure] in error
+    if failure!='unknown':assert 'timeout=120s' in error
+
+
 def test_protein_species_identity_and_ambiguity():
     record = fetch_protein("P30291", 9606, OfflineServices.fetch_json)
     assert record["length"] == 20

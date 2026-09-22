@@ -201,6 +201,31 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+class LLMRequestError(RuntimeError):
+    """Locally generated, credential-free transport diagnostics safe for reports."""
+
+
+def llm_http_error(exc, prompt_chars, timeout):
+    hints={400:'Provider rejected the request; check model parameters and context capacity',
+           401:'Authentication failed; check the configured API-key environment variable',
+           403:'Provider denied access; check model/account permissions',
+           404:'Endpoint or model not found; check the configured base URL and model',
+           413:'Provider rejected the request size',
+           429:'Provider rate or quota limit; check account limits before retrying'}
+    category=''
+    try:
+        body=exc.read(8193)
+        error=json.loads(body).get('error',{}) if len(body)<=8192 else {}
+        code=error.get('code') if isinstance(error,dict) else None
+        if isinstance(code,str) and code in {'context_length_exceeded','invalid_api_key','rate_limit_exceeded',
+                'insufficient_quota','model_not_found','unsupported_parameter','invalid_request_error'}:
+            category=f'; provider code={code}'
+    except (OSError,ValueError,AttributeError,TypeError):
+        pass
+    hint=hints.get(exc.code,'Provider or gateway error' if 500<=exc.code<600 else 'Check endpoint and provider configuration')
+    return LLMRequestError(f'LLM HTTP {exc.code}{category}; {hint}. Prompt characters={prompt_chars}; timeout={timeout}s. Response text and credentials omitted.')
+
+
 def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
               capabilities=CAPABILITIES, validator=validate_plan, max_prompt_chars=20000):
     # Only trusted Python callers can raise the evidence budget; this is not a model plan field.
@@ -238,9 +263,11 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
         with (opener or build_opener(NoRedirect())).open(request, timeout=timeout) as response:
             raw = response.read(2*1024*1024+1)
     except HTTPError as exc:
-        raise RuntimeError(f"LLM HTTP {exc.code}; inspect endpoint/model/credentials locally") from None
-    except (URLError, TimeoutError, OSError):
-        raise RuntimeError("LLM connection failed or timed out") from None
+        raise llm_http_error(exc,len(prompt),timeout) from None
+    except (URLError, TimeoutError, OSError) as exc:
+        timed_out=isinstance(exc,TimeoutError) or isinstance(getattr(exc,'reason',None),TimeoutError)
+        category='request timed out' if timed_out else 'connection failed'
+        raise LLMRequestError(f'LLM {category}; prompt characters={len(prompt)}; timeout={timeout}s. Check provider connectivity and timeout configuration; no recommendation was produced.') from None
     if len(raw) > 2*1024*1024: raise ValueError("LLM response too large")
     try:
         result = strict_json(raw.decode("utf-8"))
