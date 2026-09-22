@@ -528,3 +528,15 @@ separated small molecules does not imply broad chemical coverage: measured
 coverage is 11/68 at the explicit 0.6 fingerprint similarity setting. Retain
 per-reference provenance and review panel size before any multi-reference scan.
 Full results: to_human/E052_MDM2_REFERENCE_REVIEW.md.
+
+## E053: stricter cohort and decoupled search model
+
+Explicit chain/species/assembly and aligned-pocket checks reduced the MDM2
+reference cohort to 48 admitted ligand instances. These are not directly
+comparable to E052's 68 unique organic ligands: the admission rules and count
+units differ. Geometric contact modes are not a list of mandatory energetic
+interactions. They remain independently selectable from shape templates.
+The implementation records weighted optional evidence and actual pose scores;
+multi-template union never makes cross-pose anchor combinations simultaneous.
+The prior E050 run is now user-confirmed stopped. Workstation measurements of
+new funnel selectivity and independent-active retention are still required.

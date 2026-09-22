@@ -46,7 +46,8 @@ def initialize(query):
     if os.name == 'posix': ensure_file_descriptor_limit(len(ev.read(catalog)['shards']))
     _, original = _load_query(Path(query['query_npz']))
     indices = sorted({a['feature_index'] for a in query['anchors']})
-    expanded = dict(original, anchor_feature_indices=np.array(indices, dtype=np.int64))
+    pocket = _load_query(Path(query['consensus_npz']))[1] if query.get('consensus_npz') else original
+    expanded = dict(pocket, anchor_feature_indices=np.array(indices, dtype=np.int64))
     _STATE = (ArtifactCatalogReader(catalog), original, expanded, query)
     _FILTER_READER = _BOUND = _JOINT = None
     if query.get('condition_policy'):

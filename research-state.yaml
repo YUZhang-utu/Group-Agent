@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E050-preselection-funnel-validation
+current_experiment: E053-general-target-consensus-contract
 parallel_development:
   experiment: E051-structure-guided-chat
   branch: feature/structure-guided-chat
@@ -21,22 +21,31 @@ mdm2_project_validation:
   qualified_unique_organic_ligands: 68
   polymer_sequence_link_variants: 46
   review: D:/agent/MDM2/analysis/e052/review.html
-  multi_reference_library_execution: not_implemented
+  multi_reference_library_execution: implemented_E053_workstation_validation_pending
   polymer_chemical_query_preparation: not_validated
 general_target_consensus:
   experiment: E053-general-target-consensus-contract
-  status: requirements_recorded_implementation_pending
+  status: implemented_nonpolymer_single_admitted_state_path
   contract: experiments/E053-general-target-consensus-contract.md
   target_scope: general_target_mdm2_is_validation_project_only
   prerequisite: explicit_reference_chain_ligand_and_protein_aligned_site_admission
   prior_e052_cohort: exploratory_not_consensus_accepted
+  guide: to_human/E053_CONSENSUS_CHAT_TEST.md
+  local_regression: 372_passed_2_skipped
+  mdm2_admitted_instances: 48
+  consensus_spatial_directional_modes: 126
+  independent_chembl_evidence_and_conformer_preparation: real_api_verified_three_records
+  independent_binding_panel: 23_of_23_retained_one_reference_overlap_excluded_exploratory
+  live_llm_recommendation: not_tested
+  full_library_performance_and_recall: pending_workstation
+  polymer_and_transformed_assembly_preparation: pending
 preselection_funnel_validation:
   status: full_library_entry_implemented_workstation_pending
   execution_scope: user_requested_direct_full_library_no_pilot_prerequisite
   entry: scripts/run_e050_full_preselection.sh
   grouping: exact_murcko_scaffold_all_members_retained
   local_regression: 338_passed_4_skipped
-  workstation_status: not_launched_from_this_workspace
+  workstation_status: user_confirmed_all_E050_processes_stopped_2026_09_22
   protocol: experiments/E050-preselection-funnel-validation.md
   early_anchor_rule: at_least_one_specified_anchor
   preserve: pose_specific_anchor_combinations_and_cluster_members

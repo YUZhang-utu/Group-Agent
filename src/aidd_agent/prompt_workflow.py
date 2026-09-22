@@ -300,7 +300,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     plan = validate_plan(envelope["plan"])
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
-    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action']!='guided_funnel' for s in plan["steps"])
+    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel'} for s in plan["steps"])
     cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
@@ -342,7 +342,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                                          "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking", **SOURCE_ACTIONS}[step["action"]]
                         _, source_files = upstream(execution, step["params"]["source_run"], source_action)
                         dependencies.extend(source_files)
-                        if step['action']=='anchor_recommend':
+                        if step['action'] in {'anchor_recommend','consensus_recommend'}:
                             from .llm_profiles import select_llm_profile
                             dependencies.append(select_llm_profile(step['params']['provider']))
                         if step['action']=='prepare_docking':

@@ -150,7 +150,7 @@ def _ccd_molecule(ccd_path: Path, coordinates: list[dict[str, Any]]):
     conformer = Chem.Conformer(len(present))
     conformer.Set3D(True)
     for name, element, charge in present:
-        atom = Chem.Atom(element)
+        atom = Chem.Atom(element.title())
         atom.SetProp("_CCDAtomName", name)
         if charge not in {"", ".", "?"}:
             atom.SetFormalCharge(int(charge))

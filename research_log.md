@@ -1350,3 +1350,41 @@ Independent pocket-anchor/template models, exclusion constraints, same-pose
 scoring, evidence floors, adaptive thresholds and held-out controls are included.
 This turn changes requirements/state only; implementation and new cohort validation
 remain pending. Running jobs and sealed scientific outputs remain unchanged.
+
+## 2026-09-22: E053 implementation and real structural integration
+
+User confirmed the prior E050 processes had exited and authorized implementation
+and GitHub push. Implemented a separate general-target consensus path on the
+feature/structure-guided-chat branch. Native chain/species/assembly and local
+protein alignment gate the reference cohort. Spatial/directional contact modes
+carry distinct-PDB and scaffold support and eligible denominators. Shape templates
+are independently selected; a rare mode cannot become an automatic mandatory
+anchor. Weighted optional contacts, explicit hard/soft exclusion spheres, adaptive
+coarse rules and same-pose composite scoring precede template-aware candidate union.
+Chat supports consensus, recommend, adopt/edit, full-library guided and selection.
+
+Exploratory real MDM2 integration used 5C5A:NUT:A:201 and target author chain A:
+48 instances prepared without failure after fixing CCD uppercase halogen symbols;
+126 spatial/directional contact modes. Deterministic injected recommendation
+controls exercise adoption separately from a live LLM, which was not tested.
+ChEMBL target/activity data and batch-assay evidence retrieval succeeded for three
+records, with 4/7/7 independently embedded conformers. The individual-assay API
+returned repeated HTTP 500; switched to a batched assay query with exact ID checks.
+This evidence/preparation check does not establish active retention or catalog recall.
+
+Validation: 372 tests passed, two skipped, and the English-content guard passed.
+Tests cover wrong/displaced pockets, independent template choice, rare mandatory
+rejection, same-pose ranking/exclusions, assay identity, and multi-template union
+without combining anchors across poses. Full-library latency, coverage and recall
+remain workstation measurements. Polymer chemistry, transformed assemblies,
+automatic capacity optimization and general-target docking/export remain explicit
+follow-ups rather than claimed completed capabilities.
+
+Final E053 integration: 45 distinct PDBs, 42 unique prepared ligand templates,
+126 modes (one met automatic mandatory support eligibility), eight proposed
+templates. The deterministic optional-contact design retained 43/48 crystal
+identity controls and derived a composite threshold of 0.20774830868308158.
+The production-size first-page ChEMBL panel contained 24 molecules; one matched a
+reference-cohort chemical graph and was excluded. All 23 remaining controls passed
+the exploratory funnel, with zero preparation failures. This establishes neither
+negative enrichment nor full-library recall. Record: data/e053-mdm2-implementation.json.

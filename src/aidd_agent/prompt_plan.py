@@ -21,6 +21,10 @@ ACTION_FIELDS = {
     "anchor_recommend": ({"source_run", "provider"}, set()),
     "anchor_design": ({"source_run"}, {"design"}),
     "guided_funnel": ({"source_run"}, set()),
+    "structure_consensus": ({"source_run"}, {"reference_query", "target_chain", "maximum_templates"}),
+    "consensus_recommend": ({"source_run", "provider"}, set()),
+    "consensus_design": ({"source_run"}, {"design"}),
+    "consensus_funnel": ({"source_run"}, set()),
     "guided_select": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
     "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd"}),
     "af3_run": ({"input_step"}, set()),
@@ -173,8 +177,15 @@ def validate_plan(plan):
         if 'pdb_ids' in params and (not isinstance(params['pdb_ids'],list) or not 1<=len(params['pdb_ids'])<=20 or
             any(not isinstance(x,str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',x) for x in params['pdb_ids'])):
             raise ValueError('Provide 1..20 explicit PDB IDs')
-        if action=='anchor_recommend' and params['provider'] not in {'gpt','deepseek'}:
+        if action in {'anchor_recommend','consensus_recommend'} and params['provider'] not in {'gpt','deepseek'}:
             raise ValueError('Unknown recommendation provider')
+        if action=='structure_consensus':
+            if 'reference_query' in params and (not isinstance(params['reference_query'],str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}:[A-Za-z0-9]+:[A-Za-z0-9]+:-?[0-9]+',params['reference_query'])):raise ValueError('Invalid reference ligand identity')
+            if 'target_chain' in params and (not isinstance(params['target_chain'],str) or not re.fullmatch(r'[A-Za-z0-9]+',params['target_chain'])):raise ValueError('Invalid target chain')
+            if not _integer(params.get('maximum_templates',8),1,100):raise ValueError('Invalid template budget')
+        if action=='consensus_design' and 'design' in params:
+            from .consensus_design import FIELDS
+            if not isinstance(params['design'],dict) or set(params['design'])-FIELDS:raise ValueError('Invalid consensus edits')
         if action=='anchor_design' and 'design' in params:
             if not isinstance(params['design'],dict) or set(params['design'])-{'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}:
                 raise ValueError('Invalid design edits')

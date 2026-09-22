@@ -10,7 +10,9 @@ from .gaussian_batch import _atomic_json
 from .screening_selection import check_hashes
 
 SOURCE_ACTIONS={'anchor_recommend':'structure_survey','anchor_design':'anchor_recommend',
-                'guided_funnel':'anchor_design','guided_select':'guided_funnel'}
+                'guided_funnel':'anchor_design','guided_select':('guided_funnel','consensus_funnel'),
+                'structure_consensus':'structure_diversity','consensus_recommend':'structure_consensus',
+                'consensus_design':'consensus_recommend','consensus_funnel':'consensus_design'}
 
 
 def select_candidates(source, output, params):
@@ -47,6 +49,18 @@ def select_candidates(source, output, params):
 
 def execute(action,source,output,params,cfg,allow_compute):
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    if action=='structure_consensus':
+        from .consensus_model import build
+        return build(source,output,params.get('reference_query'),params.get('target_chain'),params.get('maximum_templates',8))
+    if action in {'consensus_recommend','consensus_design'}:
+        from .consensus_design import recommend,adopt
+        return recommend(source,output,params['provider']) if action=='consensus_recommend' else adopt(source,output,params.get('design'))
+    if action=='consensus_funnel':
+        from .prompt_workflow import Blocked
+        from .consensus_funnel import run
+        if not allow_compute:raise Blocked('Enable compute for the full-library consensus scan')
+        if not cfg.get('search'):raise Blocked('Configure the trusted library runtime')
+        return run(source,output,cfg['search'])
     if action=='anchor_recommend':
         from .anchor_advice import recommend
         return recommend(source,output,params['provider'])

@@ -106,10 +106,24 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 """
 
 
+ROUTER += '''
+For the general-target workflow, after structure_diversity use intent consensus with an extra
+reference object containing reference_query (PDB:CCD:author_chain:residue), target_chain, and optional maximum_templates.
+Use only user-provided reference identity; if ambiguous use consensus with reference {} to obtain options.
+This verifies target chain, organism, biological assembly and aligned same pocket before pooling contacts.
+On structure_consensus use recommend. On consensus_recommend use adopt/design. On consensus_design use guided.
+For consensus designs, editable fields are mandatory_anchors, alternative_groups, optional_weights (ID to weight),
+template_ids, evidence_ids, rationale, exclusions, permissiveness, gaussian_weight, optional_weight, minimum_pose_score.
+Keep template choice independent of pocket anchors. Rare contacts cannot become mandatory.
+Exclusions require explicit reviewed coordinates, mode hard/soft, radius, weight, evidence and rationale; never invent these.
+All these intents use an empty request. On consensus_funnel use select to choose anchor combinations.
+'''
+
+
 def validate_route(value):
-    if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}, {"intent", "message", "task_id", "request", "design"}):
+    if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}, {"intent", "message", "task_id", "request", "design"}, {"intent", "message", "task_id", "request", "reference"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided", "consensus"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -125,8 +139,11 @@ def validate_route(value):
         from .screening_selection import validate_selection
         validate_selection(value["selection"])
     if (value['intent']=='design') != ('design' in value):raise ValueError('Only design accepts design edits')
-    if 'design' in value and (not isinstance(value['design'],dict) or set(value['design'])-{'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}):
+    from .consensus_design import FIELDS
+    if 'design' in value and (not isinstance(value['design'],dict) or set(value['design'])-({'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}|FIELDS)):
         raise ValueError('Invalid design edits')
+    if (value['intent']=='consensus') != ('reference' in value):raise ValueError('Consensus requires a reference object')
+    if 'reference' in value and (not isinstance(value['reference'],dict) or set(value['reference'])-{'reference_query','target_chain','maximum_templates'}):raise ValueError('Invalid reference choice')
     return value
 
 
@@ -141,6 +158,16 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
+        if step.get('action') in {'structure_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
+            child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
+                'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation','limitations','failures') if k in child}
+            if child.get('cohort'):
+                summary['reference']=child['cohort'].get('reference');summary['reference_options']=child['cohort'].get('reference_options',[])
+                summary['admitted_instances']=len(child['cohort'].get('admitted',[]))
+            summary['anchors']=[{k:a[k] for k in ('anchor_id','feature_class','target_residue','protein_atom','frequency','distinct_structures','eligible_structures','mandatory_proposal_eligible','evidence_id') if k in a} for a in child.get('anchors',[])]
+            summary['templates']=[q['query_id'] for q in child.get('templates',[])]
+            return summary
         if step.get('action')=='structure_diversity' and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','target','discovered_entries','census','quality_site_unique_ligands',
@@ -193,7 +220,14 @@ def screening_summary(job):
 
 def screening_feedback(summary):
     if summary.get('kind')=='structure_diversity':
-        return json.dumps(summary,indent=2)+'\nReview the reference proposal. Polymer chemical preparation and multi-reference execution require further implementation.'
+        return json.dumps(summary,indent=2)+'\nChoose the reference ligand instance and target chain in chat to build a same-pocket consensus. Polymer chemical preparation remains separate.'
+    if summary.get('kind') in {'structure_consensus','consensus_recommendation','consensus_design','consensus_funnel'}:
+        next_step={'structure_consensus':'Review admitted complexes and independent templates, then request /recommend.',
+            'consensus_recommendation':'Edit anchor roles, weights and templates in chat, then /adopt.',
+            'consensus_design':'Use /guided for the full-library multi-template funnel.',
+            'consensus_funnel':'Select desired same-pose anchor combinations in chat.'}[summary['kind']]
+        if summary.get('readiness')=='needs_reference_instance':next_step='Choose one listed reference ligand and target chain in chat; no consensus was generated.'
+        return json.dumps(summary,indent=2)+'\n'+next_step
     if summary.get('kind')=='guided_selection':return json.dumps(summary,indent=2)
     if summary.get('kind') in {'structure_survey','anchor_recommendation','anchor_design','guided_funnel'}:
         kind=summary['kind']
@@ -412,23 +446,28 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent in {'recommend','adopt','design','guided'}:
-                expected={'recommend':'structure_survey','adopt':'anchor_recommend','design':'anchor_recommend','guided':'anchor_design'}[intent]
+            if intent in {'recommend','adopt','design','guided','consensus'}:
+                expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
+                          'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'}}[intent]
                 if decision['task_id'] is None:
                     candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
-                        any(s.get('action')==expected and s.get('status')=='complete' for s in
+                        any(s.get('action') in expected and s.get('status')=='complete' for s in
                             (read_json(j['report']) or {}).get('steps',{}).values())]
-                    if not candidates:raise ValueError('Complete '+expected+' in this conversation first')
+                    if not candidates:raise ValueError('Complete '+', '.join(sorted(expected))+' in this conversation first')
                     job=candidates[-1]
                 else:job=self.task(sid,decision['task_id'])
                 if job['status']!='complete' or not job.get('plan'):raise ValueError('Choose a completed source task')
                 details=read_json(job['report']) or {}
-                if sum(s.get('action')==expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
+                if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
                     raise ValueError('Wrong source task for '+intent)
-                action={'recommend':'anchor_recommend','adopt':'anchor_design','design':'anchor_design','guided':'guided_funnel'}[intent]
+                previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
+                action={'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
+                        'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
+                        'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
                 params=dict(source_run=Path(job['plan']).parent.name)
                 if intent=='recommend':params['provider']=provider
                 if intent=='design':params['design']=decision['design']
+                if intent=='consensus':params.update(decision['reference'])
                 plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
                           steps=[dict(id='guided',action=action,params=params)])
                 ctx=self.context
@@ -451,14 +490,14 @@ class ChatAgent:
                     job = self.task(sid, decision["task_id"])
                 if job["status"] != "complete" or not job["plan"]:
                     raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel","guided_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
+                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel","guided_funnel","consensus_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
                 details = read_json(job["report"]) or {}
                 if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
                     raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
                 action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "coarse":"benchmark_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
                 params = dict(source_run=Path(job["plan"]).parent.name)
                 if intent == "select": params.update(decision["selection"])
-                if intent == 'select' and any(s.get('action')=='guided_funnel' for s in details.get('steps',{}).values()):
+                if intent == 'select' and any(s.get('action') in {'guided_funnel','consensus_funnel'} for s in details.get('steps',{}).values()):
                     action='guided_select'
                 if intent == "coarse": params["coarse_only"] = True
                 local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",

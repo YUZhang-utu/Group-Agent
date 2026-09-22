@@ -61,7 +61,7 @@ def coarse_stages(candidate, features, original, rule, bound, joint=None, timing
     return 4 if bound is not None and bound.check(features)[0] else 3
 
 
-def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None):
+def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None, gaussian_scores=None, shape_points=None):
     """Keep one actual pose per exact required-anchor bitmask, never a union pose."""
     indices = expanded['anchor_feature_indices']
     query = tuple(expanded[k][indices] for k in (
@@ -85,13 +85,18 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
             if design is not None:
                 from .guided_filters import rule_passes
                 if not rule_passes(mask,anchor_order,design):continue
-            matching_seeds += 1
             quality = float(values[hits].min())
             row = dict(mask=mask, matched_anchor_count=int(hits.sum()),
                        min_matched_score=quality, seed_index=int(number),
                        seed_id=str(seeds[number].seed_id), scores=values.tolist(),
                        assignments=assigned.tolist(), transform=matrices[i].reshape(-1).tolist())
-            if mask not in best or quality > best[mask]['min_matched_score']:
+            if gaussian_scores is not None:
+                from .guided_filters import pose_rank
+                row.update(pose_rank(values,assigned,anchor_order,gaussian_scores[number],shape_points,matrices[i],design))
+                if row['composite_score']<design['minimum_pose_score']:continue
+            matching_seeds += 1
+            rank=row.get('composite_score',quality)
+            if mask not in best or rank > best[mask].get('composite_score',best[mask]['min_matched_score']):
                 best[mask] = row
     return [best[k] for k in sorted(best)], matching_seeds
 
@@ -127,8 +132,12 @@ def compute(task):
         candidate = reader.get(int(gid))
         mids.append(candidate.molecule_id)
         seconds['artifact_read'] += time.perf_counter()-t
-        stage = coarse_stages(candidate, None, original, policy['coarse_constraints'], None,
-                              joint=full._JOINT, timings=seconds)
+        if guided is not None and getattr(guided,'design',{}).get('adaptive_coarse'):
+            from .guided_filters import adaptive_stage
+            stage=adaptive_stage(candidate,guided.design['adaptive_coarse'])
+        else:
+            stage = coarse_stages(candidate, None, original, policy['coarse_constraints'], None,
+                                  joint=full._JOINT, timings=seconds)
         if stage >= 3:
             t = time.perf_counter()
             features = full._FILTER_READER.get(int(gid))
@@ -180,15 +189,23 @@ def compute(task):
         levels[-1] = 5
         t = time.perf_counter()
         scoring_seeds = seeds if guided is None else [seeds[i] for i in np.flatnonzero(possible)]
-        rigid = _score_ids(reader, original, np.array([gid]), backend='numpy',
-                           prepared={int(gid): (candidate, scoring_seeds, pairs)}, **full.POSE_PARAMETERS)
+        gaussian_scores=None
+        if q.get('consensus_npz'):
+            from .guided_filters import same_pose_gaussian
+            gaussian_scores=np.full(len(seeds),np.nan)
+            gaussian_scores[np.flatnonzero(possible)]=same_pose_gaussian(original,candidate,scoring_seeds)
+            gaussian_best=float(np.nanmax(gaussian_scores))
+        else:
+            rigid = _score_ids(reader, original, np.array([gid]), backend='numpy',
+                               prepared={int(gid): (candidate, scoring_seeds, pairs)}, **full.POSE_PARAMETERS)
+            gaussian_best=float(rigid[full.OBJECTIVE+'__objective'][0])
         counts['gaussian_evaluated_seeds'] += len(scoring_seeds)
         seconds['gaussian'] += time.perf_counter()-t
         counts['gaussian_evaluated_conformers'] += 1
         levels[-1] = 6
         t = time.perf_counter()
         poses, matching_seeds = pose_representatives(features, seeds, possible, expanded, columns,
-                                                     policy['minimum_score'],q.get('guided_design'),policy['required_anchors'])
+                                                     policy['minimum_score'],q.get('guided_design'),policy['required_anchors'],gaussian_scores,candidate.shape_points)
         seconds['anchor_assignment'] += time.perf_counter()-t
         counts['exact_seed_annotations'] += int(possible.sum())
         counts['matching_seeds'] += matching_seeds
@@ -201,7 +218,7 @@ def compute(task):
                         conformer_id=candidate.conformer_id,
                         matched_anchors=[aid for j, aid in enumerate(policy['required_anchors'])
                                          if pose['mask'] & (1 << j)],
-                        conformer_gaussian_best=float(rigid[full.OBJECTIVE+'__objective'][0]))
+                        conformer_gaussian_best=gaussian_best)
             records.append(pose)
     t = time.perf_counter()
     full._atomic_savez(target, dict(global_ids=ids, molecule_ids=np.asarray(mids),stage_levels=np.asarray(levels,dtype=np.uint8)))
@@ -248,7 +265,7 @@ def merge_pose(db, row):
     """SQL union is only by molecule; each payload remains one real pose."""
     old = db.execute('SELECT quality,gid FROM poses WHERE mid=? AND mask=?',
                      (row['molecule_id'], row['mask'])).fetchone()
-    quality, gid = row['min_matched_score'], row['global_id']
+    quality, gid = row.get('composite_score',row['min_matched_score']), row['global_id']
     if old is None or quality > old[0] or (quality == old[0] and gid < old[1]):
         db.execute('INSERT OR REPLACE INTO poses VALUES (?,?,?,?,?)',
                    (row['molecule_id'], row['mask'], quality, gid, json.dumps(row)))
@@ -387,6 +404,9 @@ def run(selection, output, workers=22, chunk_size=2048):
         if q.get('guided_design'):
             protocol['guided_design']=q['guided_design']
             protocol['gaussian']='Best geometry/pocket-surviving seed score, ranking only; no cutoff; not legacy ranking equivalence'
+        if q.get('consensus_npz'):
+            if str(Path(q['consensus_npz']).resolve()) not in sources:raise ValueError('Consensus coordinates are not sealed')
+            protocol['gaussian']='Same-pose mean shape/color Tanimoto (sigma=1, no distance cutoff), weighted optional contacts minus explicit soft exclusions; optional composite cutoff'
         protocol = json.loads(json.dumps(protocol))
         protocol_path = output/'protocol.json'
         if protocol_path.exists() and full.ev.read(protocol_path) != protocol:

@@ -1726,3 +1726,14 @@ Actual project output: D:/agent/MDM2/analysis/e052/review.html. API snapshots,
 133 native coordinate files, contact/quality tables, small-molecule and peptide
 sequence matrices accompany the report. This is exploratory reference selection,
 not full-library recall or speed measurement. No E050 interruption occurred.
+
+## E053 implementation checks
+
+Protocol: experiments/E053-general-target-consensus-contract.md. Classification:
+exploratory. Implementation and real structure integration under
+D:/agent/MDM2/analysis/e053 use explicit 5C5A:NUT:A:201 / author chain A.
+Reference-chain admission precedes preparation and consensus; 48 instances and
+126 contact modes were obtained. Independent ChEMBL API/chemical preparation was
+checked separately, never added to library coverage counts. Unit/integration
+regression: 372 passed, two skipped. Full-library acceptance is pending the user's
+workstation run described in to_human/E053_CONSENSUS_CHAT_TEST.md.

@@ -53,5 +53,43 @@ class GuidedFilter:
         for matrix in matrices:
             moved=points @ matrix[:3,:3].T + matrix[:3,3]
             distances,_=self.tree.query(moved,k=1)
-            answer.append(float(np.mean(distances < self.cutoff-1e-8)) <= self.fraction)
+            physical=float(np.mean(distances < self.cutoff-1e-8)) <= self.fraction
+            excluded=any(region['mode']=='hard' and np.any(np.linalg.norm(moved-np.array(region['center']),axis=1)<region['radius'])
+                         for region in self.design.get('exclusions',[]))
+            answer.append(physical and not excluded)
         return np.asarray(answer,dtype=bool)
+
+
+def adaptive_stage(candidate, rule):
+    from .joint_coarse import extents
+    if not rule['heavy_atoms'][0]<=len(candidate.shape_points)<=rule['heavy_atoms'][1]:return 0
+    if any(np.count_nonzero(candidate.feature_types==int(t))<n for t,n in rule['feature_minimum'].items()):return 1
+    extent=extents(candidate.shape_points)
+    if np.any(extent<np.array(rule['extent_lower'])-1e-7) or np.any(extent>np.array(rule['extent_upper'])+1e-7):return 2
+    return 3
+
+
+def same_pose_gaussian(query, candidate, seeds):
+    """Normalized shape/color Tanimoto for each actual seed, with cached self terms."""
+    from .pose_acceleration import cross_overlaps
+    from .gaussian_batch import _query_self_overlaps
+    from .gaussian_overlay import gaussian_self_overlap
+    sigma=1.;cutoff=None
+    cross=cross_overlaps(query,candidate,seeds,sigma=sigma,cutoff=cutoff,backend='numpy')
+    qself=_query_self_overlaps(query,sigma,cutoff)
+    cs=gaussian_self_overlap(candidate.shape_points,sigma=sigma,cutoff=cutoff)
+    cf=gaussian_self_overlap(candidate.feature_points,types=candidate.feature_types,sigma=sigma,cutoff=cutoff)
+    shape=cross[:,0]/np.maximum(qself['shape']+cs-cross[:,0],1e-12)
+    color=cross[:,1]/np.maximum(qself['color_unweighted']+cf-cross[:,1],1e-12)
+    return np.clip(.5*(shape+color),0,1)
+
+
+def pose_rank(values, assignments, order, gaussian, points, transform, design):
+    weights=np.array([design.get('optional_weights',{}).get(a,0.) for a in order])
+    optional=float(np.dot(weights,np.where(assignments>=0,values,0))/weights.sum()) if weights.sum() else 0.
+    moved=points@transform[:3,:3].T+transform[:3,3]
+    penalty=sum(r['weight']*float(np.mean(np.linalg.norm(moved-np.array(r['center']),axis=1)<r['radius']))
+                for r in design.get('exclusions',[]) if r['mode']=='soft')
+    gw=design['gaussian_weight'];ow=design['optional_weight']
+    combined=(gw*float(gaussian)+ow*optional)/(gw+ow)-penalty
+    return dict(gaussian_same_pose=float(gaussian),optional_score=optional,exclusion_penalty=penalty,composite_score=combined)

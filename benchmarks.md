@@ -277,3 +277,15 @@ positive retention. Synthetic identity checks are preparation controls only.
 Fixture passes do not establish sensitivity, biological validity or performance.
 Report API failures distinctly from empty evidence. Grouped molecule masks must
 never be treated as a single simultaneous pose.
+
+## E053 acceptance boundaries
+
+The implemented nonpolymer path adds strict reference-pocket admission, independent
+consensus/template models, weighted/exclusion-aware same-pose scoring and
+multi-template union. The real MDM2 structural integration is exploratory.
+ChEMBL confidence-9 binding controls exclude reference-cohort molecular graphs;
+report assay types, missing evidence, preparation failures and per-gate cumulative
+retention separately from crystal self-controls and catalog coverage. The ETKDG
+control route is not a full MOL2 ingestion validation. Template scans are currently
+sequential with parallel chunks, so include repeated I/O in measured latency.
+Do not claim speedup, full-library acceptance or calibrated recall from fixtures.
