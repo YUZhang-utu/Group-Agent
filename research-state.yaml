@@ -23,6 +23,13 @@ mdm2_project_validation:
   review: D:/agent/MDM2/analysis/e052/review.html
   multi_reference_library_execution: not_implemented
   polymer_chemical_query_preparation: not_validated
+general_target_consensus:
+  experiment: E053-general-target-consensus-contract
+  status: requirements_recorded_implementation_pending
+  contract: experiments/E053-general-target-consensus-contract.md
+  target_scope: general_target_mdm2_is_validation_project_only
+  prerequisite: explicit_reference_chain_ligand_and_protein_aligned_site_admission
+  prior_e052_cohort: exploratory_not_consensus_accepted
 preselection_funnel_validation:
   status: full_library_entry_implemented_workstation_pending
   execution_scope: user_requested_direct_full_library_no_pilot_prerequisite

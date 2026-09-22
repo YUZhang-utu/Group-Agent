@@ -1337,3 +1337,16 @@ Biopython dependencies. Final targeted diversity checks: 7 passed. Actual cached
 MDM2 census rerun completed; code hashes and artifact manifest recorded. Existing
 main checkout remained clean. Public API retrieval was real; Chat routing was
 fixture-tested and no live LLM decision or library scan was performed.
+
+## 2026-09-22: E053 general-target consensus admission requirements
+
+User clarified that MDM2 is a validation project, not a target-specific product.
+Recorded the general contract in experiments/E053-general-target-consensus-contract.md.
+User reference complexes must resolve chain, ligand and site. PDB entry association
+is only discovery: chain-level identity and protein-aligned site admission precede
+quality gating and mode-specific consensus. Three shared contact residues alone
+are insufficient. E052 cohorts remain exploratory and are not relabeled accepted.
+Independent pocket-anchor/template models, exclusion constraints, same-pose
+scoring, evidence floors, adaptive thresholds and held-out controls are included.
+This turn changes requirements/state only; implementation and new cohort validation
+remain pending. Running jobs and sealed scientific outputs remain unchanged.
