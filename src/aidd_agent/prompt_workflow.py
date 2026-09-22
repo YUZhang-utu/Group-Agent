@@ -358,6 +358,8 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     status = "blocked" if isinstance(exc, Blocked) else "failed"
                     # Do not include arbitrary server response bodies or credentials in reports.
                     message = str(exc) if isinstance(exc, (ValueError, Blocked)) else type(exc).__name__
+                    if isinstance(exc, ModuleNotFoundError):
+                        message = f"Missing Python module: {exc.name or 'unknown'}. Worker interpreter: {sys.executable}. Install the required dependency in this environment and restart Chat."
                     results[sid] = dict(status=status, action=step["action"], error=message)
                     report["status"] = status
                     break

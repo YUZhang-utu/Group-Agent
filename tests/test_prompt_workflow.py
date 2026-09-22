@@ -25,6 +25,20 @@ def make_plan(tmp_path, steps=None):
     return context, path
 
 
+def test_missing_module_reports_worker_environment_without_arbitrary_exception_text(tmp_path, monkeypatch):
+    from aidd_agent import prompt_workflow as workflow
+    context, path = make_plan(tmp_path)
+    def missing(*args, **kwargs):
+        raise ModuleNotFoundError('Untrusted exception details', name='rdkit')
+    monkeypatch.setattr(workflow, 'execute_step', missing)
+    result, _ = run_plan(Path(context['db']), context['user_id'], context['project_id'], path,
+                      services=OfflineServices())
+    error = next(iter(result['steps'].values()))['error']
+    assert 'Missing Python module: rdkit' in error
+    assert sys.executable in error
+    assert 'Untrusted exception details' not in error
+
+
 def run(context, path, **kwargs):
     return run_plan(Path(context["db"]), context["user_id"], context["project_id"], path, **kwargs)
 
