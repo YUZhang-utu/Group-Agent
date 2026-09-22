@@ -1388,3 +1388,16 @@ The production-size first-page ChEMBL panel contained 24 molecules; one matched 
 reference-cohort chemical graph and was excluded. All 23 remaining controls passed
 the exploratory funnel, with zero preparation failures. This establishes neither
 negative enrichment nor full-library recall. Record: data/e053-mdm2-implementation.json.
+
+## 2026-09-22: Repair consensus recommendation context budget
+
+The workstation reached consensus_recommend but failed before the model request:
+the consensus caller allowed 100000 characters while chat_plan enforced its
+ordinary 20000-character user-prompt limit. Added a bounded trusted-caller override
+and used it only for the compact, complete consensus evidence payload. No anchors,
+templates or support citations are dropped; context size/counts are reported.
+Regression uses 126 anchors and 42 templates through the actual request-building
+path with a mock HTTP response, and verifies the normal planner still rejects
+oversized prompts. Thirty focused tests and the English-content guard passed.
+No live provider success is claimed. Existing completed structure/cohort tasks
+remain reusable; start a new recommendation task after restarting updated Chat.

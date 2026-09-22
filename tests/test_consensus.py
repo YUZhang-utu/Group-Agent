@@ -196,3 +196,36 @@ def test_consensus_compute_scores_each_retained_pose(tmp_path,monkeypatch):
     assert receipt['counts']['gaussian_evaluated_seeds']==2 and len(rows)==2
     assert rows[0]['gaussian_same_pose']!=rows[1]['gaussian_same_pose']
     assert all('composite_score' in r for r in rows)
+
+
+def test_large_consensus_recommendation_preserves_all_evidence(tmp_path,monkeypatch):
+    import io
+    from aidd_agent import consensus_design, prompt_plan, llm_profiles
+    from aidd_agent.expanded_wee1 import fingerprint
+    _,design=survey_design()
+    marker=tmp_path/'marker';marker.write_text('sealed evidence')
+    anchors=[dict(anchor_id=aid,evidence_id='e'+aid,target_residue=i,protein_atom='N',feature_class='hydrogen_bond',
+        frequency=.25,distinct_structures=15,eligible_structures=60,distinct_chemotypes=4,
+        mandatory_proposal_eligible=False,pdb_ids=[f'{j:04d}' for j in range(15)])
+        for i,aid in enumerate(['A','B']+[f'pocket:{i:016d}' for i in range(124)])]
+    survey=dict(readiness='proposal_ready',sources=fingerprint([marker]),target=dict(accession='Q00987'),
+        cohort=dict(reference=dict(query_id='5C5A:NUT:A:201',target_chain='A')),anchors=anchors,
+        templates=[dict(query_id='T'+str(i+1),smiles='C'*150,resolution=2.) for i in range(42)],
+        proposed_template_ids=['T1'],limitations=['Exploratory geometry only'])
+    source=tmp_path/'survey.json';source.write_text(json.dumps(survey))
+    profile=tmp_path/'profile.json';profile.write_text(json.dumps(dict(base_url='https://example.org/v1',model='fixture')))
+    monkeypatch.setattr(llm_profiles,'select_llm_profile',lambda _:profile)
+    sent=[]
+    class Opener:
+        def open(self,request,timeout):
+            sent.append(json.loads(request.data)['messages'][1]['content'])
+            return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason='stop',message=dict(content=json.dumps(design)))])).encode())
+    original=prompt_plan.chat_plan
+    monkeypatch.setattr(prompt_plan,'chat_plan',lambda *args,**kwargs:original(*args,opener=Opener(),**kwargs))
+    result=consensus_design.recommend(source,tmp_path/'proposal','gpt')
+    assert 20000<len(sent[0])<=100000
+    assert json.loads(sent[0])['anchors']==anchors
+    assert len(json.loads(sent[0])['templates'])==42
+    assert result['evidence_context']['truncated'] is False
+    with pytest.raises(ValueError,match='20000'):original(sent[0],{},opener=Opener())
+    with pytest.raises(ValueError,match='budget'):original('test',{},max_prompt_chars=100001)

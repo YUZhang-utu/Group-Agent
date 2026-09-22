@@ -202,9 +202,12 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
-              capabilities=CAPABILITIES, validator=validate_plan):
-    if not isinstance(prompt, str) or not 1 <= len(prompt) <= 20000:
-        raise ValueError("Prompt must contain 1–20000 characters")
+              capabilities=CAPABILITIES, validator=validate_plan, max_prompt_chars=20000):
+    # Only trusted Python callers can raise the evidence budget; this is not a model plan field.
+    if type(max_prompt_chars) is not int or not 1 <= max_prompt_chars <= 100000:
+        raise ValueError('Invalid trusted prompt character budget')
+    if not isinstance(prompt, str) or not 1 <= len(prompt) <= max_prompt_chars:
+        raise ValueError(f"Prompt must contain 1-{max_prompt_chars} characters")
     allowed = {"base_url", "model", "api_key_env", "json_mode", "timeout_seconds"}
     if not isinstance(profile, dict) or set(profile) - allowed or not {"base_url", "model"} <= profile.keys():
         raise ValueError("Invalid LLM profile; credentials must use an environment variable")
