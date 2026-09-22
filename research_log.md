@@ -1256,3 +1256,41 @@ coverage have not been supplied. Do not launch a duplicate or update running cod
 Tomorrow inspect suite-report.json, full-library/progress.json, run.log and final
 coverage/counts. Keep scientific acceptance pending until reports are available.
 Handoff: to_human/20260921_OVERNIGHT_HANDOFF.md.
+
+## 2026-09-22 - correct preselection funnel validation scope
+
+User supplied completed E049 ALL run: 25,813,808 conformers, 8,318,351 molecules,
+647,638 coarse survivors, zero Gaussian-evaluated conformers and final hits.
+Subsequent user-run controls passed crystal direction consistency and three
+synthetic rigid recoveries; twelve selected conformers had no four-anchor hits
+under original or expanded tested seeds. These are user-reported artifacts,
+not locally ingested complete workstation data.
+
+User clarified the intended funnel: preserve one-or-more anchor matches, record
+which anchors and pose-specific combinations, cluster, then allow human selection
+before downstream docking/affinity work. Early four-anchor ALL was incorrect for
+this scope. User specifically requires substantial computational reduction before
+human selection, with measured retention and speed. Stop ALL-zero-hit diagnostic
+expansion. E050 protocol records a corrected pilot and scale-up plan; production
+code and workstation execution are unchanged. Corrected funnel acceptance pending.
+
+## 2026-09-22 - direct full-library E050 entry delivered
+
+User explicitly requested direct full-library execution and rejected small-data
+pilot prerequisites. Added independent preselection_full entry and launcher;
+existing E049 scoring modules are unchanged. New protocol uses ANY over the
+selected anchor IDs with the recorded coarse rules and 0.5 threshold, processes
+every catalog conformer, retains a real pose for every observed anchor bitmask,
+merges molecules without synthesizing simultaneous contacts, and groups retained
+members by exact non-stereochemical Murcko scaffold. Acyclic connectivity and
+explicit singleton failures avoid silent member loss. This grouping is not 3D
+similarity clustering. No docking/affinity stage is launched.
+
+Output includes sealed resumable chunks, all-stage conformer/molecule counts,
+worker compute and wall-time scopes, full candidate pose/member tables and a
+SQLite index. Family/output locks prevent duplicate same-family jobs. Actual
+workstation selectivity, wall time and candidate quality remain unmeasured.
+Regression: 338 passed, 4 skipped; the new RDKit scaffold reconstruction test
+was skipped because RDKit is unavailable locally. Fixture orchestration covers
+full coverage, resume, ANY routing and pose evidence retention. English guard
+passed 272 maintained files. Run guide: to_human/E050_FULL_PRESELECTION.md.

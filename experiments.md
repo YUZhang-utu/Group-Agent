@@ -1698,3 +1698,12 @@ Workstation measurements are pending; no full-library acceptance claim.
 
 Protocol: experiments/E049-survivor-validation.md. Terminal guide:
 to_human/E049_SURVIVOR_VALIDATION.md. Workstation validation pending.
+
+## E050 - pre-human-selection funnel validation
+
+Protocol: experiments/E050-preselection-funnel-validation.md. Supersedes early
+ALL gating for the clarified preselection workflow. Measure ANY candidate and
+pose-evidence retention, stage selectivity, exact work, elapsed time and clustering
+output. Direct full-library execution was subsequently requested by the user;
+preselection_full is implemented with no pilot prerequisite. Local regression:
+338 passed, 4 skipped. Workstation measurements remain pending.
