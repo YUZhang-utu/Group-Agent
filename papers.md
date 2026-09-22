@@ -24,3 +24,14 @@ runtime component wheels and version-specific distributions. CuPy official
 performance guidance: https://docs.cupy.dev/en/stable/user_guide/performance.html ;
 asynchronous execution, synchronization and first-use costs. Engineering sources,
 not evidence of biological screening quality or measured RTX 5090 acceleration.
+
+## E051 sources
+
+- RCSB Search/Data API: https://search.rcsb.org/ and https://data.rcsb.org/ .
+  Target-associated PDB discovery and entry metadata; metadata alone do not
+  establish prepared receptor quality or ligand binding relevance.
+- Europe PMC REST API: https://europepmc.org/RestfulWebService . Search/core
+  abstracts are provenance-bearing leads, not automatic experimental validation.
+- Pharmit help: https://pharmit.csb.pitt.edu/help.html . Pharmacophore feature
+  selection and receptor exclusion inform workflow design. E051 does not claim
+  Pharmit algorithm equivalence or adopt its thresholds as a calibration.

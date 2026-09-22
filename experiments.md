@@ -1707,3 +1707,14 @@ pose-evidence retention, stage selectivity, exact work, elapsed time and cluster
 output. Direct full-library execution was subsequently requested by the user;
 preselection_full is implemented with no pilot prerequisite. Local regression:
 338 passed, 4 skipped. Workstation measurements remain pending.
+
+## E051 protocol and verification
+
+Protocol: experiments/E051-structure-guided-chat.md. Hypothesis: an explicitly
+adopted structural core plus receptor-frame exclusion reduces Gaussian work
+while preserving independently established positives. Local fixtures check
+sequence mapping, distinct-PDB recurrence, missing-evidence fallback, grounded
+advice, same-pose selection, reference controls and pre-Gaussian call ordering.
+Full-library evaluation is authorized directly; no pilot prerequisite is added.
+Record generated/eligible/scored seeds, survivor conformers/molecules, wall time
+and positive retention. Changes to rules require new immutable output roots.

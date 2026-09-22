@@ -268,3 +268,12 @@ and final pose matches. /coarse measures only sampled pre-seed selectivity;
 its 90% target flag is exploratory, not a completeness or speed gate.
 Reference comparisons must use the same NEW predicates. Validate positives
 independently; empty positive panels cannot establish retention.
+
+## E051 acceptance boundaries
+
+Measure full-library conformer/molecule coverage, each gate's input/output,
+seed reduction before Gaussian, worker and wall time, source seals, and known
+positive retention. Synthetic identity checks are preparation controls only.
+Fixture passes do not establish sensitivity, biological validity or performance.
+Report API failures distinctly from empty evidence. Grouped molecule masks must
+never be treated as a single simultaneous pose.

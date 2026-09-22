@@ -69,6 +69,8 @@ def _post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
     request = Request(url, data=json.dumps(payload).encode(),
                       headers={"Content-Type": "application/json", "User-Agent": "aidd-macrocycle-agent/0.1"})
     with urlopen(request, timeout=30) as response:
+        if getattr(response, 'status', None) == 204:
+            return {}
         return json.load(response)
 
 

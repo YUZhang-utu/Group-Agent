@@ -145,6 +145,13 @@ def load_runtime(path):
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     action, params = step["action"], step["params"]
+    from .guided_workflow import SOURCE_ACTIONS, execute as execute_guided
+    if action in SOURCE_ACTIONS:
+        from .screening_selection import upstream
+        source,_=upstream(execution,params['source_run'],SOURCE_ACTIONS[action])
+        output=directory/'guided'
+        result=execute_guided(action,source,output,params,cfg,allow_compute)
+        return dict(status=result['kind'],report=str(output/'report.json'),readiness=result.get('readiness'))
     if action in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"}:
         from .screening_selection import upstream, review, preview, export
         source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "condition_funnel":"select_screening", "benchmark_funnel":"select_screening", "select_screening": ("review_screening","classify_screening","full_library_screen","condition_funnel"),
@@ -192,8 +199,12 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         (directory / "protein.fasta").write_text(f">{record['accession']}\n{record['sequence']}\n", encoding="utf-8")
         return dict(accession=record["accession"], organism=record["organism"], length=record["length"],
                     sequence_sha256=record["sequence_sha256"], source_url=record["source_url"])
-    if action in {"pdb_search", "af3_prepare"}:
+    if action in {"pdb_search", "af3_prepare", "structure_survey"}:
         protein = ev.read(execution / params["protein_step"] / "protein.json")
+    if action=='structure_survey':
+        from .structure_survey import survey
+        result=survey(protein,directory/'survey',services,params.get('max_structures',12),params.get('max_resolution',3.),params.get('pdb_ids'))
+        return dict(status='structure_survey',report=str(directory/'survey/report.json'),readiness=result['readiness'])
     if action == "pdb_search":
         query, candidates = services.pdb_search(protein["accession"], max_resolution=params.get("max_resolution", 3.0))
         _atomic_json(directory / "pdb-candidates.json", dict(query=query, candidates=candidates,
@@ -283,7 +294,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     plan = validate_plan(envelope["plan"])
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
-    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] for s in plan["steps"])
+    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action']!='guided_funnel' for s in plan["steps"])
     cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
@@ -320,10 +331,14 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     _atomic_json(execution / "report.json", report)
                     if "source_run" in step["params"]:
                         from .screening_selection import upstream
+                        from .guided_workflow import SOURCE_ACTIONS
                         source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "condition_funnel":"select_screening", "benchmark_funnel":"select_screening", "select_screening": ("review_screening","classify_screening","full_library_screen","condition_funnel"),
-                                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking"}[step["action"]]
+                                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking", **SOURCE_ACTIONS}[step["action"]]
                         _, source_files = upstream(execution, step["params"]["source_run"], source_action)
                         dependencies.extend(source_files)
+                        if step['action']=='anchor_recommend':
+                            from .llm_profiles import select_llm_profile
+                            dependencies.append(select_llm_profile(step['params']['provider']))
                         if step['action']=='prepare_docking':
                             from .docking_preparation import profile_path
                             dependencies.append(profile_path())

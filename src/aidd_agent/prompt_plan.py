@@ -16,6 +16,11 @@ ACTION_FIELDS = {
     "protein_resolve": ({"gene", "organism_id"}, set()),
     "pdb_search": ({"protein_step"}, {"max_resolution"}),
     "pdb_fetch": ({"pdb_id"}, set()),
+    "structure_survey": ({"protein_step"}, {"max_resolution", "max_structures", "pdb_ids"}),
+    "anchor_recommend": ({"source_run", "provider"}, set()),
+    "anchor_design": ({"source_run"}, {"design"}),
+    "guided_funnel": ({"source_run"}, set()),
+    "guided_select": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
     "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd"}),
     "af3_run": ({"input_step"}, set()),
     "search_3d": ({"query"}, {"retrieval_mode"}),
@@ -47,12 +52,20 @@ Never generate shell commands, filesystem paths, API keys, protein sequences or 
 protein_resolve uses gene and organism taxonomy ID; when identity is ambiguous, use clarifications.
 protein_fetch uses a known UniProt accession, optionally organism_id.
 pdb_search consumes a prior protein step; max_resolution is optional Angstrom cutoff.
+structure_survey consumes a prior verified protein step to discover ligand-bound PDBs,
+analyze crystal contacts and mapped recurrence, and fall back to literature when no usable
+crystal exists. Use this for a pre-search structure/anchor survey, not search_3d.
+max_structures defaults to 12 analyzed entries; all discovered entries remain in the report.
+After survey, the local coordinator supports recommend, adopt/design and guided chat actions.
+New-target guided screening is exploratory and requires a coordinate-backed adopted design;
+do not claim the existing search_3d WEE1 calibration applies to it.
 af3_prepare consumes a prior protein step, optional 1-based inclusive start/end ONLY if the user
 specified the construct, seeds (default [1]), ligand_ccd (only user-requested CCD identifiers).
 Do not invent a construct, ligand, accession or chain. Use full sequence when no construct requested.
 af3_run consumes an af3_prepare step and should only appear when the user asks to run prediction.
 search_3d currently supports only the three supplied calibrated WEE1 query names; never substitute
-WEE1 for another target. New target search or automatic receptor choice is unsupported: clarify.
+WEE1 for another target. Use structure_survey and the guided coordinator for a new target;
+this is exploratory coordinate-backed screening, not the calibrated WEE1 search adapter.
 search_3d retrieval_mode is exhaustive (default, every conformer compared) or approximate
 (only when explicitly requested). Exhaustive descriptor comparisons precede budgeted refinement.
 PDB metadata are candidate evidence, not accepted receptor/pose quality. AF3 is prediction.
@@ -143,7 +156,17 @@ def validate_plan(plan):
                 raise ValueError("Evidence, selection and export require separate tasks")
         if "coarse_only" in params and type(params["coarse_only"]) is not bool:
             raise ValueError("coarse_only must be boolean")
-        if action == "select_screening":
+        if 'max_structures' in params and not _integer(params['max_structures'],1,100):
+            raise ValueError('max_structures must be 1..100')
+        if 'pdb_ids' in params and (not isinstance(params['pdb_ids'],list) or not 1<=len(params['pdb_ids'])<=20 or
+            any(not isinstance(x,str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',x) for x in params['pdb_ids'])):
+            raise ValueError('Provide 1..20 explicit PDB IDs')
+        if action=='anchor_recommend' and params['provider'] not in {'gpt','deepseek'}:
+            raise ValueError('Unknown recommendation provider')
+        if action=='anchor_design' and 'design' in params:
+            if not isinstance(params['design'],dict) or set(params['design'])-{'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}:
+                raise ValueError('Invalid design edits')
+        if action in {"select_screening", "guided_select"}:
             from .screening_selection import validate_selection
             validate_selection({k: v for k, v in params.items() if k != "source_run"})
         seen[sid] = action

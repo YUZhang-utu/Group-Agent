@@ -27,6 +27,8 @@ from .joint_coarse import extents
 from .pose_feasibility import possible_seed_mask
 from .prompt_workflow import file_lock
 
+_GUIDED_CACHE = None
+
 
 def record_json(path, document):
     full._atomic_json(Path(path), document)
@@ -59,7 +61,7 @@ def coarse_stages(candidate, features, original, rule, bound, joint=None, timing
     return 4 if bound is not None and bound.check(features)[0] else 3
 
 
-def pose_representatives(features, seeds, possible, expanded, columns, threshold):
+def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None):
     """Keep one actual pose per exact required-anchor bitmask, never a union pose."""
     indices = expanded['anchor_feature_indices']
     query = tuple(expanded[k][indices] for k in (
@@ -80,6 +82,9 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
             mask = sum(1 << j for j, passed in enumerate(hits) if passed)
             if not mask:
                 continue
+            if design is not None:
+                from .guided_filters import rule_passes
+                if not rule_passes(mask,anchor_order,design):continue
             matching_seeds += 1
             quality = float(values[hits].min())
             row = dict(mask=mask, matched_anchor_count=int(hits.sum()),
@@ -92,10 +97,18 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
 
 
 def compute(task):
+    global _GUIDED_CACHE
     start, stop, target = task
     target = Path(target)
     reader, original, expanded, q = full._STATE
     policy = q['condition_policy']
+    guided=None
+    if q.get('guided_design'):
+        from .guided_filters import GuidedFilter
+        key=json.dumps(q['guided_design'],sort_keys=True)
+        if _GUIDED_CACHE is None or _GUIDED_CACHE[0]!=key:
+            _GUIDED_CACHE=(key,GuidedFilter(q,expanded,q['guided_design']))
+        guided=_GUIDED_CACHE[1]
     columns = [next(a['score_column'] for a in q['anchors'] if a['anchor_id'] == aid)
                for aid in policy['required_anchors']]
     counts = Counter({key:0 for key in ('size_passed','coverage_passed','extent_passed',
@@ -131,27 +144,51 @@ def compute(task):
             counts[name] += int(stage > j)
         if stage != 4:
             continue
+        if guided is not None:
+            t=time.perf_counter()
+            geometry_ok=guided.geometry_possible(features)
+            seconds['mandatory_feature_geometry']+=time.perf_counter()-t
+            if not geometry_ok:
+                counts['guided_geometry_rejected']+=1
+                continue
+            counts['guided_geometry_passed']+=1
         t = time.perf_counter()
         seeds, pairs = prepare_seeds(candidate, original, **full.POSE_PARAMETERS)
         seconds['seed_generation'] += time.perf_counter()-t
         counts['original_seeds'] += len(seeds)
         t = time.perf_counter()
         possible = possible_seed_mask(full._BOUND, features, seeds)
+        if guided is not None:possible=guided.geometry_seeds(features,seeds,possible)
         seconds['seed_feasibility'] += time.perf_counter()-t
         counts['possible_seeds'] += int(possible.sum())
         if not possible.any():
             continue
+        if guided is not None:
+            t=time.perf_counter()
+            positions=np.flatnonzero(possible)
+            transforms=np.asarray([seeds[i].transform_matrix for i in positions]).reshape(-1,4,4)
+            pocket=guided.pocket_mask(candidate.shape_points,transforms)
+            counts['pocket_tested_seeds']+=len(positions)
+            counts['pocket_rejected_seeds']+=int((~pocket).sum())
+            possible[positions]=pocket
+            seconds['pocket_exclusion']+=time.perf_counter()-t
+            if not possible.any():
+                counts['pocket_rejected_conformers']+=1
+                continue
+            counts['pocket_passed_conformers']+=1
         counts['pose_feasibility_passed'] += 1
         levels[-1] = 5
         t = time.perf_counter()
+        scoring_seeds = seeds if guided is None else [seeds[i] for i in np.flatnonzero(possible)]
         rigid = _score_ids(reader, original, np.array([gid]), backend='numpy',
-                           prepared={int(gid): (candidate, seeds, pairs)}, **full.POSE_PARAMETERS)
+                           prepared={int(gid): (candidate, scoring_seeds, pairs)}, **full.POSE_PARAMETERS)
+        counts['gaussian_evaluated_seeds'] += len(scoring_seeds)
         seconds['gaussian'] += time.perf_counter()-t
         counts['gaussian_evaluated_conformers'] += 1
         levels[-1] = 6
         t = time.perf_counter()
         poses, matching_seeds = pose_representatives(features, seeds, possible, expanded, columns,
-                                                     policy['minimum_score'])
+                                                     policy['minimum_score'],q.get('guided_design'),policy['required_anchors'])
         seconds['anchor_assignment'] += time.perf_counter()-t
         counts['exact_seed_annotations'] += int(possible.sum())
         counts['matching_seeds'] += matching_seeds
@@ -323,6 +360,10 @@ def run(selection, output, workers=22, chunk_size=2048):
     q = copy.deepcopy(next(q for q in evidence['queries'] if
         set(policy['required_anchors']) <= {a['anchor_id'] for a in q['anchors']}))
     q['condition_policy'] = policy
+    if selected.get('guided_design'):
+        q['guided_design']=selected['guided_design']
+        if str(Path(q['guided_design']['receptor_npz']).resolve()) not in selected['sources']:
+            raise ValueError('Guided receptor is not sealed by the adopted design')
     indices = sorted({a['feature_index'] for a in q['anchors']})
     for a in q['anchors']:
         a['score_column'] = indices.index(a['feature_index'])
@@ -343,6 +384,9 @@ def run(selection, output, workers=22, chunk_size=2048):
                         clustering='Exact non-stereochemical Murcko scaffold groups; acyclic full-connectivity groups',
                         gaussian='Unchanged best original-seed conformer score, ranking only; no cutoff',
                         reference_acceptance='Not an unpruned full-library equivalence benchmark')
+        if q.get('guided_design'):
+            protocol['guided_design']=q['guided_design']
+            protocol['gaussian']='Best geometry/pocket-surviving seed score, ranking only; no cutoff; not legacy ranking equivalence'
         protocol = json.loads(json.dumps(protocol))
         protocol_path = output/'protocol.json'
         if protocol_path.exists() and full.ev.read(protocol_path) != protocol:
@@ -395,6 +439,8 @@ def run(selection, output, workers=22, chunk_size=2048):
                 for _, receipt in bounded_results(pool,compute,tasks(),workers*2):
                     update(receipt,False)
                     full.ev.log(f"Checked {counts['input_conformers']}/{total}; coarse {counts['anchor_bound_passed']}; Gaussian {counts['gaussian_evaluated_conformers']}; matching {counts['matching_conformers']}")
+                    if q.get('guided_design'):
+                        full.ev.log(f"Guided geometry {counts['guided_geometry_passed']}; pocket conformers {counts['pocket_passed_conformers']}; seeds generated {counts['original_seeds']}, geometry possible {counts['possible_seeds']}, pocket rejected {counts['pocket_rejected_seeds']}, Gaussian evaluated {counts['gaussian_evaluated_seeds']}")
             report['scan_wall_seconds_this_invocation'] = time.perf_counter()-scan_start
             if counts['input_conformers'] != total:
                 raise ValueError('Incomplete conformer coverage')

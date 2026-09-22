@@ -18,20 +18,35 @@ from .prompt_workflow import create_plan, initialize_context
 from .language_policy import contains_han
 
 WORKFLOWS = [
+    {"name":"Structure-guided chat", "status":"survey, recommend, adopt/design and guided full-library adapters",
+     "scope":"Mapped crystal recurrence, literature fallback, evidence-grounded LLM advice and editable coordinate-backed designs; mandatory geometry and receptor exclusion precede Gaussian. Exploratory, not calibrated new-target affinity."},
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
     {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein and optional CCD ligands; installed native or Apptainer profile."},
     {"name": "3D screening", "status": "WEE1 templates; exhaustive coarse retrieval by default", "scope": "All conformer descriptors compared before budgeted Gaussian refinement. Approximate mode requires explicit selection. New exhaustive runs are not claimed equivalent to old ANN candidate sets."},
     {"name": "Uncapped library condition counts", "status": "full_count adapter; workstation validation pending", "scope": "Evaluate every conformer pose against classified features without descriptor Top-K or Gaussian Top-N. Long batch job, not all possible orientations or torsions. Reuse completed classification as query definition."},
     {"name": "Necessary-condition funnel", "status": "rule-based adapter; workstation speedup pending", "scope": "Use an explicit selection rule across all library conformers; reject only impossible feature type/assignment/pair geometry, then refine every survivor without Top-K. Per-feature counts are conditional on that rule."},
     {"name": "Screening evidence and human selection", "status": "available", "scope": "Review a completed search, preview explicit same-pose anchor conditions, then separately request SDF/ID export for docking preparation."},
-    {"name": "New-target query preparation", "status": "not exposed in chat", "scope": "Requires reference ligand/site, query preparation and independent retrieval calibration."},
+    {"name": "New-target query preparation", "status": "structure_survey and adopted guided designs", "scope": "Requires mapped target-bound reference coordinates; exploratory thresholds are not independent retrieval calibration."},
     {"name": "Molecule aggregation and pocket QC", "status": "CLI components; chat integration pending", "scope": "Requires validated query poses, receptor/site definitions and aggregation artifacts."},
     {"name": "Flexible docking", "status": "Glide preparation/execution adapter; workstation validation pending", "scope": "Derive pocket from crystal ligand, prepare inputs, explicitly run licensed preparation and reference-gated docking. PLANTS execution and cross-docking validation remain pending."},
     {"name": "Biological enrichment and final selection", "status": "not validated", "scope": "Requires held-out active/decoy labels, diversity/property criteria and experimental evidence."},
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
-intent, message, task_id, request, and ONLY for select a selection object.
-intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/coarse/select/export/prepare_docking/run_docking.
+intent, message, task_id, request, plus a selection object for select or a design object for design.
+intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/coarse/select/export/prepare_docking/run_docking/recommend/adopt/design/guided.
+For a pre-search protein/ligand PDB survey use run requesting protein verification and structure_survey.
+Use recommend on a completed structure_survey task for grounded advice. Use adopt when the user
+explicitly accepts that proposal or delegates to it. Silence never means adoption.
+Use design to edit an anchor_recommend task: include an additional design object with only
+query_id, mandatory_anchors, alternative_groups, optional_anchors, evidence_ids or rationale.
+Use exact IDs in evidence. Mandatory anchors are ALL, each alternative group is ANY in the same
+pose, optional anchors are labels only. Do not invent coordinates or scientific evidence.
+Use guided on an adopted anchor_design to run the full library with feature geometry and pocket
+exclusion before Gaussian, preserving pose combinations and all scaffold-group members.
+Use select on guided_funnel results to retain requested anchor combinations at the original
+threshold. This keeps the adopted mandatory rules and exports pose/ID lists, not docking inputs.
+These are separate chat tasks; progress questions must not launch them. If no usable crystal
+coordinates exist, show literature and request the needed target-bound structure, not a made-up query.
 Write message in English. task_id is an existing task ID from this session or null (latest).
 request is a self-contained scientific request only for run, otherwise empty.
 Use conversation context to resolve follow-up clarifications. Never invent biological sequences,
@@ -89,9 +104,9 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 
 
 def validate_route(value):
-    if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}):
+    if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}, {"intent", "message", "task_id", "request", "design"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -106,6 +121,9 @@ def validate_route(value):
     if "selection" in value:
         from .screening_selection import validate_selection
         validate_selection(value["selection"])
+    if (value['intent']=='design') != ('design' in value):raise ValueError('Only design accepts design edits')
+    if 'design' in value and (not isinstance(value['design'],dict) or set(value['design'])-{'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}):
+        raise ValueError('Invalid design edits')
     return value
 
 
@@ -120,9 +138,21 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
-        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"}: continue
+        if step.get('action')=='guided_select' and step.get('status')=='complete':
+            child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            return {k:child[k] for k in ('kind','status','matching_molecules','pose_records','selection','outputs','scope') if k in child}
+        if step.get("status") != "complete" or step.get("action") not in {"review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking", "structure_survey", "anchor_recommend", "anchor_design", "guided_funnel"}: continue
         path = ensure_within(Path(step["result"]["report"]), Path(job["plan"]).parent)
         child = read_json(path) or {}
+        if child.get('kind') in {'structure_survey','anchor_recommendation','anchor_design','guided_funnel'}:
+            keys=('kind','status','readiness','target','discovered_structures','unanalyzed_structures',
+                  'recurrence','recommendation','defaults','design','needs_input','literature','literature_advice',
+                  'reference_control','stage_counts','counts','aggregation','outputs','failures')
+            summary={k:child[k] for k in keys if k in child}
+            summary['queries']=[dict(query_id=q['query_id'],anchors=[{k:a[k] for k in
+                ('anchor_id','feature_class','target_residue') if k in a} for a in q['anchors']],
+                evidence_id=q.get('evidence_id')) for q in child.get('queries',[])]
+            return summary
         if child.get('kind') == 'coarse_audit':
             return {k:v for k,v in child.items() if k not in {'sources','code','sample_ids','sample_panel','scenarios'}}
         if child.get('kind') == 'hardware_benchmark':
@@ -148,6 +178,16 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind')=='guided_selection':return json.dumps(summary,indent=2)
+    if summary.get('kind') in {'structure_survey','anchor_recommendation','anchor_design','guided_funnel'}:
+        kind=summary['kind']
+        next_step={'structure_survey':'Use /recommend for evidence-grounded LLM advice.',
+            'anchor_recommendation':'Edit the proposed anchor IDs in chat, or use /adopt to accept the proposal.',
+            'anchor_design':'Use /guided to start the full-library scan with this sealed design.',
+            'guided_funnel':'Review the pose combinations and scaffold groups in the reported outputs.'}[kind]
+        if summary.get('readiness')=='needs_structure_input':
+            next_step='Provide a target-bound PDB ID in chat for a new survey. Literature alone does not provide 3D coordinates. Use /recommend to summarize available literature.'
+        return json.dumps(summary,indent=2)+'\n'+next_step
     lines = [summary["kind"].replace("_", " ").capitalize()]
     if summary['kind'] in {'coarse_audit','hardware_benchmark','docking_preparation','docking_execution'}:return json.dumps(summary,indent=2)
     if summary.get("library"):
@@ -328,7 +368,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking"}:
+            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking", "/recommend", "/adopt", "/guided"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
             else:
@@ -356,6 +396,34 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
+            if intent in {'recommend','adopt','design','guided'}:
+                expected={'recommend':'structure_survey','adopt':'anchor_recommend','design':'anchor_recommend','guided':'anchor_design'}[intent]
+                if decision['task_id'] is None:
+                    candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
+                        any(s.get('action')==expected and s.get('status')=='complete' for s in
+                            (read_json(j['report']) or {}).get('steps',{}).values())]
+                    if not candidates:raise ValueError('Complete '+expected+' in this conversation first')
+                    job=candidates[-1]
+                else:job=self.task(sid,decision['task_id'])
+                if job['status']!='complete' or not job.get('plan'):raise ValueError('Choose a completed source task')
+                details=read_json(job['report']) or {}
+                if sum(s.get('action')==expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
+                    raise ValueError('Wrong source task for '+intent)
+                action={'recommend':'anchor_recommend','adopt':'anchor_design','design':'anchor_design','guided':'guided_funnel'}[intent]
+                params=dict(source_run=Path(job['plan']).parent.name)
+                if intent=='recommend':params['provider']=provider
+                if intent=='design':params['design']=decision['design']
+                plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
+                          steps=[dict(id='guided',action=action,params=params)])
+                ctx=self.context
+                path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
+                jid=uuid.uuid4().hex[:16]
+                with self.connect() as db:
+                    db.execute('INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                        (jid,sid,plan['summary'],provider,'','queued',str(path),str(path.parent/'execution/report.json'),str(self.root/(jid+'.log')),time.time()))
+                answer=f"Task {jid} queued: {intent}. Source task: {job['id']}."
+                self.message(sid,'assistant',answer)
+                return answer
             if intent in {"evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
                 if intent in {'benchmark','funnel','coarse'} and decision['task_id'] is None:
                     candidates = [j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
@@ -367,13 +435,15 @@ class ChatAgent:
                     job = self.task(sid, decision["task_id"])
                 if job["status"] != "complete" or not job["plan"]:
                     raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
+                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel","guided_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
                 details = read_json(job["report"]) or {}
                 if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
                     raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
                 action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "coarse":"benchmark_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
                 params = dict(source_run=Path(job["plan"]).parent.name)
                 if intent == "select": params.update(decision["selection"])
+                if intent == 'select' and any(s.get('action')=='guided_funnel' for s in details.get('steps',{}).values()):
+                    action='guided_select'
                 if intent == "coarse": params["coarse_only"] = True
                 local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
                     "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
@@ -496,6 +566,8 @@ class ChatAgent:
         if self.runtime: cmd += ["--runtime",str(self.runtime)]
         if self.allow_compute: cmd += ["--allow-compute"]
         options = {"start_new_session":True} if os.name == "posix" else {"creationflags":subprocess.CREATE_NO_WINDOW}
+        if self.config_dir:
+            options['env']=dict(os.environ,AIDD_LLM_CONFIG_DIR=str(self.config_dir))
         self.update(jid,status="running")
         with Path(job["log"]).open("a",encoding="utf-8") as log:
             with subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT,**options) as process:

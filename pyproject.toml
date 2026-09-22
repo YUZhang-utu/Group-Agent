@@ -16,7 +16,7 @@ aidd-chat = "aidd_agent.chat_web:main"
 [project.optional-dependencies]
 chemistry = ["rdkit"]
 structures = ["gemmi", "biopython"]
-workstation = ["rdkit", "gemmi", "biopython", "pandas", "pyarrow", "faiss-cpu", "psutil"]
+workstation = ["rdkit", "gemmi", "biopython", "scipy", "pandas", "pyarrow", "faiss-cpu", "psutil"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

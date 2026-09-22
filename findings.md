@@ -510,3 +510,11 @@ feature-count predicates before poses, alongside existing anchor constraints.
 Extent matching is a coarse invariant, not detailed Gaussian overlap or pocket
 fit. Pocket-derived anchor evidence remains distinct from evaluated receptor
 contacts. Selectivity and overall speedup require new workstation measurements.
+
+## E051: grounded pre-search design
+
+The user-reported E050 retention motivates selecting a small explicit structural
+core before expensive pose work. Recurrence is evidence for a hypothesis, not
+proof that a contact is biologically indispensable. Guided pocket exclusion and
+seed-level geometry provide additional pre-Gaussian gates; no measured speedup
+or full-library recall claim is available yet. The running E050 branch is frozen.

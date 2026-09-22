@@ -2,6 +2,14 @@ project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E050-preselection-funnel-validation
+parallel_development:
+  experiment: E051-structure-guided-chat
+  branch: feature/structure-guided-chat
+  status: implemented_local_fixture_validation
+  running_e050_checkout: unchanged
+  guide: to_human/E051_STRUCTURE_GUIDED_CHAT.md
+  live_api_llm_and_full_library_performance: pending
+  thresholds: exploratory_not_recall_calibrated
 preselection_funnel_validation:
   status: full_library_entry_implemented_workstation_pending
   execution_scope: user_requested_direct_full_library_no_pilot_prerequisite

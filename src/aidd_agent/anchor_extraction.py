@@ -113,6 +113,10 @@ def extract_query_manifest(mmcif: Path, ccd: Path, ccd_id: str,
     from rdkit.Chem import ChemicalFeatures
 
     instances = enumerate_ligand_instances(mmcif, [ccd_id])
+    identity = query_id.split(':')
+    if len(identity) == 4:
+        instances = [item for item in instances if item['chain_id'] == identity[2]
+                     and item['residue_number'] == identity[3]]
     if len(instances) != 1:
         raise ValueError(f"Expected one {ccd_id} instance, found {len(instances)}")
     instance = instances[0]

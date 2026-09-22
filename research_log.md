@@ -1294,3 +1294,22 @@ Regression: 338 passed, 4 skipped; the new RDKit scaffold reconstruction test
 was skipped because RDKit is unavailable locally. Fixture orchestration covers
 full coverage, resume, ANY routing and pose evidence retention. English guard
 passed 272 maintained files. Run guide: to_human/E050_FULL_PRESELECTION.md.
+
+## 2026-09-22: E051 structure-guided chat implementation
+
+Implemented an isolated feature/structure-guided-chat worktree while the user
+continues E050. Added verified-target PDB survey, sequence-mapped recurrence,
+Europe PMC fallback, grounded provider advice, explicit adoption/manual edits,
+reference controls, and pre-Gaussian geometry/pocket gates. Gaussian now ranks
+only surviving seeds in the guided workflow; legacy E050 semantics are unchanged.
+Full-library outputs preserve pose masks and scaffold groups. Chat post-selection
+produces same-threshold molecule/pose lists without merging anchors across poses.
+This is exploratory implementation evidence. Live structure preparation, provider
+calls, full-library selectivity, speed and independent positive recall remain
+workstation checks. Arbitrary coordinate upload and guided SDF/docking handoff
+are not implemented. See to_human/E051_STRUCTURE_GUIDED_CHAT.md.
+
+E051 local validation: 348 passed, 5 skipped (2026-09-22); English-content guard
+passed. Optional scientific-dependency tests were skipped, including the new
+Biopython mapping fixture in this environment. No live API/LLM request or real
+full-library scientific run was performed. Main checkout remained clean.
