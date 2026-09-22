@@ -1313,3 +1313,27 @@ E051 local validation: 348 passed, 5 skipped (2026-09-22); English-content guard
 passed. Optional scientific-dependency tests were skipped, including the new
 Biopython mapping fixture in this environment. No live API/LLM request or real
 full-library scientific run was performed. Main checkout remained clean.
+
+## 2026-09-22: E052 MDM2 project census and diverse references
+
+Read and hashed eight supplied structures without modification. Seven aligned
+CIF exports lack original crystallographic/target-association metadata. Verified
+human MDM2 Q00987, retrieved all 147 associated experimental entries (138 X-ray,
+8 NMR, 1 EM), and downloaded all 133 X-ray entries <=3 A. Five failed strict target
+mapping; they are excluded explicitly. Coordinate/quality/site checks yielded
+68 unique organic nonpolymer ligands. An 8-reference farthest-first panel covers
+11/68 at Morgan similarity >=0.6; greedy full cover uses 44, not an optimality proof.
+Polymer analysis found 46 sequence/link variants, including the user's 7NUS,
+8GCG and 9CDZ. Sequence diagnostics are not chemical similarity or search readiness.
+
+Implemented reusable structure_diversity chat planning/execution and bounded
+report summaries. Added standalone HTML human review and source/output hashes.
+Results are exploratory. Current guided execution remains single-query; peptide
+chemical preparation and multi-reference execution are explicit unfinished
+boundaries. No full-library run or running E050 code was changed.
+
+E052 validation: full local suite 359 passed, 2 skipped with isolated RDKit and
+Biopython dependencies. Final targeted diversity checks: 7 passed. Actual cached
+MDM2 census rerun completed; code hashes and artifact manifest recorded. Existing
+main checkout remained clean. Public API retrieval was real; Chat routing was
+fixture-tested and no live LLM decision or library scan was performed.

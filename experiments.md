@@ -1718,3 +1718,11 @@ advice, same-pose selection, reference controls and pre-Gaussian call ordering.
 Full-library evaluation is authorized directly; no pilot prerequisite is added.
 Record generated/eligible/scored seeds, survivor conformers/molecules, wall time
 and positive retention. Changes to rules require new immutable output roots.
+
+## E052 protocol and actual project evidence
+
+Protocol: experiments/E052-mdm2-diverse-references.md, committed before analysis.
+Actual project output: D:/agent/MDM2/analysis/e052/review.html. API snapshots,
+133 native coordinate files, contact/quality tables, small-molecule and peptide
+sequence matrices accompany the report. This is exploratory reference selection,
+not full-library recall or speed measurement. No E050 interruption occurred.

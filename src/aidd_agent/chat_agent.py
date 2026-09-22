@@ -35,6 +35,9 @@ ROUTER = """You are an AIDD conversational task coordinator. Return JSON only wi
 intent, message, task_id, request, plus a selection object for select or a design object for design.
 intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/coarse/select/export/prepare_docking/run_docking/recommend/adopt/design/guided.
 For a pre-search protein/ligand PDB survey use run requesting protein verification and structure_survey.
+For a resolution census and diverse ligand reference comparison use run requesting
+structure_diversity, preserving the user's reference PDB. Do not claim polymer sequence
+similarity is chemical similarity or that multi-reference library execution is available.
 Use recommend on a completed structure_survey task for grounded advice. Use adopt when the user
 explicitly accepts that proposal or delegates to it. Silence never means adoption.
 Use design to edit an anchor_recommend task: include an additional design object with only
@@ -138,6 +141,17 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
+        if step.get('action')=='structure_diversity' and step.get('status')=='complete':
+            child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            summary={k:child[k] for k in ('kind','status','target','discovered_entries','census','quality_site_unique_ligands',
+                'coverage_curve','outputs','failed_entries','limitations') if k in child}
+            summary['proposed_references']=[{k:r[k] for k in ('query_id','resolution','heavy_atoms','r_free')}
+                for r in child.get('proposed_references',[])]
+            polymers=child.get('polymer_ligands',{})
+            summary['polymer_ligands']=dict(unique_sequence_link_variants=polymers.get('unique_sequence_link_variants'),
+                examples=[{k:r[k] for k in ('query_id','resolution','length','description','reference_readiness')}
+                          for r in polymers.get('sequence_diversity_examples',[])],limitations=polymers.get('limitations',[]))
+            return summary
         if step.get('action')=='guided_select' and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             return {k:child[k] for k in ('kind','status','matching_molecules','pose_records','selection','outputs','scope') if k in child}
@@ -178,6 +192,8 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind')=='structure_diversity':
+        return json.dumps(summary,indent=2)+'\nReview the reference proposal. Polymer chemical preparation and multi-reference execution require further implementation.'
     if summary.get('kind')=='guided_selection':return json.dumps(summary,indent=2)
     if summary.get('kind') in {'structure_survey','anchor_recommendation','anchor_design','guided_funnel'}:
         kind=summary['kind']

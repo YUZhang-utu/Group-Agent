@@ -17,6 +17,7 @@ ACTION_FIELDS = {
     "pdb_search": ({"protein_step"}, {"max_resolution"}),
     "pdb_fetch": ({"pdb_id"}, set()),
     "structure_survey": ({"protein_step"}, {"max_resolution", "max_structures", "pdb_ids"}),
+    "structure_diversity": ({"protein_step", "reference_pdb"}, {"maximum_references", "similarity_threshold"}),
     "anchor_recommend": ({"source_run", "provider"}, set()),
     "anchor_design": ({"source_run"}, {"design"}),
     "guided_funnel": ({"source_run"}, set()),
@@ -56,6 +57,11 @@ structure_survey consumes a prior verified protein step to discover ligand-bound
 analyze crystal contacts and mapped recurrence, and fall back to literature when no usable
 crystal exists. Use this for a pre-search structure/anchor survey, not search_3d.
 max_structures defaults to 12 analyzed entries; all discovered entries remain in the report.
+Use structure_diversity when asked to census all experimental structures by resolution
+and compare ligands to propose diverse references. It requires a user-specified reference_pdb
+for the binding site; never invent it. This step downloads coordinates and computes
+ligand similarity, but does not launch a library scan. Polymer ligands have separate
+sequence diagnostics and still need validated chemical graph preparation.
 After survey, the local coordinator supports recommend, adopt/design and guided chat actions.
 New-target guided screening is exploratory and requires a coordinate-backed adopted design;
 do not claim the existing search_3d WEE1 calibration applies to it.
@@ -158,6 +164,12 @@ def validate_plan(plan):
             raise ValueError("coarse_only must be boolean")
         if 'max_structures' in params and not _integer(params['max_structures'],1,100):
             raise ValueError('max_structures must be 1..100')
+        if action=='structure_diversity':
+            if not isinstance(params['reference_pdb'],str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',params['reference_pdb']):
+                raise ValueError('Provide an explicit reference PDB for site comparison')
+            if not _integer(params.get('maximum_references',8),1,100):raise ValueError('Invalid reference budget')
+            value=params.get('similarity_threshold',.6)
+            if type(value) not in (int,float) or not 0<value<=1:raise ValueError('Invalid similarity threshold')
         if 'pdb_ids' in params and (not isinstance(params['pdb_ids'],list) or not 1<=len(params['pdb_ids'])<=20 or
             any(not isinstance(x,str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',x) for x in params['pdb_ids'])):
             raise ValueError('Provide 1..20 explicit PDB IDs')

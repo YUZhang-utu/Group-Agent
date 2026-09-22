@@ -199,8 +199,14 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         (directory / "protein.fasta").write_text(f">{record['accession']}\n{record['sequence']}\n", encoding="utf-8")
         return dict(accession=record["accession"], organism=record["organism"], length=record["length"],
                     sequence_sha256=record["sequence_sha256"], source_url=record["source_url"])
-    if action in {"pdb_search", "af3_prepare", "structure_survey"}:
+    if action in {"pdb_search", "af3_prepare", "structure_survey", "structure_diversity"}:
         protein = ev.read(execution / params["protein_step"] / "protein.json")
+    if action=='structure_diversity':
+        from .structure_diversity import run
+        result=run(protein,directory/'diversity',reference_pdb=params['reference_pdb'].upper(),
+                   maximum=params.get('maximum_references',8),similarity=params.get('similarity_threshold',.6))
+        return dict(status='structure_diversity',report=str(directory/'diversity/report.json'),
+                    proposed_references=len(result['proposed_references']))
     if action=='structure_survey':
         from .structure_survey import survey
         result=survey(protein,directory/'survey',services,params.get('max_structures',12),params.get('max_resolution',3.),params.get('pdb_ids'))

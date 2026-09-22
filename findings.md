@@ -518,3 +518,13 @@ core before expensive pose work. Recurrence is evidence for a hypothesis, not
 proof that a contact is biologically indispensable. Guided pocket exclusion and
 seed-level geometry provide additional pre-Gaussian gates; no measured speedup
 or full-library recall claim is available yet. The running E050 branch is frozen.
+
+## E052: MDM2 findings
+
+The local input set includes polymer macrocycle/peptide ligands; a nonpolymer-only
+survey misses core project references. Reference diversity needs distinct small-
+molecule chemistry and polymer chemistry tracks. Selecting eight maximally
+separated small molecules does not imply broad chemical coverage: measured
+coverage is 11/68 at the explicit 0.6 fingerprint similarity setting. Retain
+per-reference provenance and review panel size before any multi-reference scan.
+Full results: to_human/E052_MDM2_REFERENCE_REVIEW.md.

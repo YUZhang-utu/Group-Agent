@@ -35,3 +35,15 @@ not evidence of biological screening quality or measured RTX 5090 acceleration.
 - Pharmit help: https://pharmit.csb.pitt.edu/help.html . Pharmacophore feature
   selection and receptor exclusion inform workflow design. E051 does not claim
   Pharmit algorithm equivalence or adopt its thresholds as a calibration.
+
+## E052 source evidence
+
+- UniProt Q00987: https://rest.uniprot.org/uniprotkb/Q00987.json . Verified human
+  MDM2 sequence and accession, retained locally with source payload checksum.
+- RCSB entry: https://www.rcsb.org/structure/5C5A . Nutlin-3a complex supplies the
+  project reference pocket; original coordinates supersede missing export metadata.
+- RCSB entries https://www.rcsb.org/structure/7NUS ,
+  https://www.rcsb.org/structure/8GCG and https://www.rcsb.org/structure/9CDZ .
+  Deposited polymer entities establish why peptide ligands require a separate path.
+- Official Data API: https://data.rcsb.org/ . Cached Search/GraphQL/CCD responses
+  and raw coordinate files under the project analysis directory record actual counts.
