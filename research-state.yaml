@@ -1,7 +1,15 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E061-budget-throughput
+current_experiment: E062-seed-pocket-throughput
+seed_pocket_throughput:
+  status: local_equivalence_passed_workstation_speedup_pending
+  full_regression: 474_passed_2_skipped
+  user_receipt_seed_fraction: 0.387
+  user_receipt_pocket_fraction: 0.345
+  synthetic_seed_speedup: 1.33
+  synthetic_pocket_speedup: 1.54
+  protocol: experiments/E062-seed-pocket-throughput.md
 budget_throughput:
   status: local_equivalence_passed_workstation_receipts_pending
   full_regression: 470_passed_2_skipped

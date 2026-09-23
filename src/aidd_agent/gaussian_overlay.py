@@ -205,31 +205,35 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
     if max_seeds == 0:
         return ()
     seeds, seen = [], set()
+    candidate_distances={}
     for qi in range(len(query)):
         for qj in range(qi + 1, len(query)):
             query_vector = query[qj] - query[qi]
             query_distance = np.linalg.norm(query_vector)
             if query_distance <= 1e-12:
                 continue
+            axials=None
+            target_mid = (query[qi] + query[qj]) / 2.0
             for ci in range(len(candidate)):
                 for cj in range(ci + 1, len(candidate)):
-                    candidate_vector = candidate[cj] - candidate[ci]
-                    candidate_distance = np.linalg.norm(candidate_vector)
-                    if candidate_distance <= 1e-12 or abs(candidate_distance - query_distance) > tolerance:
-                        continue
                     orientations = []
                     if candidate_types[ci] == query_types[qi] and candidate_types[cj] == query_types[qj]:
                         orientations.append((ci, cj))
                     if candidate_types[cj] == query_types[qi] and candidate_types[ci] == query_types[qj]:
                         orientations.append((cj, ci))
+                    if not orientations:continue
+                    if (ci,cj) not in candidate_distances:
+                        candidate_distances[ci,cj]=np.linalg.norm(candidate[cj]-candidate[ci])
+                    candidate_distance=candidate_distances[ci,cj]
+                    if candidate_distance <= 1e-12 or abs(candidate_distance-query_distance)>tolerance:continue
+                    if axials is None:
+                        axis=query_vector/query_distance
+                        axials=[_rotation_axis_angle(axis,2.0*math.pi*sample/axial_samples) for sample in range(axial_samples)]
                     for first, second in orientations:
                         vector = candidate[second] - candidate[first]
                         base = _rotation_between(vector, query_vector)
                         source_mid = (candidate[first] + candidate[second]) / 2.0
-                        target_mid = (query[qi] + query[qj]) / 2.0
-                        axis = query_vector / query_distance
-                        for sample in range(axial_samples):
-                            axial = _rotation_axis_angle(axis, 2.0 * math.pi * sample / axial_samples)
+                        for sample,axial in enumerate(axials):
                             rotation = axial @ base
                             translation = target_mid - rotation @ source_mid
                             matrix = np.eye(4); matrix[:3, :3] = rotation; matrix[:3, 3] = translation

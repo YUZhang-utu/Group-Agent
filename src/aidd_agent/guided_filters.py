@@ -49,15 +49,19 @@ class GuidedFilter:
 
     def pocket_mask(self, points, transforms):
         matrices=np.asarray(transforms).reshape(-1,4,4)
-        answer=[]
-        for matrix in matrices:
-            moved=points @ matrix[:3,:3].T + matrix[:3,3]
-            distances,_=self.tree.query(moved,k=1)
-            physical=float(np.mean(distances < self.cutoff-1e-8)) <= self.fraction
-            excluded=any(region['mode']=='hard' and np.any(np.linalg.norm(moved-np.array(region['center']),axis=1)<region['radius'])
-                         for region in self.design.get('exclusions',[]))
-            answer.append(physical and not excluded)
-        return np.asarray(answer,dtype=bool)
+        points=np.asarray(points)
+        answer=np.empty(len(matrices),dtype=bool)
+        batch=max(1,16384//max(1,len(points)))
+        hard=[r for r in self.design.get('exclusions',[]) if r['mode']=='hard']
+        for start in range(0,len(matrices),batch):
+            block=matrices[start:start+batch]
+            moved=points @ block[:,:3,:3].transpose(0,2,1)+block[:,None,:3,3]
+            distances,_=self.tree.query(moved.reshape(-1,3),k=1)
+            physical=np.mean(distances.reshape(len(block),len(points))<self.cutoff-1e-8,axis=1)<=self.fraction
+            for region in hard:
+                physical &= ~np.any(np.linalg.norm(moved-np.array(region['center']),axis=2)<region['radius'],axis=1)
+            answer[start:start+len(block)]=physical
+        return answer
 
 
 def adaptive_stage(candidate, rule):

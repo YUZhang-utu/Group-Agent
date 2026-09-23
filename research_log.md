@@ -1684,3 +1684,21 @@ repetitions) preserved the exact representative, reduced Gaussian evaluations
 Artifact: data/e061/synthetic.json. This excludes seed generation, I/O, pocket
 checks and multiprocessing and is not a workstation throughput claim. Real chunk
 receipt timing is pending. Added read-only budget_profile receipt aggregation.
+
+## 2026-09-23 - E062 receipt-driven seed and pocket optimization
+
+User supplied one real 64-conformer receipt, 16 workers and numba assignment.
+Of 2.78895s wall: seed generation 38.7%, pocket 34.5%, assignment 15.1%,
+Gaussian 7.4%, persistence 1.7%. 29740/33088 seeds clash (89.9%); every
+conformer still has a surviving pose. This is one chunk, not a random sample.
+Implemented per-query-pair axial rotation reuse and compatible-pair distance
+caching, plus bounded batched receptor KD queries. No seed/candidate reduction.
+
+Exploratory comparison against c0a84bb's seed implementation: ten RNG-62 random
+panels, seed caps 1/64/512, exact ordered payloads unchanged. Five warm repetitions
+at cap512: 0.261991s to 0.197057s (1.33x). Pocket panel: 60 atoms, 517 poses,
+2000 receptor points, exact scalar/batched masks; 0.027868s to 0.018091s (1.54x).
+Artifact data/e062/synthetic.json. Synthetic single-process kernels only; no
+workstation end-to-end claim. Full regression 474 passed, 2 skipped; English
+and diff checks passed. Active runs must retain original code/seals. Broad
+runtime reduction would need separately evaluated search-budget changes.

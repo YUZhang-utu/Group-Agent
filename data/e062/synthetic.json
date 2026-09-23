@@ -1,0 +1,22 @@
+{
+  "seed_panels": 10,
+  "seed_caps": [
+    1,
+    64,
+    512
+  ],
+  "exact_seed_payloads": true,
+  "exact_pocket_mask": true,
+  "seed_seconds": {
+    "before": 0.2619905000028666,
+    "after": 0.19705670000985265,
+    "speedup": 1.3295183568473812
+  },
+  "pocket_seconds": {
+    "before": 0.027868300006957725,
+    "after": 0.018090700003085658,
+    "speedup": 1.5404765985950981
+  },
+  "scope": "Synthetic single-process kernels, not workstation end-to-end",
+  "rng_seed": 62
+}
