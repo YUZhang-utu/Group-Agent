@@ -54,6 +54,19 @@ def test_budget_compute_does_not_call_empirical_filters(tmp_path,monkeypatch):
     with pytest.raises(ValueError):screen.verified_chunk(path,np.array([7]))
 
 
+def test_contact_first_pose_cannot_be_compensated_by_shape(monkeypatch):
+    from aidd_agent import guided_filters
+    query,features,seeds=geometry()
+    def terms(values,assigned,order,gaussian,*args):
+        contact=0. if gaussian==1. else .8
+        return dict(optional_score=contact,gaussian_same_pose=gaussian,composite_score=.7*gaussian+.3*contact)
+    monkeypatch.setattr(guided_filters,'pose_rank',terms)
+    rows,_=pre.pose_representatives(features,seeds,np.ones(2,bool),query,[0,1],.5,
+        dict(minimum_pose_score=.9),['A','B'],np.array([1.,.2]),query['shape_points'],budget_mode=True)
+    assert len(rows)==1 and rows[0]['seed_index']==1
+    assert rows[0]['composite_score']<.7 and rows[0]['optional_score']==.8
+
+
 def test_hydrogen_reconstruction_and_original_pose_transform():
     from rdkit import Chem
     for smiles in ('c1cc[nH]c1','[NH4+]','c1ccccc1'):
@@ -91,7 +104,7 @@ def test_rank_merge_deduplicates_conformers_and_keeps_reserve(tmp_path,monkeypat
     for ti,values in enumerate([[('a',.1,1),('a',.8,2),('b',.7,3),('c',.2,4)],[('b',.9,3),('c',.5,4)]]):
         folder=tmp_path/'chunks'/f'{ti:02d}';folder.mkdir(parents=True)
         path=folder/'000.poses.jsonl'
-        path.write_text(''.join(json.dumps(dict(molecule_id=mid,composite_score=score,global_id=gid,transform=np.eye(4).reshape(-1).tolist()))+'\n' for mid,score,gid in values))
+        path.write_text(''.join(json.dumps(dict(molecule_id=mid,composite_score=1-score,optional_score=score,gaussian_same_pose=1-score,global_id=gid,transform=np.eye(4).reshape(-1).tolist()))+'\n' for mid,score,gid in values))
         path.with_name('000.receipt.json').write_text(json.dumps(dict(files=fingerprint([path]))))
     region=[dict(id='A',points=[[0,0,0]],radius=1.,minimum_atoms=1)]
     definitions=dict(definitions=dict(one=region,two=region),ambiguity_margin=.5)

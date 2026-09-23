@@ -18,6 +18,7 @@ from .prompt_workflow import create_plan, initialize_context
 from .language_policy import contains_han
 
 WORKFLOWS = [
+    {"name":"Contact-first molecule budgets", "status":"Chat budget and budget_page adapters", "scope":"Unique-molecule ANN retrieval, same-pose contact-first template ranks, RRF fusion and paged original/posed MOL2 plus names. Target recall and enrichment require validation."},
     {"name":"Structure-guided chat", "status":"survey, recommend, adopt/design and guided full-library adapters",
      "scope":"Mapped crystal recurrence, literature fallback, evidence-grounded LLM advice and editable coordinate-backed designs; mandatory geometry and receptor exclusion precede Gaussian. Exploratory, not calibrated new-target affinity."},
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
@@ -107,6 +108,14 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 
 
 ROUTER += '''
+Use budget when the user requests a budgeted library search and molecule delivery from a
+completed consensus recommendation or design. Include budget {}, or explicit integer
+retrieval_molecules and export_molecules. Defaults are 1000000 retrieved unique molecules
+and 100000 exported unique molecules. Contact ranks precede shape tie-breaks and template RRF.
+Use budget_page to deliver the next molecules from an existing consensus_budget or budget_page
+task without rescoring; include budget {} or export_molecules and optional start_rank.
+Both intents have empty request. They include MOL2/name export in the authorized task.
+Do not route these requests to guided or the old select/export workflow.
 For the general-target workflow, after structure_diversity use intent consensus with an extra
 reference object containing reference_query (PDB:CCD:author_chain:residue), target_chain, and optional maximum_templates.
 Use only user-provided reference identity; if ambiguous use consensus with reference {} to obtain options.
@@ -134,6 +143,12 @@ All these intents use an empty request. On consensus_funnel use select to choose
 
 
 def validate_route(value):
+    if isinstance(value,dict) and value.get('intent') in {'budget','budget_page'}:
+        from .budget_workflow import validate_budget
+        if set(value)!={'intent','message','task_id','request','budget'}:raise ValueError('Budget routing requires a budget object')
+        validate_budget(value['budget'],value['intent']=='budget_page')
+        validate_route(dict(intent='status',message=value['message'],task_id=value['task_id'],request=value['request']))
+        return value
     if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}, {"intent", "message", "task_id", "request", "design"}, {"intent", "message", "task_id", "request", "reference"}):
         raise ValueError("Invalid chat decision")
     if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided", "consensus"}:
@@ -171,6 +186,9 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
+        if step.get('action') in {'consensus_budget','budget_page'} and step.get('status')=='complete':
+            child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            return {k:child[k] for k in ('kind','status','target','ranked_molecules','exported_molecules','requested_molecules','start_rank','end_rank','shortfall','review_required','outputs','limitations','ranking') if k in child}
         if step.get('action') in {'structure_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
@@ -233,6 +251,8 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind') in {'consensus_budget','budget_page'}:
+        return json.dumps(summary,indent=2)+'\nUse /budget_page for the next nonoverlapping molecule page without rescoring.'
     if summary.get('kind')=='structure_diversity':
         return json.dumps(summary,indent=2)+'\nChoose the reference ligand instance and target chain in chat to build a same-pocket consensus. Polymer chemical preparation remains separate.'
     if summary.get('kind') in {'structure_consensus','consensus_recommendation','consensus_design','consensus_funnel'}:
@@ -433,9 +453,10 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking", "/recommend", "/adopt", "/guided"}:
+            if command in {"/budget", "/budget_page", "/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking", "/recommend", "/adopt", "/guided"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
+                if command in {'/budget','/budget_page'}:decision['budget']={}
             else:
                 profile = select_llm_profile(provider, config_dir=self.config_dir)
                 snapshot = self.snapshot(sid)
@@ -461,9 +482,10 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
-            if intent in {'recommend','adopt','design','guided','consensus'}:
+            if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus'}:
                 expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
-                          'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'}}[intent]
+                          'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'},
+                          'budget':{'consensus_design','consensus_recommend'},'budget_page':{'consensus_budget','budget_page'}}[intent]
                 if decision['task_id'] is None:
                     candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
                         any(s.get('action') in expected and s.get('status')=='complete' for s in
@@ -476,10 +498,11 @@ class ChatAgent:
                 if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
                     raise ValueError('Wrong source task for '+intent)
                 previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
-                action={'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
+                action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
                         'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
                         'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
                 params=dict(source_run=Path(job['plan']).parent.name)
+                if intent in {'budget','budget_page'}:params.update(decision['budget'])
                 if intent=='recommend':params['provider']=provider
                 if intent=='design':params['design']=decision['design']
                 if intent=='consensus':params.update(decision['reference'])

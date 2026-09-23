@@ -96,10 +96,12 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
                 if budget_mode:row['legacy_score_threshold_passed'] = row['composite_score']>=design['minimum_pose_score']
                 elif row['composite_score']<design['minimum_pose_score']:continue
             matching_seeds += 1
-            rank=row.get('composite_score',quality)
+            rank=(row.get('optional_score',quality),row.get('gaussian_same_pose',0.)) if budget_mode else row.get('composite_score',quality)
             signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
             key=(0,'') if budget_mode else (mask,signature)
-            if key not in best or rank > best[key].get('composite_score',best[key]['min_matched_score']):
+            old_rank=((best[key].get('optional_score',best[key]['min_matched_score']),best[key].get('gaussian_same_pose',0.))
+                      if budget_mode and key in best else best[key].get('composite_score',best[key]['min_matched_score']) if key in best else None)
+            if key not in best or rank > old_rank:
                 best[key] = row
     return [best[k] for k in sorted(best)], matching_seeds
 

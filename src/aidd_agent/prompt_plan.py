@@ -25,6 +25,8 @@ ACTION_FIELDS = {
     "consensus_recommend": ({"source_run", "provider"}, set()),
     "consensus_design": ({"source_run"}, {"design"}),
     "consensus_funnel": ({"source_run"}, set()),
+    "consensus_budget": ({"source_run"}, {"retrieval_molecules", "export_molecules"}),
+    "budget_page": ({"source_run"}, {"start_rank", "export_molecules"}),
     "guided_select": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
     "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd"}),
     "af3_run": ({"input_step"}, set()),
@@ -186,6 +188,9 @@ def validate_plan(plan):
         if action=='consensus_design' and 'design' in params:
             from .consensus_design import FIELDS
             if not isinstance(params['design'],dict) or set(params['design'])-FIELDS:raise ValueError('Invalid consensus edits')
+        if action in {'consensus_budget','budget_page'}:
+            from .budget_workflow import validate_budget
+            validate_budget({k:v for k,v in params.items() if k!='source_run'},action=='budget_page')
         if action=='anchor_design' and 'design' in params:
             if not isinstance(params['design'],dict) or set(params['design'])-{'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}:
                 raise ValueError('Invalid design edits')

@@ -50,6 +50,13 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+For explicitly requested budget searches and molecule handoff, use the coordinator
+`budget` and `budget_page` intents described in [E060](../../../to_human/E060_CHAT_BUDGET.md).
+The user's combined search/export request authorizes both stages. Use contact-first
+template ranks and preserve reserve pages. Do not route this request to the older
+threshold selection/confirmation workflow. Full-library runtime and current-target
+ANN recall remain measured outcomes, not guarantees from a configured budget.
+
 Use [the conversational workbench](../../../to_human/E041_CHAT_WORKBENCH.md) when
 users want ongoing dialogue, task progress or result lookup. The queue executes
 existing Project-scoped plans; status/results are read from reports. Keep task IDs

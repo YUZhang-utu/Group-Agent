@@ -194,7 +194,7 @@ def merge_and_rank(out, design, definitions, batch, quota, k):
     if temporary.exists():temporary.unlink()
     reader=ArtifactCatalogReader(batch/'artifacts/catalog.json')
     with sqlite3.connect(temporary) as db:
-        db.execute('CREATE TABLE poses(mid TEXT,template TEXT,score REAL,gid INTEGER,payload TEXT,PRIMARY KEY(mid,template))')
+        db.execute('CREATE TABLE poses(mid TEXT,template TEXT,score REAL,gid INTEGER,payload TEXT,contact REAL,gaussian REAL,PRIMARY KEY(mid,template))')
         for ti,template in enumerate(design['templates']):
             for path in sorted((out/'chunks'/f'{ti:02d}').glob('*.poses.jsonl')):
                 check_hashes(ev.read(path.with_name(path.name.replace('.poses.jsonl','.receipt.json')))['files'])
@@ -202,23 +202,26 @@ def merge_and_rank(out, design, definitions, batch, quota, k):
                     for line in stream:
                         row=json.loads(line)
                         if not np.isfinite(row['composite_score']):raise ValueError('Nonfinite pose score')
-                        db.execute('INSERT INTO poses VALUES(?,?,?,?,?) ON CONFLICT(mid,template) DO UPDATE SET score=excluded.score,gid=excluded.gid,payload=excluded.payload WHERE excluded.score>poses.score OR (excluded.score=poses.score AND excluded.gid<poses.gid)',
-                            (row['molecule_id'],template['query_id'],row['composite_score'],row['global_id'],line))
+                        if not np.isfinite([row['optional_score'],row['gaussian_same_pose']]).all():raise ValueError('Nonfinite ranking terms')
+                        db.execute('INSERT INTO poses VALUES(?,?,?,?,?,?,?) ON CONFLICT(mid,template) DO UPDATE SET score=excluded.score,gid=excluded.gid,payload=excluded.payload,contact=excluded.contact,gaussian=excluded.gaussian WHERE (excluded.contact,excluded.gaussian,-excluded.gid)>(poses.contact,poses.gaussian,-poses.gid)',
+                            (row['molecule_id'],template['query_id'],row['composite_score'],row['global_id'],line,row['optional_score'],row['gaussian_same_pose']))
             db.commit()
         db.execute('CREATE TABLE template_ranks(mid TEXT,template TEXT,rank INTEGER,PRIMARY KEY(mid,template))')
-        db.execute('INSERT INTO template_ranks SELECT mid,template,ROW_NUMBER() OVER(PARTITION BY template ORDER BY score DESC,mid) FROM poses')
+        db.execute('INSERT INTO template_ranks SELECT mid,template,ROW_NUMBER() OVER(PARTITION BY template ORDER BY contact DESC,gaussian DESC,mid) FROM poses')
         db.execute('CREATE TABLE ranking(rank INTEGER PRIMARY KEY,mid TEXT UNIQUE,rrf REAL,template_support INTEGER)')
         # Preserve the entire scored pool. A quota-priority tier precedes the
         # reserve tier, whose full RRF order remains available for later pages.
-        db.execute('''INSERT INTO ranking SELECT ROW_NUMBER() OVER(ORDER BY tier DESC,rrf DESC,mid),mid,rrf,support FROM
-            (SELECT mid,MAX(rank<=?) tier,SUM(1.0/(?+rank)) rrf,COUNT(*) support FROM template_ranks GROUP BY mid)''',(quota,k))
+        db.execute('''INSERT INTO ranking SELECT ROW_NUMBER() OVER(ORDER BY has_contact DESC,tier DESC,rrf DESC,mid),mid,rrf,support FROM
+            (SELECT t.mid,MAX(p.contact>0) has_contact,MAX(t.rank<=?) tier,SUM(1.0/(?+t.rank)) rrf,COUNT(*) support
+             FROM template_ranks t JOIN poses p ON p.mid=t.mid AND p.template=t.template GROUP BY t.mid)''',(quota,k))
         db.commit()
         for mid,template,gid,payload in db.execute('SELECT mid,template,gid,payload FROM poses'):
             row=json.loads(payload);candidate=reader.get(gid)
             if candidate.molecule_id!=mid:raise ValueError('Pose identity mismatch')
             matrix=np.asarray(row['transform']).reshape(4,4)
             moved=candidate.shape_points@matrix[:3,:3].T+matrix[:3,3]
-            row['region_occupancy']=compare(moved,definitions['definitions'],definitions['ambiguity_margin'])
+            row['region_occupancy']=(compare(moved,definitions['definitions'],definitions['ambiguity_margin'])
+                                     if definitions else dict(status='unknown',reason='No reviewed region definitions for this target/frame'))
             row['template_id']=template
             db.execute('UPDATE poses SET payload=? WHERE mid=? AND template=?',(json.dumps(row),mid,template))
         db.commit()
@@ -229,6 +232,7 @@ def merge_and_rank(out, design, definitions, batch, quota, k):
 
 
 def validate_regions(design, definitions):
+    if definitions is None:return
     ref=design['reference'];frame=ref.get('coordinate_frame',ref.get('query_id')) if isinstance(ref,dict) else ref
     if definitions['coordinate_frame']!=frame or definitions['target']!=design['target']['accession']:
         raise ValueError('Occupancy frame/target mismatch')
@@ -240,9 +244,10 @@ def execute(args):
     if out.is_relative_to(batch) or batch.is_relative_to(out):raise ValueError('Output overlaps library')
     out.mkdir(parents=True,exist_ok=True)
     with file_lock(out/'run.lock'):
-        sourcepaths=[args.recommendation,args.definitions,batch/'artifacts/catalog.json',batch/'chemical/catalog.json',
+        sourcepaths=[args.recommendation,batch/'artifacts/catalog.json',batch/'chemical/catalog.json',
                      batch/'faiss/manifest.json',batch/'faiss/transform.npz']
-        protocol=dict(kind='molecule_budget_screen',budget=args.retrieval_molecules,workers=args.workers,
+        if args.definitions:sourcepaths.append(args.definitions)
+        protocol=dict(kind='molecule_budget_screen',ranking_policy='contact_first_v1',budget=args.retrieval_molecules,workers=args.workers,
             chunk_conformers=args.chunk_conformers,nprobe=args.nprobe,template_quota=args.template_quota,rrf_k=args.rrf_k,
             assignment_backend=os.environ.get('AIDD_ASSIGNMENT_BACKEND','python'),
             sources=fingerprint(sourcepaths),code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))))
@@ -252,8 +257,16 @@ def execute(args):
         try:
             _atomic_json(out/'status.json',dict(status='running'))
             if (out/'adopted-design/report.json').exists():design=ev.read(out/'adopted-design/report.json')
-            else:design=adopt(args.recommendation,out/'adopted-design')
-            check_hashes(design['sources']);definitions=ev.read(args.definitions);validate_regions(design,definitions)
+            else:
+                supplied=ev.read(args.recommendation)
+                if supplied.get('kind')=='consensus_design':
+                    check_hashes(supplied['sources']);design=copy.deepcopy(supplied)
+                    from .contact_policy import require_protein_contacts
+                    require_protein_contacts(design['design'],design['anchors'])
+                    design['sources'].update(fingerprint([args.recommendation]))
+                    (out/'adopted-design').mkdir(exist_ok=True);_atomic_json(out/'adopted-design/report.json',design)
+                else:design=adopt(args.recommendation,out/'adopted-design')
+            check_hashes(design['sources']);definitions=ev.read(args.definitions) if args.definitions else None;validate_regions(design,definitions)
             artifact=ev.read(batch/'artifacts/catalog.json');chemical=ev.read(batch/'chemical/catalog.json')
             if chemical['artifact_v1_catalog_sha256']!=ev.sha(batch/'artifacts/catalog.json') or chemical['library_id']!=artifact['library_id']:
                 raise ValueError('Chemical/artifact lineage mismatch')
@@ -280,8 +293,9 @@ def execute(args):
             timing=run_refinement(batch,out,design,ids,args.workers,args.chunk_conformers)
             count=merge_and_rank(out,design,definitions,batch,args.template_quota,args.rrf_k)
             check_hashes(protocol['sources']);check_hashes(protocol['code'])
-            report=dict(status='complete',ranked_molecules=count,retrieval=retrieval,refinement=timing,
-                selected_conformers=len(ids),ranking='Per-template best molecule pose; quota-priority tier; full RRF within each tier',
+            report=dict(kind='consensus_budget_ranking',status='complete',ranked_molecules=count,retrieval=retrieval,refinement=timing,
+                target=design['target'],reference=design['reference'],selected_conformers=len(ids),
+                ranking='Contact-first pose and template ranks; Gaussian ties only; any-positive-contact tier before zero-contact reserve; quota tier then RRF',
                 empirical_filters='annotation_only',physical_filter=design['design']['pocket'],
                 biological_validation='not_run',outputs=fingerprint([out/'ranking.sqlite']))
             _atomic_json(out/'report.json',report);_atomic_json(out/'status.json',dict(status='complete'))
@@ -292,7 +306,7 @@ def execute(args):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--batch',type=Path,required=True);p.add_argument('--recommendation',type=Path,required=True)
-    p.add_argument('--definitions',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--definitions',type=Path);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--retrieval-molecules',type=int,default=1000000);p.add_argument('--workers',type=int,default=24)
     p.add_argument('--chunk-conformers',type=int,default=64);p.add_argument('--nprobe',type=int,default=128)
     p.add_argument('--template-quota',type=int,default=100000);p.add_argument('--rrf-k',type=int,default=60)

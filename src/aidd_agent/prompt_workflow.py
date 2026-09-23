@@ -131,15 +131,15 @@ def load_runtime(path):
                 if runner.is_file(): inputs.append(runner)
     if "search" in cfg:
         search = cfg["search"]
-        if not isinstance(search, dict) or set(search) != {"batch", "e034", "workers", "coarse_chunk", "refine_chunk", "bounded_pair_seeds"}:
+        if not isinstance(search, dict) or not {'batch','workers','refine_chunk'}<=set(search) or set(search)-{"batch", "e034", "workers", "coarse_chunk", "refine_chunk", "bounded_pair_seeds", "budget_regions"}:
             raise ValueError("Invalid trusted search profile")
-        for field in ("batch", "e034"):
+        for field in (k for k in ('batch','e034','budget_regions') if k in search):
             p = Path(search[field])
             if not p.is_absolute(): p = path.parent / p
             search[field] = str(p.resolve())
-        if any(type(search[k]) is not int or search[k] <= 0 for k in ("workers", "coarse_chunk", "refine_chunk")):
+        if any(type(search[k]) is not int or search[k] <= 0 for k in ("workers", "coarse_chunk", "refine_chunk") if k in search):
             raise ValueError("Invalid search scheduling")
-        if type(search["bounded_pair_seeds"]) is not bool: raise ValueError("Invalid seed engine")
+        if 'bounded_pair_seeds' in search and type(search["bounded_pair_seeds"]) is not bool: raise ValueError("Invalid seed engine")
     return cfg, inputs
 
 
@@ -269,7 +269,7 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
                     pose_quality="not_independently_validated")
     if action == "search_3d":
         search = cfg.get("search")
-        if not search: raise Blocked("Configure batch and E034 evidence in the trusted local search profile")
+        if not search or not {'e034','coarse_chunk','bounded_pair_seeds'}<=set(search): raise Blocked("Configure batch and E034 evidence in the trusted local search profile")
         query = {"wee1_qt9": "8bju", "wee1_824": "1x8b", "wee1_both": "both"}[params["query"]]
         output = directory / "search"
         command = [sys.executable, "-m", "aidd_agent.fast_3d_search", "--batch", search["batch"],
@@ -300,7 +300,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     plan = validate_plan(envelope["plan"])
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
-    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel'} for s in plan["steps"])
+    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page'} for s in plan["steps"])
     cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)

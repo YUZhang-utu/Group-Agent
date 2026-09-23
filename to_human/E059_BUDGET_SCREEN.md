@@ -84,3 +84,8 @@ python -m aidd_agent.pilot_review \
 It compares candidate molecule-best scores to crystal self-control scores. The
 candidate population was already threshold-selected; pose optimization protocols
 differ. This comparison does not establish activity discrimination or enrichment.
+# Chat and contact-first ranking update
+
+See [E060](E060_CHAT_BUDGET.md) for the Chat entry point and current contact-first
+pose/template ranking. The weighted composite is now diagnostic in budget mode.
+Create a fresh run after this code update; sealed E059 runs retain their old policy.

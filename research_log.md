@@ -1647,3 +1647,22 @@ ANN orchestration, rank merge and export pagination tested on small fixtures;
 current-target ANN recall, million-molecule timing and real 100,000 export remain
 workstation pending. No full library is mounted in this Windows workspace.
 No claim that a same-day full run has completed or will complete.
+
+## 2026-09-23 - E060 contact-first budgets from Chat
+
+Implemented coordinator-owned consensus_budget and budget_page actions. Natural
+language requests and /budget launch target-scoped retrieval, contact-first pose
+selection and template ranking, RRF fusion and original/posed MOL2/name export.
+/budget_page reuses the ranked reserve without rescoring. Compute opt-in, source
+ownership, seals and existing queue cancellation/resume remain enforced. Legacy
+mediator roles are migrated into recorded protein-only copies. Unknown targets
+never borrow the MDM2 occupancy definitions.
+
+Exploratory engineering validation: 465 passed, 2 skipped in the full regression;
+English guard and diff checks passed. Tests cover noncompensating pose/template
+ranking, natural/slash routing, cross-session rejection, budget validation,
+compute blocking, generic-target adapter setup and no-rescore pagination. The
+first regression exposed missing skill action registration; fixed before final
+regression. No live provider or Linux full-library run occurred on this Windows
+host; current-target ANN recall, throughput and real 100000 delivery remain
+workstation pending. Deployment and exact Chat prompts: to_human/E060_CHAT_BUDGET.md.
