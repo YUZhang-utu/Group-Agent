@@ -1,0 +1,15 @@
+{
+  "kind": "synthetic_pose_microbenchmark",
+  "seed": 61,
+  "shape_atoms": 60,
+  "poses": 128,
+  "gaussian_poses_before": 128,
+  "gaussian_poses_after": 1,
+  "identical_representative": true,
+  "median_seconds": {
+    "eager": 0.01976470000226982,
+    "lazy": 0.006963000007090159
+  },
+  "speedup": 2.8385322392853904,
+  "scope": "Synthetic scoring only; excludes seeds, I/O, pocket checks and multiprocessing; not workstation throughput"
+}

@@ -167,21 +167,21 @@ def verified_chunk(path, ids):
 
 
 def run_refinement(batch,out,design,ids,workers,chunk):
+    from .chunk_execution import bounded_results
     queries=make_queries(batch,design);ctx=mp.get_context('spawn');done=0
     total=len(queries)*((len(ids)+chunk-1)//chunk);started=time.perf_counter()
     with ProcessPoolExecutor(workers,mp_context=ctx,initializer=init_worker,initargs=(queries,)) as pool:
         # Template-major scheduling amortizes reader initialization.
         for ti in range(len(queries)):
-            pending=[];root=out/'chunks'/f'{ti:02d}';root.mkdir(parents=True,exist_ok=True)
-            for start in range(0,len(ids),chunk):
-                subset=ids[start:start+chunk];target=root/f'{start:010d}.npz'
-                if verified_chunk(target,subset):done+=1;continue
-                pending.append(pool.submit(refine_chunk,(ti,subset,str(target))))
-                if len(pending)>=workers*2:
-                    pending.pop(0).result();done+=1
-                    print(f'Refined {done}/{total} chunks; {time.perf_counter()-started:.1f}s',flush=True)
-            for job in pending:
-                job.result();done+=1
+            root=out/'chunks'/f'{ti:02d}';root.mkdir(parents=True,exist_ok=True)
+            def tasks():
+                nonlocal done
+                for start in range(0,len(ids),chunk):
+                    subset=ids[start:start+chunk];target=root/f'{start:010d}.npz'
+                    if verified_chunk(target,subset):done+=1;continue
+                    yield ti,subset,str(target)
+            for _,result in bounded_results(pool,refine_chunk,tasks(),workers*2):
+                done+=1
                 print(f'Refined {done}/{total} chunks; {time.perf_counter()-started:.1f}s',flush=True)
     return dict(chunks=total,wall_seconds=time.perf_counter()-started)
 

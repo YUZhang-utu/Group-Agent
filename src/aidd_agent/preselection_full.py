@@ -61,7 +61,7 @@ def coarse_stages(candidate, features, original, rule, bound, joint=None, timing
     return 4 if bound is not None and bound.check(features)[0] else 3
 
 
-def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None, gaussian_scores=None, shape_points=None, budget_mode=False):
+def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None, gaussian_scores=None, shape_points=None, budget_mode=False, contact_ties=False):
     """Keep one actual pose per exact required-anchor bitmask, never a union pose."""
     indices = expanded['anchor_feature_indices']
     query = tuple(expanded[k][indices] for k in (
@@ -69,6 +69,8 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
         'feature_direction_kinds', 'anchored_weights'))
     selected = np.flatnonzero(possible)
     best = {}
+    top_contact=-np.inf
+    if contact_ties and not budget_mode:raise ValueError('Contact ties require budget mode')
     matching_seeds = 0
     for start in range(0, len(selected), 32):
         numbers = selected[start:start+32]
@@ -96,6 +98,11 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
                 if budget_mode:row['legacy_score_threshold_passed'] = row['composite_score']>=design['minimum_pose_score']
                 elif row['composite_score']<design['minimum_pose_score']:continue
             matching_seeds += 1
+            if contact_ties:
+                contact=row['optional_score']
+                if contact>top_contact:best.clear();top_contact=contact
+                if contact==top_contact:best[int(number)]=row
+                continue
             rank=(row.get('optional_score',quality),row.get('gaussian_same_pose',0.)) if budget_mode else row.get('composite_score',quality)
             signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
             key=(0,'') if budget_mode else (mask,signature)
@@ -104,6 +111,24 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
             if key not in best or rank > old_rank:
                 best[key] = row
     return [best[k] for k in sorted(best)], matching_seeds
+
+
+def contact_first_representatives(features,seeds,possible,expanded,columns,threshold,design,order,candidate,original):
+    """Score Gaussian only on exact maximum-contact ties; preserve first ties."""
+    from .guided_filters import same_pose_gaussian,pose_rank
+    started=time.perf_counter()
+    rows,count=pose_representatives(features,seeds,possible,expanded,columns,threshold,design,order,
+        np.zeros(len(seeds)),candidate.shape_points,budget_mode=True,contact_ties=True)
+    contact_seconds=time.perf_counter()-started
+    if not rows:return [],count,0,contact_seconds,0.
+    started=time.perf_counter()
+    scores=same_pose_gaussian(original,candidate,[seeds[r['seed_index']] for r in rows])
+    winner=int(np.argmax(scores));row=rows[winner]
+    gaussian_seconds=time.perf_counter()-started
+    row.update(pose_rank(np.asarray(row['scores']),np.asarray(row['assignments']),order,scores[winner],
+        candidate.shape_points,np.asarray(row['transform']).reshape(4,4),design))
+    row['legacy_score_threshold_passed']=row['composite_score']>=design['minimum_pose_score']
+    return [row],count,len(rows),contact_seconds,gaussian_seconds
 
 
 def compute(task):
@@ -202,7 +227,16 @@ def compute(task):
         t = time.perf_counter()
         scoring_seeds = seeds if guided is None else [seeds[i] for i in np.flatnonzero(possible)]
         gaussian_scores=None
-        if q.get('consensus_npz'):
+        lazy=budget_mode and bool(q.get('consensus_npz'))
+        if lazy:
+            poses,matching_seeds,evaluated,contact_time,gaussian_time=contact_first_representatives(
+                features,seeds,possible,expanded,columns,policy['minimum_score'],q['guided_design'],
+                policy['required_anchors'],candidate,original)
+            gaussian_best=None
+            seconds['anchor_assignment']+=contact_time
+            seconds['gaussian']+=gaussian_time
+            counts['gaussian_evaluated_seeds']+=evaluated
+        elif q.get('consensus_npz'):
             from .guided_filters import same_pose_gaussian
             gaussian_scores=np.full(len(seeds),np.nan)
             gaussian_scores[np.flatnonzero(possible)]=same_pose_gaussian(original,candidate,scoring_seeds)
@@ -211,14 +245,15 @@ def compute(task):
             rigid = _score_ids(reader, original, np.array([gid]), backend='numpy',
                                prepared={int(gid): (candidate, scoring_seeds, pairs)}, **full.POSE_PARAMETERS)
             gaussian_best=float(rigid[full.OBJECTIVE+'__objective'][0])
-        counts['gaussian_evaluated_seeds'] += len(scoring_seeds)
-        seconds['gaussian'] += time.perf_counter()-t
+        if not lazy:
+            counts['gaussian_evaluated_seeds'] += len(scoring_seeds)
+            seconds['gaussian'] += time.perf_counter()-t
         counts['gaussian_evaluated_conformers'] += 1
         levels[-1] = 6
         t = time.perf_counter()
-        poses, matching_seeds = pose_representatives(features, seeds, possible, expanded, columns,
+        if not lazy:poses, matching_seeds = pose_representatives(features, seeds, possible, expanded, columns,
                                                      policy['minimum_score'],q.get('guided_design'),policy['required_anchors'],gaussian_scores,candidate.shape_points,budget_mode=budget_mode)
-        seconds['anchor_assignment'] += time.perf_counter()-t
+        if not lazy:seconds['anchor_assignment'] += time.perf_counter()-t
         counts['exact_seed_annotations'] += int(possible.sum())
         counts['matching_seeds'] += matching_seeds
         counts['matching_conformers'] += int(bool(poses))
@@ -231,6 +266,7 @@ def compute(task):
                         matched_anchors=[aid for j, aid in enumerate(policy['required_anchors'])
                                          if pose['mask'] & (1 << j)],
                         conformer_gaussian_best=gaussian_best)
+            if lazy:pose['conformer_gaussian_scope']='Not evaluated across all poses; Gaussian used only for maximum-contact ties'
             records.append(pose)
     t = time.perf_counter()
     full._atomic_savez(target, dict(global_ids=ids, molecule_ids=np.asarray(mids),stage_levels=np.asarray(levels,dtype=np.uint8)))

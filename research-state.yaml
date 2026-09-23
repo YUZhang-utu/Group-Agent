@@ -1,7 +1,14 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E060-chat-contact-budget
+current_experiment: E061-budget-throughput
+budget_throughput:
+  status: local_equivalence_passed_workstation_receipts_pending
+  full_regression: 470_passed_2_skipped
+  optimization: lazy_gaussian_maximum_contact_ties_completion_order_scheduling
+  synthetic_scoring_speedup: 2.84
+  workstation_speedup: not_measured
+  guide: to_human/E061_BUDGET_THROUGHPUT.md
 chat_contact_budget:
   status: implemented_local_validation_workstation_pending
   guide: to_human/E060_CHAT_BUDGET.md

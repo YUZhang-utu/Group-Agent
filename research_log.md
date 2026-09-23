@@ -1666,3 +1666,21 @@ first regression exposed missing skill action registration; fixed before final
 regression. No live provider or Linux full-library run occurred on this Windows
 host; current-target ANN recall, throughput and real 100000 delivery remain
 workstation pending. Deployment and exact Chat prompts: to_human/E060_CHAT_BUDGET.md.
+
+## 2026-09-23 - E061 budget throughput
+
+User reports approximately 2500/660000 chunks in ten minutes. Same-rate projection
+is 44 hours, excluding merge/export; not a measured completion time. Implemented
+completion-order scheduling and deferred Gaussian evaluation to exact maximum
+contact ties. Candidate/conformer/template/seed counts and contact assignment are
+unchanged. The all-pose Gaussian maximum diagnostic is explicitly null in lazy
+mode. Active workstation runs must retain their original checkout and seals.
+
+Exploratory validation: 470 passed, 2 skipped; English guard/diff checks passed.
+Synthetic scoring microbenchmark (NumPy seed 61, 60 shape points per molecule,
+128 random translation poses, existing two-feature geometry fixture; three warm
+repetitions) preserved the exact representative, reduced Gaussian evaluations
+128 to 1 and measured 0.019765 versus 0.006963 seconds (2.84x scoring only).
+Artifact: data/e061/synthetic.json. This excludes seed generation, I/O, pocket
+checks and multiprocessing and is not a workstation throughput claim. Real chunk
+receipt timing is pending. Added read-only budget_profile receipt aggregation.
