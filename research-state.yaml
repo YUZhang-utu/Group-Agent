@@ -2,6 +2,12 @@ project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E056-contact-diagnostics
+protein_contact_policy:
+  water_bridge: evidence_only_excluded_from_new_screening
+  unmodeled_metal_coordination: evidence_only
+  validation: 82_focused_tests_passed
+  existing_proposal_migration: 6_water_modes_removed_14_retained_budget_9_75
+  guide: to_human/PROTEIN_ONLY_CONTACT_POLICY.md
 contact_diagnostics:
   protocol: experiments/E056-contact-diagnostics.md
   guide: to_human/E056_CONTACT_DIAGNOSTICS.md

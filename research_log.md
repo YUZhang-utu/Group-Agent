@@ -1574,3 +1574,15 @@ Final artifact: data/e056-evidence-sealed/report.json and review.md. Handoff:
 to_human/E056_CONTACT_DIAGNOSTICS.md; portable summary E056_VALIDATION_SUMMARY.json.
 Desktop can audit the saved existing recommendation via verified source recovery,
 without rebuilding consensus. Permanent new metadata appears in future rebuilds.
+
+## 2026-09-23: User excludes water-mediated screening contacts
+
+Implemented a protein-contact-only policy for new recommendations, adoption and
+consensus funnel entry. Water bridges and unmodeled metal coordination remain in
+source evidence but cannot be selected, including at zero weight. Historical
+reports remain auditable. Added an explicit new-proposal migration preserving the
+original fixed budget and unaffected weights/templates; it never adopts or scans.
+The local current-proposal migration removed six water modes, kept 14 anchors and
+budget 9.75. Eighty-two focused tests passed. This is a modeling-scope decision,
+not a claim that crystallographic waters are universally unreliable. Explicit
+water modeling and biological validation remain outside the current scope.

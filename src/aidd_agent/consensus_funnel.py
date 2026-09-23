@@ -15,6 +15,8 @@ def run(source, output, search):
     source=Path(source);out=Path(output);out.mkdir(parents=True,exist_ok=True)
     adopted=ev.read(source);check_hashes(adopted['sources'])
     if adopted['readiness']!='ready_for_consensus_funnel':raise ValueError('Adopt a consensus design first')
+    from .contact_policy import require_protein_contacts
+    require_protein_contacts(adopted['design'],adopted['anchors'])
     batch=Path(search['batch']);_,acceptance=ev.accept_library(batch,full=False)
     design=adopted['design'];sources={**adopted['sources'],**fingerprint([source,batch/'artifacts/catalog.json',batch/'chemical/catalog.json'])}
     reports=[]

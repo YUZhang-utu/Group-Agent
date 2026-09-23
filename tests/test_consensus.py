@@ -153,7 +153,7 @@ def test_multi_template_union_preserves_provenance_and_same_pose_selection(tmp_p
     source=tmp_path/'design.json';_,design=survey_design()
     design.update(minimum_score=.5,coarse_constraints={})
     source.write_text(json.dumps(dict(readiness='ready_for_consensus_funnel',sources=fingerprint([batch/'artifacts/catalog.json']),design=design,anchor_order=['A','B'],
-        anchors=[],consensus_npz='pocket',templates=[dict(query_id='T1'),dict(query_id='T2')],independent_active_validation='not_run',
+        anchors=[dict(anchor_id='A'),dict(anchor_id='B')],consensus_npz='pocket',templates=[dict(query_id='T1'),dict(query_id='T2')],independent_active_validation='not_run',
         reference=dict(coordinate_frame='ref'))))
     monkeypatch.setattr(module.ev,'accept_library',lambda *a,**k:(None,dict(library_conformers=3,library_molecules=2)))
     monkeypatch.setattr(active_controls,'run',lambda *a:dict(status='unavailable',acceptance='not_validated'))

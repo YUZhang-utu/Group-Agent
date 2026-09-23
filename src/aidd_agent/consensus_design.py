@@ -9,6 +9,7 @@ from .expanded_wee1 import fingerprint
 from .screening_selection import check_hashes
 
 from .contact_groups import EXTENSION_FIELDS, selected_anchors, validate_extensions, resolve_regions, optional_weight_total, contact_semantics
+from .contact_policy import EXCLUDED_CLASSES, require_protein_contacts
 
 BASE_FIELDS={'mandatory_anchors','alternative_groups','optional_weights','template_ids','evidence_ids','rationale',
         'exclusions','permissiveness','gaussian_weight','optional_weight','minimum_pose_score'}
@@ -44,6 +45,7 @@ def validate(design, survey, llm=False):
     validate_extensions(design,survey)
     core=required+[a for g in groups for a in g];all_ids=core+list(weights)+[a for g in design.get('optional_groups',[]) for a in g['anchor_ids']]
     if not all_ids or len(set(all_ids))>20 or any(not isinstance(a,str) or a not in anchors for a in all_ids):raise ValueError('Choose 1 to 20 known pocket anchors')
+    if llm:require_protein_contacts(design,survey['anchors'])
     if len(set(required))!=len(required) or set(core)&set(weights):raise ValueError('Duplicate or contradictory anchor role')
     def number(x,lo,hi):return type(x) in (int,float) and np.isfinite(x) and lo<=x<=hi
     if any(not number(w,0,1) for w in weights.values()):raise ValueError('Optional weights must be in [0,1]')
@@ -77,9 +79,12 @@ def recommend(source, output, provider, adviser=None):
     if survey['readiness']!='proposal_ready':raise ValueError('Resolve the reference instance and preparation before recommendation')
     context=dict(target=survey['target']['accession'],reference=survey['cohort']['reference'],
         anchors=[{k:a[k] for k in ('anchor_id','evidence_id','target_residue','protein_atom','feature_class','frequency',
-          'distinct_structures','eligible_structures','distinct_chemotypes','mandatory_proposal_eligible','pdb_ids')} for a in survey['anchors']],
+          'distinct_structures','eligible_structures','distinct_chemotypes','mandatory_proposal_eligible','pdb_ids')} for a in survey['anchors'] if a['feature_class'] not in EXCLUDED_CLASSES],
         templates=[{k:q[k] for k in ('query_id','smiles','resolution')} for q in survey['templates']],
         proposed_template_ids=survey['proposed_template_ids'],limitations=survey['limitations'])
+    context['contact_policy']=dict(excluded_classes=sorted(EXCLUDED_CLASSES),
+        reason='No explicit mediator model; retained only in source evidence',
+        excluded_anchor_count=sum(a['feature_class'] in EXCLUDED_CLASSES for a in survey['anchors']))
     if survey.get('contact_evidence'):
         context['contact_evidence_status']={k:survey['contact_evidence'][k] for k in ('version','complexes','pairs','scope')}
         context['contact_evidence_status']['interpretation']='Anchors are sparse feature modes, not an exhaustive contact map. Do not infer absent contacts from omitted anchors. Spatial regions need explicit reviewed reference atom selections.'
@@ -109,6 +114,7 @@ and coefficients via a later user design edit; do not invent them or pretend opt
 Choose diverse templates independently of anchors, using proposed_template_ids as a starting point. Explain uncertainty in English.
 Do not invent exclusion volumes, binding energies, activity evidence or coordinate changes. All numerical defaults are exploratory.'''
     prompt+='\nThe coordinator freezes the initial sum of optional contact and family weights as optional_budget after validation. Subsequent edits preserve that denominator; do not invent normalization fields. Weights are scoring preferences, not frequencies or affinities.'
+    prompt+='\nUse protein contacts only. Water bridges and unmodeled metal coordination are evidence-only and must not appear in scoring groups or eligibility rules.'
     if adviser:value=adviser(context);model=dict(mode='injected',provider=provider)
     else:value,model=chat_plan(encoded_context,ev.read(select_llm_profile(provider)),system_prompt=prompt,
                               capabilities={},validator=lambda v:validate(v,survey,True),max_prompt_chars=MAX_EVIDENCE_CHARS)
@@ -146,6 +152,7 @@ def adopt(source, output, overrides=None):
         if set(overrides)-FIELDS:raise ValueError('Unknown consensus design edit')
         design.update(overrides)
     validate(design,survey)
+    require_protein_contacts(design,survey['anchors'])
     order=selected_anchors(design)
     if design.get('spatial_groups'):design['resolved_spatial_groups']=resolve_regions(design,survey)
     _,expanded=_load_query(Path(survey['consensus_npz']))

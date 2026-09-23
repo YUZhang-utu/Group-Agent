@@ -120,6 +120,8 @@ occupancy_rewards (monotone list starting at zero, one entry per occupied-group 
 and spatial_ambiguity. Spatial reference atom names must be explicitly supplied or present in evidence;
 never invent atom selections, radii or rewards. Spatial groups require the new contact ledger.
 Optional groups are scoring bonuses, unlike alternative_groups which are hard requirements.
+Only protein contacts may enter new screening designs. Water bridges and unmodeled metal coordination are evidence-only.
+Remove their IDs from every role, including groups and mandatory rules; zero weight alone does not remove eligibility or assignment competition.
 optional_normalization supports weighted_mean (legacy) or fixed_budget with a positive optional_budget.
 New recommendations freeze the initial contact-weight total. Preserve optional_budget when editing weights or deleting contacts.
 Reject budget overflow; do not silently raise the budget. Fixed-budget dimension weights must sum to one.
