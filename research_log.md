@@ -1497,3 +1497,18 @@ full-library execution or NH/independent-active validation was performed.
 See to_human/E054_GENERAL_CONTACT_GROUPS.md and data/e054-groups-validation-final/.
 Workstation needs an updated service and fresh consensus before new recommendation;
 old anchor IDs and code-hashed runs must not be reused blindly.
+
+## 2026-09-23: Correct the automatic recommendation entry after user replay
+
+The user supplied a new completed proposal with mandatory ILE61 and hard OR groups
+at LEU54, HIS96, VAL93 and LYS94. Replay on 45 local crystal identity poses passes
+41, 40, 40, 18 and 9 poses per requirement; their conjunction passes 8/45. This is
+an exploratory geometric diagnostic, not independent or full-library recall.
+The recommendation prompt still requested old fields despite the grouped backend.
+Updated it to request optional families and explain hard-OR versus optional-max
+semantics. Local llm=True validation now rejects invented hard conditions and
+unreviewed spatial definitions. Explicit user hard-rule edits remain supported
+under existing evidence checks. Sixty-eight focused regression tests passed.
+No user proposal adopted and no source evidence or ranking coefficients changed.
+Reuse the user's completed new consensus after updating/restarting the SAME Chat
+workspace, and create one fresh recommendation. See the dated hard-group review.

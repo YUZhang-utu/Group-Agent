@@ -17,6 +17,9 @@ general_contact_groups:
   workstation_verified: false
   production_design_adopted: false
   library_NH_and_new_independent_active_retention: pending
+  automatic_recommendation_policy: optional_only_hard_rules_require_user_edits
+  recommendation_policy_regression: 68_focused_passed
+  user_recommendation_hard_rule_replay: 8_of_45_local_crystal_poses_not_library_recall
 parallel_development:
   experiment: E051-structure-guided-chat
   branch: feature/structure-guided-chat
@@ -56,7 +59,7 @@ general_target_consensus:
   latest_fix_local_validation: 41_passed_1_skipped_mock_provider_not_live
   provider_failure_hypothesis: missing_JSON_instruction_reproduced_with_mock_provider
   latest_fix_workstation_verified: user_reported_recommendation_complete
-  next_action: update_workstation_rebuild_consensus_then_review_new_ids_and_recommendation
+  next_action: update_recommendation_policy_restart_same_workspace_then_new_recommend_reuse_completed_consensus
   subpocket_design_review: to_human/20260923_MDM2_SUBPOCKET_DESIGN_REVIEW.md
   subpocket_coordinate_audit: 48_complexes_45_PDBs_complete_exploratory
   subpocket_audit_report: to_human/20260923_MDM2_SUBPOCKET_AUDIT_RESULTS.md

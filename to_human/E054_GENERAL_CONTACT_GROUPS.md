@@ -4,6 +4,12 @@ Implemented on feature/structure-guided-chat, 2026-09-23.
 The general algorithms contain no MDM2 residues, subpocket names or target IDs.
 MDM2-specific definitions live only in an explicit regression script and reports.
 
+Recommendation follow-up: automatic recommendations now use optional contacts
+and optional families only. Hard rules require explicit user edits, and spatial
+definitions require reviewed atom selections. See
+[the hard-group review](20260923_RECOMMENDATION_HARD_GROUP_REVIEW.md) for the
+8/45 local crystal replay that motivated this recommendation-entry correction.
+
 ## What changed
 
 1. Every new consensus includes a sealed `contacts.json` ledger. It records all

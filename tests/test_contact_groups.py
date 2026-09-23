@@ -51,6 +51,28 @@ def test_optional_family_counts_max_once_and_is_not_a_hard_or():
     assert missing['optional_score']==0
 
 
+@pytest.mark.parametrize('hard_kind',['mandatory','alternative'])
+def test_automatic_recommendation_cannot_invent_hard_requirements(hard_kind):
+    survey,design=survey_design()
+    if hard_kind=='mandatory':
+        design.update(mandatory_anchors=['B'],optional_weights={'A':.5},evidence_ids=['eB'])
+    else:
+        design.update(alternative_groups=[['B']],optional_weights={'A':.5},evidence_ids=['eB'])
+    assert validate(design,survey)==design  # Explicit user edits still retain their intended semantics.
+    with pytest.raises(ValueError,match='Automatic recommendations'):
+        validate(design,survey,llm=True)
+
+
+def test_automatic_optional_families_allowed_but_spatial_definitions_require_review(tmp_path):
+    survey,design=survey_design()
+    design.update(optional_weights={},optional_groups=[dict(id='family',anchor_ids=['A','B'],weight=.6)])
+    assert validate(design,survey,llm=True)==design
+    survey,design,_,_=spatial_fixture(tmp_path)
+    assert validate(design,survey)==design
+    with pytest.raises(ValueError,match='explicitly reviewed'):
+        validate(design,survey,llm=True)
+
+
 @pytest.mark.parametrize('bad', ['duplicate','overlap','unknown','nan','required'])
 def test_invalid_optional_family_rejected(bad):
     survey,design=survey_design()
