@@ -1,0 +1,1054 @@
+{
+  "scope": "Exploratory local crystal geometry and assignment microbenchmark; not workstation throughput",
+  "controls": [
+    {
+      "query_id": "1RV1:IMZ:A:110",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "1RV1:IMZ:B:110",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "1RV1:IMZ:C:110",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "3JZK:YIN:A:1",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4JWR:1MY:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4HBM:0Y7:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4ERF:0R3:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4ERE:0R2:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4DIJ:BLF:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "3W69:LTZ:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "3TU1:07G:A:1",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "3TJ2:TJ2:A:1",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "3LBK:K23:A:1",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5HMI:62T:A:1001",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5HMH:62R:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5C5A:NUT:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4ZYI:4TH:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4ZYC:4SS:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4ZFI:4NJ:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": false
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "boundary"
+      },
+      "agreed_regions": 2,
+      "boundary_regions": 1
+    },
+    {
+      "query_id": "4QOC:35T:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4QO4:35S:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4OQ3:2V8:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4OGV:2U7:A:501",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4OCC:2TZ:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4OBA:2TW:A:501",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "4OAS:2SW:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "6GGN:EYH:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5ZXF:NUT:A:101",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5Z02:NUT:A:101",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5TRF:7HC:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5OAI:B5K:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5LN2:6ZT:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5J7G:6GG:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5J7F:6GG:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5J7F:6GG:D:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "5HMK:62Q:A:1001",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7BJ6:TVK:A:207",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7NA2:1I0:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7BMG:U3Z:A:204",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7BIV:TUW:A:206",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7BIR:TUZ:A:203",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "6Q9L:HTZ:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "6Q9H:HRH:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "6Q96:HRE:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    },
+    {
+      "query_id": "7NA4:1I9:A:201",
+      "definitions": {
+        "p53": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        },
+        "5C5A": {
+          "A_Trp23": true,
+          "B_Leu26": true,
+          "C_Phe19": true
+        }
+      },
+      "states": {
+        "A_Trp23": "agreement",
+        "B_Leu26": "agreement",
+        "C_Phe19": "agreement"
+      },
+      "agreed_regions": 3,
+      "boundary_regions": 0
+    }
+  ],
+  "agreement_counts": {
+    "3": 44,
+    "2": 1
+  },
+  "assignment": {
+    "cases": 300,
+    "exact": true,
+    "python_seconds": 0.16152490000240505,
+    "numba_seconds": 0.0017900999955600128
+  },
+  "sources": {
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\1RV1_IMZ_A_110\\aligned.npz": "05bda8acea154c77173c0048655d1162a2f298696c3516d4d63aeb4bbd881393",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\1RV1_IMZ_B_110\\aligned.npz": "cec2b663696b9290858de612dce28e3cf2eb770135cfe7be3995bf23272f7b95",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\1RV1_IMZ_C_110\\aligned.npz": "395d59c3731bd4bc7ad35d546dd9361d3a9fa4b60def3928e64dbf7cc87d011c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\3JZK_YIN_A_1\\aligned.npz": "37120ab14ffaa1137265bb27c25e02c7f20ee594089c8662686441e0a13733e8",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4JWR_1MY_A_201\\aligned.npz": "1da4f399eb0dd06b0d49c4afe29eea464ba630a92da1eb765aa0606ba12f9859",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4HBM_0Y7_A_201\\aligned.npz": "62ae5ea96a78c2c7f71770e3b74af901e47f3a0330e46131269a8082e88170ec",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4ERF_0R3_A_201\\aligned.npz": "701d9d1e9bd622ec47f003fd30126c276cc09123963f065a8ca21aac3f6bbf12",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4ERE_0R2_A_201\\aligned.npz": "017c4b53f1f436368179620cebf52ebc29dab05e9b90d9ebe1118a85d87ec18b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4DIJ_BLF_A_201\\aligned.npz": "420af52fe3163ddceb0a5cfdad3184d3a44e86fde77c5b2531ef2f5c3766cce4",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\3W69_LTZ_A_201\\aligned.npz": "c159ba62f650c05679660cb80250c297ba23e76fdd2cd8c9d8d8d351a6ac4ee1",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\3TU1_07G_A_1\\aligned.npz": "b57fd88c0eb1e74ec9d4b85850541316125d2a54a64b7a3862229e08e5119a8c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\3TJ2_TJ2_A_1\\aligned.npz": "6759acea739711772faee10bde49ab9178ca726d21c68733d41e27d51278dece",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\3LBK_K23_A_1\\aligned.npz": "55ca15fa27dc0c498509eec823ad03ca36e112739a4f54afa01a51424aeefe18",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5HMI_62T_A_1001\\aligned.npz": "509187ab12dd4152ded19c71a0167d0a3a491173d51ed6a9c33c8a3429a1af2a",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5HMH_62R_A_201\\aligned.npz": "ad71cb2aa7b169bf7b6895b15ccb74681f9cab1839d3406e87677d087ff807fc",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5C5A_NUT_A_201\\aligned.npz": "55e297bedfa5441f25972238e5be3013bbf94e51379a2ccda4c89662eea57af0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4ZYI_4TH_A_201\\aligned.npz": "5a70f94474d9fa25343ce9c73346e1c9082e00d5d7ae029aac9de8e102f198e2",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4ZYC_4SS_A_201\\aligned.npz": "d8b269a9c6f4d9a0e719ddd362915101e3ffe8b68c6b80a69b2af3e3ffdcc08d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4ZFI_4NJ_A_201\\aligned.npz": "9c98b709be8be11b63b51be98298bcf636d643e5da8bc76d48a89d615656a84f",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4QOC_35T_A_201\\aligned.npz": "912e82678f96d3b14195e0d9fb3a058ad9b2e2e993f318d920bc403bc0e6b1fc",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4QO4_35S_A_201\\aligned.npz": "f2c1101461fb6c26c298b7b5499c2a651242fc31a966b22288050b697f436185",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4OQ3_2V8_A_201\\aligned.npz": "fda1764b741567fa56eb430fd4ec917d0d89483d70f28011ab22080d5279d160",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4OGV_2U7_A_501\\aligned.npz": "d302f57923d31b6f819165412456089bd51e704686d39ebdaec38234fbfce1f0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4OCC_2TZ_A_201\\aligned.npz": "943b25b82b2503e4b60ba55308a335011ead9bca4f2a397a87ce4b9c519bf77d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4OBA_2TW_A_501\\aligned.npz": "d8ab241ac8a620ed390a90e8e9a40ab0d82df21388a6fd6c764771287f8b2693",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\4OAS_2SW_A_201\\aligned.npz": "e93d2bbbf88af049c7e0a2b8b0c31660a6cedba5155e13607b7cb17f1bd690eb",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\6GGN_EYH_A_201\\aligned.npz": "16759fd5759025648636cd37907f5a43c6f871484cd1c631b5746ad0af5d50ed",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5ZXF_NUT_A_101\\aligned.npz": "2a87a04756fb067aee3a0358c3672318ce26c2fa3fb57fc0433f794f9be785f9",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5Z02_NUT_A_101\\aligned.npz": "0c44a4db404a9ad9ad79081a29d6215f076f4ab5906b6ac449ff9f4272f683ca",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5TRF_7HC_A_201\\aligned.npz": "a3c84d6c7c2b545b3137ed71e03ebb4306ad1e57f6e9d5d6cb059f17d3f16b66",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5OAI_B5K_A_201\\aligned.npz": "eacadc8eba188c0782cf5a6073282289381ca601c15dabd8087d878da458d2b2",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5LN2_6ZT_A_201\\aligned.npz": "6f1fca4c7ba629ef46fd231d1c61c76e4d64a116b30268906b89b326db9db671",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5J7G_6GG_A_201\\aligned.npz": "34148a1568aba32096c6f8fcfe0ece2f3f43bf4d11b6baee5097b89e6776c4d8",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5J7F_6GG_A_201\\aligned.npz": "885b57fcdfa69b577a2803c96701f0c4738cc590e5e311e1c7d49b3842e0b104",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5J7F_6GG_D_201\\aligned.npz": "59d624f6e21a0a8066b8f3b53f2043dab2997fb0916913427f6dbbb2ce40329c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\5HMK_62Q_A_1001\\aligned.npz": "5feaffb0a59c4cf110b12c1df8b94f57c1df3401da620c599dda27805e0e1c2a",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7BJ6_TVK_A_207\\aligned.npz": "662b6cf5abcad91ed4e51e0d465ef4c737c18472237413e72331a8b944780a0d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7NA2_1I0_A_201\\aligned.npz": "37929818d1759739b69af3e3329ea19c512d400406e7d4e19361d188f3f8b1a6",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7BMG_U3Z_A_204\\aligned.npz": "ddfa4a0bb23b2fdb291e4ccd1a63cc13a1c25ca864013e1c919b51669cd36d68",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7BIV_TUW_A_206\\aligned.npz": "eeded413c890f9b3dd8776eaad69c227ab8d3750c7e2e0fa7b7197fe907ed120",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7BIR_TUZ_A_203\\aligned.npz": "f7c772419a50f85db97d1744ab4feccaaf06fd9e25dcf13dcd50645cbbca055d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\6Q9L_HTZ_A_201\\aligned.npz": "cc318fae217837f383fe1567d18d3b517ecbbfb624e9343314ade7eef0f48a3a",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\6Q9H_HRH_A_201\\aligned.npz": "d1660a67832e44c2b448bad7a24e05b9b69fb01a69faf9927ac4fcf27953e886",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\6Q96_HRE_A_201\\aligned.npz": "37a3845a1a697d9f22dd20e80e5f165341e654cbb6207e2d4edef7592242b71c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\queries\\7NA4_1I9_A_201\\aligned.npz": "f2f1d33f2160631ea3864f01a55e1ebd72b279143cb11fc602f5769f69b881b0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e056-consensus-final\\report.json": "af29460a31871d37195bb411c79b38b85664a26522b3f049fa5f41b4fba6bf45",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\to_human\\E058_MDM2_DUAL_REGIONS.json": "29d9424f1ea5cac0bb3fe8bb35ed3fc2feba0e31df62f8a99fb27862cd8b4590"
+  }
+}

@@ -4,6 +4,7 @@ from collections import Counter
 import copy
 import json
 import math
+import os
 import multiprocessing as mp
 from pathlib import Path
 import random
@@ -102,6 +103,7 @@ def run(recommendation, batch, output, count=2000, workers=8, chunk_molecules=16
     started=time.perf_counter();deadline=started+seconds
     report=dict(kind='consensus_molecule_pilot',status='running',full_library=False,
         requested_molecules=count,workers=workers,wall_budget_seconds=seconds,seed=seed,
+        assignment_backend=os.environ.get('AIDD_ASSIGNMENT_BACKEND','python'),
         biological_validation='not_run',scope='Current direct-contact consensus; no new spatial definitions',
         integrity_scope='Sealed design and catalog/manifest checks, sampled artifact/chemical identity; no full-library byte checksum scan',
         timing_scope='Pilot preparation, repeated worker initialization, all templates, writes, union and scaffold grouping; not production full-run timing')
@@ -140,6 +142,11 @@ def run(recommendation, batch, output, count=2000, workers=8, chunk_molecules=16
         for start in range(0,len(items),chunk_molecules):
             ids=sorted(gid for _,gids in items[start:start+chunk_molecules] for gid in gids)
             tasks.append((queries,ids,str(out/'chunks'/f'{start:08d}')))
+        if report['assignment_backend']=='numba':
+            from .interaction_matching import _maximum_weight_assignment
+            warm=time.perf_counter()
+            _maximum_weight_assignment(np.ones((2,2)),np.ones(2))
+            report['assignment_warmup_seconds']=time.perf_counter()-warm
         ctx=mp.get_context('spawn');pool=ctx.Pool(workers)
         pending=[];next_task=0;completed=[];scan_start=time.perf_counter();timings=Counter();counts=Counter()
         while next_task<len(tasks) or pending:
@@ -188,11 +195,13 @@ def run(recommendation, batch, output, count=2000, workers=8, chunk_molecules=16
             hits=db.execute('SELECT COUNT(*) FROM members').fetchone()[0]
             pose_count=db.execute('SELECT COUNT(*) FROM poses').fetchone()[0]
             clusters=db.execute('SELECT COUNT(DISTINCT cluster) FROM members').fetchone()[0]
+            report['scaffold_failures_preserved_as_singletons']=db.execute("SELECT COUNT(*) FROM members WHERE error<>''").fetchone()[0]
+            report['valid_scaffold_groups']=db.execute("SELECT COUNT(DISTINCT cluster) FROM members WHERE error=''").fetchone()[0]
         check_hashes(report['sources']);check_hashes(report['implementation_sources'])
         elapsed=time.perf_counter()-started;n=len(panel)
         report.update(status='complete',sample_complete=True,matching_molecules=hits,pose_records=pose_count,scaffold_groups=clusters,
             stages=[dict(stage=name,molecules=sum(v>=i for v in stages.values())) for i,name in enumerate(
-                ['size','feature_count','extent','anchor_bound','pose_feasibility','gaussian','final_pose'],1)],
+                ['size','feature_count','extent','anchor_bound','pose_feasibility','gaussian_evaluated','final_pose'],1)],
             merge_and_group_seconds=time.perf_counter()-merge_start,wall_seconds=elapsed,
             amortized_wall_seconds_per_molecule=elapsed/n,
             projected_matching_molecules=total*hits/n,

@@ -1600,3 +1600,26 @@ runtime prompt-runtime-apptainer.local.json and library-precompute-20260911,
 workers, four molecules per chunk and a 600-second checked budget. Current
 consensus kernel is CPU-only despite a separate legacy CuPy path. GPU acceleration
 requires separate implementation and numerical equivalence validation.
+
+## 2026-09-23: E058 workstation baseline and remediation
+
+User-reported E057 completed: 256 molecules, 808 conformers, 11 templates;
+65.3243 s total, 27.3905 s preparation, 36.5514 s scan, 226 hits (88.28%).
+Full-library exploratory projection 7.3435 million hits and 342.39 wall hours.
+Scaffold states: 87 successful molecules, 139 KekulizeException singletons;
+167 reported groups include only 28 valid scaffold groups. No full run started.
+
+Implemented source-record recovery and heavy graph comparison, retained-pose
+template exclusivity/score review, dual-definition region replay, and optional
+Numba compilation of the unchanged deterministic assignment loop. Crystal
+controls: 44/45 three-region agreement; 4ZFI boundary at C_Phe19. Atom competition
+is restricted to eligible regions, matching production grouped_terms semantics.
+No new hard rule or weights adopted. Compiled assignment matches randomized/tied
+reference matrices exactly. 300-case microbenchmark 0.1615 s Python vs 0.00179 s
+compiled (warm), not a whole-funnel speed claim. Workstation source recovery,
+actual pose occupancy and equivalent throughput rerun remain pending.
+
+Final stable-source regression: 452 passed, 2 skipped; explicit compiled-backend
+preselection/consensus/remediation checks: 25 passed. Earlier full-suite runs
+while source edits were active hit resume checks; isolated checks and the final
+unchanged-source full run passed. English-content and whitespace checks passed.

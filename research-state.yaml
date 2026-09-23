@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E057-bounded-consensus-pilot
+current_experiment: E058-pilot-remediation
 protein_contact_policy:
   water_bridge: evidence_only_excluded_from_new_screening
   unmodeled_metal_coordination: evidence_only
@@ -658,3 +658,14 @@ bounded_consensus_pilot:
   budget_seconds: 600
   gpu_consensus_backend: not_implemented
   incomplete_sample_extrapolation: disabled
+
+pilot_remediation:
+  protocol: experiments/E058-pilot-remediation.md
+  guide: to_human/E058_PILOT_REMEDIATION.md
+  workstation_baseline_hits: 226_of_256
+  workstation_scaffold_failures: 139_of_226
+  actual_source_recovery: pending_workstation
+  crystal_dual_definition: 44_three_agreement_1_boundary
+  assignment_backend: optional_numba_identical_loop
+  production_thresholds_changed: false
+  larger_library_run: deferred_until_review

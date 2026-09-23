@@ -74,7 +74,7 @@ def _rank_summary(baseline: np.ndarray, interaction: np.ndarray,
     }
 
 
-def _maximum_weight_assignment(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
+def _assignment_reference(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Deterministic rectangular Hungarian assignment; -1 denotes unmatched."""
     scores = np.asarray(values, dtype=np.float64)
     weights = np.asarray(weights, dtype=np.float64)
@@ -92,7 +92,7 @@ def _maximum_weight_assignment(values: np.ndarray, weights: np.ndarray) -> np.nd
         p[0] = row
         column0 = 0
         minimum = np.full(columns + 1, np.inf)
-        used = np.zeros(columns + 1, dtype=bool)
+        used = np.zeros(columns + 1, dtype=np.bool_)
         while True:
             used[column0] = True
             row0 = p[column0]
@@ -130,6 +130,24 @@ def _maximum_weight_assignment(values: np.ndarray, weights: np.ndarray) -> np.nd
         if row >= 0 and candidate < real_columns and scores[row, candidate] > 0:
             result[row] = candidate
     return result
+
+
+_COMPILED_ASSIGNMENT = None
+
+def _maximum_weight_assignment(values, weights):
+    """Opt-in identical loop compilation; never substitute another tie policy."""
+    import os
+    backend = os.environ.get('AIDD_ASSIGNMENT_BACKEND', 'python')
+    if backend == 'python':
+        return _assignment_reference(values, weights)
+    if backend != 'numba':
+        raise ValueError('AIDD_ASSIGNMENT_BACKEND must be python or numba')
+    global _COMPILED_ASSIGNMENT
+    if _COMPILED_ASSIGNMENT is None:
+        from numba import njit
+        _COMPILED_ASSIGNMENT = njit(cache=True, fastmath=False)(_assignment_reference)
+    return _COMPILED_ASSIGNMENT(np.asarray(values, dtype=np.float64),
+                                np.asarray(weights, dtype=np.float64))
 
 
 def interaction_match(
