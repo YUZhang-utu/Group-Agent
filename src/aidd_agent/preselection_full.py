@@ -96,8 +96,10 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
                 if row['composite_score']<design['minimum_pose_score']:continue
             matching_seeds += 1
             rank=row.get('composite_score',quality)
-            if mask not in best or rank > best[mask].get('composite_score',best[mask]['min_matched_score']):
-                best[mask] = row
+            signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
+            key=(mask,signature)
+            if key not in best or rank > best[key].get('composite_score',best[key]['min_matched_score']):
+                best[key] = row
     return [best[k] for k in sorted(best)], matching_seeds
 
 
@@ -255,20 +257,23 @@ def schema(db):
     db.executescript('''
         CREATE TABLE IF NOT EXISTS library_molecules(mid TEXT PRIMARY KEY, stage INTEGER);
         CREATE TABLE IF NOT EXISTS poses(mid TEXT, mask INTEGER, quality REAL, gid INTEGER,
-                                        payload TEXT, PRIMARY KEY(mid,mask));
+                                        payload TEXT, spatial TEXT NOT NULL, PRIMARY KEY(mid,mask,spatial));
         CREATE TABLE IF NOT EXISTS members(mid TEXT PRIMARY KEY, cluster TEXT, scaffold TEXT,
                                           error TEXT, union_mask INTEGER, pose_count INTEGER);
     ''')
+    if 'spatial' not in {r[1] for r in db.execute('PRAGMA table_info(poses)')}:
+        raise ValueError('Legacy pose database requires a fresh run after grouped-scoring code changes')
 
 
 def merge_pose(db, row):
     """SQL union is only by molecule; each payload remains one real pose."""
-    old = db.execute('SELECT quality,gid FROM poses WHERE mid=? AND mask=?',
-                     (row['molecule_id'], row['mask'])).fetchone()
+    signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
+    old = db.execute('SELECT quality,gid FROM poses WHERE mid=? AND mask=? AND spatial=?',
+                     (row['molecule_id'], row['mask'],signature)).fetchone()
     quality, gid = row.get('composite_score',row['min_matched_score']), row['global_id']
     if old is None or quality > old[0] or (quality == old[0] and gid < old[1]):
-        db.execute('INSERT OR REPLACE INTO poses VALUES (?,?,?,?,?)',
-                   (row['molecule_id'], row['mask'], quality, gid, json.dumps(row)))
+        db.execute('INSERT OR REPLACE INTO poses VALUES (?,?,?,?,?,?)',
+                   (row['molecule_id'], row['mask'], quality, gid, json.dumps(row),signature))
 
 
 def scaffold_key(chemistry):

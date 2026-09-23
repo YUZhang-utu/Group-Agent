@@ -46,13 +46,14 @@ def run(source, output, search):
                             full_coverage=child['full_coverage'],counts=child['counts']))
     dbpath=out/'candidates.sqlite'
     with sqlite3.connect(dbpath) as db:
-        db.executescript('DROP TABLE IF EXISTS poses; DROP TABLE IF EXISTS members; CREATE TABLE poses(mid TEXT,template TEXT,mask INTEGER,quality REAL,payload TEXT,PRIMARY KEY(mid,template,mask)); CREATE TABLE members(mid TEXT PRIMARY KEY,cluster TEXT);')
+        db.executescript('DROP TABLE IF EXISTS poses; DROP TABLE IF EXISTS members; CREATE TABLE poses(mid TEXT,template TEXT,mask INTEGER,quality REAL,payload TEXT,spatial TEXT NOT NULL,PRIMARY KEY(mid,template,mask,spatial)); CREATE TABLE members(mid TEXT PRIMARY KEY,cluster TEXT);')
         for meta in reports:
             child=ev.read(meta['report']);check_hashes(child['output_hashes'])
             with sqlite3.connect(Path(child['outputs']['candidates.sqlite']).resolve().as_uri()+'?mode=ro',uri=True) as incoming:
                 for mid,mask,quality,payload in incoming.execute('SELECT mid,mask,quality,payload FROM poses'):
                     row=json.loads(payload);row['template_id']=meta['template_id'];row['coordinate_frame']=adopted['reference']['coordinate_frame']
-                    db.execute('INSERT INTO poses VALUES(?,?,?,?,?)',(mid,meta['template_id'],mask,quality,json.dumps(row)))
+                    signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
+                    db.execute('INSERT INTO poses VALUES(?,?,?,?,?,?)',(mid,meta['template_id'],mask,quality,json.dumps(row),signature))
                 for mid,cluster in incoming.execute('SELECT mid,cluster FROM members'):db.execute('INSERT OR IGNORE INTO members VALUES(?,?)',(mid,cluster))
         count=db.execute('SELECT COUNT(*) FROM members').fetchone()[0];poses=db.execute('SELECT COUNT(*) FROM poses').fetchone()[0]
     result.update(status='complete',full_coverage=all(r['full_coverage'] for r in reports),matching_molecules=count,pose_records=poses,

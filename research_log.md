@@ -1444,3 +1444,56 @@ scientific ranking change, provider fallback, live API call or library scan.
 Continuation is recorded in to_human/20260923_E053_JSON_MODE_REPAIR.md. Restart the
 updated Chat and create a new /recommend in the same conversation using completed
 consensus evidence. The stopped E050 job remains stopped.
+
+## 2026-09-23: Live recommendation completed; user proposes subpocket semantics
+
+User reported a complete live recommendation and proposed conditional LEU54 HBD,
+three functional subpocket occupancy groups, nonlinear occupancy preference and
+optional mode-family bonuses. Recorded exact requests and implementation gaps in
+to_human/20260923_MDM2_SUBPOCKET_DESIGN_REVIEW.md. Read-only local evidence audit
+finds that low-frequency modes are retained, GLN72 backbone-O modes already exist,
+and LEU54 HBD support is 10/45 (not mandatory-eligible). Existing alternative groups
+are hard requirements, so they cannot express optional bonuses. No design was
+adopted, code changed, library scan launched, or NH retention rate asserted.
+
+## 2026-09-23: Complete local contact and spatial audit before scoring changes
+
+Protocol written in experiments/E053-subpocket-audit-protocol.md before execution.
+Audited 48 prepared instances / 45 PDBs using original heavy-atom coordinates and
+independent p53 side-chain spatial probes from 1YCR aligned to 5C5A (51 CA pairs,
+0.7893 A RMSD). All source hashes passed and prepared shape coordinates exactly
+matched saved transforms. Raw nonpolar-proxy contacts at 4 A vs extracted modes:
+PHE86 29 vs 0 complexes, ILE99 46 vs 2, MET62 42 vs 0. This confirms substantial
+representation gaps; raw proximity is not a validated interaction assignment.
+Trp23 probe overlap is 48/48 at 1.5/2.0/2.5 A; Leu26 46/48; Phe19 47/48; all
+three 45/48. Residue-only groups obscure these spatial exceptions. Three geometry
+and quality tests passed. Initial attempt stopped on the short-peptide mapping
+guard; audit-specific exact database/sequence mapping resolved it without changing
+production admission. Results are exploratory, not universal occupancy or recall.
+Artifacts: data/e053-subpocket-audit-20260923-v2/ and the human audit results report.
+Production scoring/extraction unchanged; no adoption, library scan, NH rate or
+induced-fit claim. Review exceptions and atom-contact semantics before grouping.
+
+## 2026-09-23: E054 general contact evidence and grouped scoring
+
+Implemented target-independent atom-contact ledgers, retaining all observed nearby
+pairs and polar alternatives independently of sparse pharmacophore features.
+Chemistry/protonation/angle uncertainty remains explicit. Added evidence-sealed
+spatial atom groups, optional-family maxima, nonlinear occupancy rewards, and
+same-pose spatial-signature persistence through seed and molecule/template merges.
+No MDM2 rules are embedded in the general engine. Added reference-state severe
+overlap checks and a selected-template self-control readiness gate.
+
+Exploratory validation: 412 tests passed, two skipped; full independent comparison
+matches all 6905 historical atom pairs. 4JV7/4JV9 clash with reference GLN59;
+4MDN clashes with TYR100 and all three remain pending rather than called inactive.
+4ZFI's spatial exception changes with the reference definition and is not a hard
+rejection. Offline raw-evidence rebuild completed with 45 complexes, 119 modes,
+39 templates, 6507 pairs and zero failures. New-cohort deterministic grouped-design
+fixture passes 45/45 crystal self-controls; incompatible 4JV9 fixture is blocked.
+These are local software/geometry confirmations; nonlinear coefficients and
+biological generalization remain exploratory. No user design adopted, live LLM,
+full-library execution or NH/independent-active validation was performed.
+See to_human/E054_GENERAL_CONTACT_GROUPS.md and data/e054-groups-validation-final/.
+Workstation needs an updated service and fresh consensus before new recommendation;
+old anchor IDs and code-hashed runs must not be reused blindly.

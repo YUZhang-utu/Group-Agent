@@ -14,6 +14,21 @@ POLICY=dict(minimum_pocket_coverage=.8,minimum_aligned_residues=12,
             maximum_pocket_ca_rmsd=1.5,maximum_centroid_distance=5.,
             minimum_ligand_envelope_overlap=.4,ligand_envelope_distance=3.,
             minimum_shared_contact_residues=3,contact_distance=4.5)
+POLICY['minimum_reference_heavy_atom_distance']=1.2
+
+
+def reference_state_check(ligand_points, receptor_atoms, cutoff=1.2):
+    """Severe overlap diagnostic in one reference state, not a full VDW score."""
+    atoms=[a for a in receptor_atoms if not a['label_alt_id'] and float(a['occupancy'])>=.9
+           and not a.get('pdbx_PDB_ins_code')]
+    if not atoms or not len(ligand_points):
+        return dict(status='unknown',reason='missing_observed_reference_geometry')
+    distances,indices=cKDTree(np.asarray([a['xyz'] for a in atoms])).query(ligand_points)
+    clashes=[dict(ligand_atom_index=int(i),reference_residue=atoms[int(indices[i])]['canonical_residue'],
+                  reference_atom=atoms[int(indices[i])]['auth_atom_id'],distance=float(distances[i]))
+             for i in np.flatnonzero(distances<cutoff-1e-8)]
+    return dict(status='incompatible' if clashes else 'no_severe_overlap',minimum_distance=float(distances.min()),
+                cutoff=cutoff,clashes=clashes,scope='Reference-state severe overlap only; not affinity or exhaustive steric validation')
 
 
 def fit_protein(moving, fixed):
@@ -116,6 +131,10 @@ def admit(reference, ref_row, ref_chain, candidate, row, chain, policy=None, ass
     if len(local)<p['minimum_aligned_residues']:result['reasons']=['insufficient_local_alignment'];return result
     m,rmsd,residuals=fit_protein([cm[r] for r in local],[rm[r] for r in local])
     xyz=np.array([a['xyz'] for a in lig])@m[:3,:3].T+m[:3,3];rxyz=np.array([a['xyz'] for a in rl])
+    state_check=reference_state_check(xyz,ra,p['minimum_reference_heavy_atom_distance'])
+    result['reference_state_check']=state_check
+    if state_check['status']!='no_severe_overlap':
+        result['reasons'].append('reference_state_incompatible_or_unresolved')
     center=float(np.linalg.norm(xyz.mean(0)-rxyz.mean(0)))
     overlap=float(np.mean(cKDTree(rxyz).query(xyz)[0]<=p['ligand_envelope_distance']))
     local_atoms=[a for a in ca if a['canonical_residue'] in rc]

@@ -88,8 +88,18 @@ def pose_rank(values, assignments, order, gaussian, points, transform, design):
     weights=np.array([design.get('optional_weights',{}).get(a,0.) for a in order])
     optional=float(np.dot(weights,np.where(assignments>=0,values,0))/weights.sum()) if weights.sum() else 0.
     moved=points@transform[:3,:3].T+transform[:3,3]
+    extensions={}
+    if design.get('optional_groups') or design.get('spatial_groups'):
+        from .contact_groups import grouped_terms
+        extensions=grouped_terms(values,assignments,order,moved,design)
+        families=design.get('optional_groups',[])
+        total=weights.sum()+sum(g['weight'] for g in families)
+        numerator=float(np.dot(weights,np.where(assignments>=0,values,0)))+sum(
+            g['weight']*extensions['optional_group_scores'][g['id']] for g in families)
+        optional=numerator/total if total else 0.
     penalty=sum(r['weight']*float(np.mean(np.linalg.norm(moved-np.array(r['center']),axis=1)<r['radius']))
                 for r in design.get('exclusions',[]) if r['mode']=='soft')
     gw=design['gaussian_weight'];ow=design['optional_weight']
-    combined=(gw*float(gaussian)+ow*optional)/(gw+ow)-penalty
-    return dict(gaussian_same_pose=float(gaussian),optional_score=optional,exclusion_penalty=penalty,composite_score=combined)
+    sw=design.get('occupancy_weight',0.)
+    combined=(gw*float(gaussian)+ow*optional+sw*extensions.get('occupancy_score',0.))/(gw+ow+sw)-penalty
+    return dict(gaussian_same_pose=float(gaussian),optional_score=optional,exclusion_penalty=penalty,composite_score=combined,**extensions)

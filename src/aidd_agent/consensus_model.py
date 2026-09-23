@@ -138,6 +138,8 @@ def build(source, output, reference_query=None, target_chain=None, maximum_templ
             'Only the admitted receptor-state cohort is pooled; alternative states remain pending',
             'Support thresholds and spatial mode radius are exploratory', 'Known active retention is not established by crystal self-controls'])
     report['sources'].update(fingerprint([out/'cohort.json',pocket,pocket.with_suffix('.manifest.json'),receptor_path]))
+    from .contact_evidence import attach
+    attach(report,out/'contacts.json')
     _atomic_json(out/'report.json',report)
     from .consensus_report import render
     render(out)

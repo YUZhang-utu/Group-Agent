@@ -15,7 +15,14 @@ def render(output):
         '<h2>Admission decisions</h2><table><tr><th>Ligand</th><th>Status</th><th>Evidence / reasons</th></tr>']
     for decision in r['cohort']['decisions']:
         rows.append('<tr><td>'+e(decision['query_id'])+'</td><td>'+e(decision['status'])+'</td><td><details><summary>Inspect alignment and chain checks</summary><pre>'+e(json.dumps(decision,indent=2))+'</pre></details></td></tr>')
-    rows+=['</table><h2>Pocket anchors</h2><table><tr><th>ID / contact</th><th>Support</th><th>Automatic mandatory eligible</th><th>Evidence</th></tr>']
+    rows+=['</table>']
+    if r.get('contact_evidence'):
+        rows+=['<h2>Atom contact evidence</h2><p>The feature anchors below are a sparse representation, not the complete contact map. '
+               'The ledger retains observed heavy-atom pairs within 4.5 A, all compatible polar proximity alternatives, '
+               'source atom identities, aligned coordinates and uncertain atoms. Proximity is not a validated bond. '
+               'Missing geometry is unknown.</p><a href="contacts.json">Open complete contact ledger</a><pre>'+
+               e(json.dumps(r['contact_evidence'],indent=2))+'</pre>']
+    rows+=['<h2>Pocket anchors</h2><table><tr><th>ID / contact</th><th>Support</th><th>Automatic mandatory eligible</th><th>Evidence</th></tr>']
     for a in r['anchors']:
         rows.append(f'<tr><td>{e(a["anchor_id"])}<br>{e(a["target_residue"])} {e(a["protein_atom"])} / {e(a["feature_class"])}</td>'
             f'<td>{a["distinct_structures"]}/{a["eligible_structures"]} eligible PDBs; {a["distinct_chemotypes"]} chemotypes</td><td>{e(a["mandatory_proposal_eligible"])}</td>'

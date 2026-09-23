@@ -114,6 +114,13 @@ This verifies target chain, organism, biological assembly and aligned same pocke
 On structure_consensus use recommend. On consensus_recommend use adopt/design. On consensus_design use guided.
 For consensus designs, editable fields are mandatory_anchors, alternative_groups, optional_weights (ID to weight),
 template_ids, evidence_ids, rationale, exclusions, permissiveness, gaussian_weight, optional_weight, minimum_pose_score.
+Optional extensions: optional_groups (objects with id, anchor_ids, weight; best member counts once),
+spatial_groups (objects with id, reference_query, ligand_atoms, radius, minimum_atoms),
+occupancy_rewards (monotone list starting at zero, one entry per occupied-group count), occupancy_weight,
+and spatial_ambiguity. Spatial reference atom names must be explicitly supplied or present in evidence;
+never invent atom selections, radii or rewards. Spatial groups require the new contact ledger.
+Optional groups are scoring bonuses, unlike alternative_groups which are hard requirements.
+No spatial occupancy count is a hard filter. Do not promise universal contact or affinity validation.
 Keep template choice independent of pocket anchors. Rare contacts cannot become mandatory.
 Exclusions require explicit reviewed coordinates, mode hard/soft, radius, weight, evidence and rationale; never invent these.
 All these intents use an empty request. On consensus_funnel use select to choose anchor combinations.
@@ -161,7 +168,8 @@ def screening_summary(job):
         if step.get('action') in {'structure_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
-                'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation','limitations','failures') if k in child}
+                'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation',
+                'failed_template_self_controls','contact_evidence','limitations','failures') if k in child}
             if child.get('cohort'):
                 summary['reference']=child['cohort'].get('reference');summary['reference_options']=child['cohort'].get('reference_options',[])
                 summary['admitted_instances']=len(child['cohort'].get('admitted',[]))
@@ -223,10 +231,11 @@ def screening_feedback(summary):
         return json.dumps(summary,indent=2)+'\nChoose the reference ligand instance and target chain in chat to build a same-pocket consensus. Polymer chemical preparation remains separate.'
     if summary.get('kind') in {'structure_consensus','consensus_recommendation','consensus_design','consensus_funnel'}:
         next_step={'structure_consensus':'Review admitted complexes and independent templates, then request /recommend.',
-            'consensus_recommendation':'Edit anchor roles, weights and templates in chat, then /adopt.',
+            'consensus_recommendation':'Use /adopt for the unchanged proposal, or submit edits to create an edited design. Review that design before /guided.',
             'consensus_design':'Use /guided for the full-library multi-template funnel.',
             'consensus_funnel':'Select desired same-pose anchor combinations in chat.'}[summary['kind']]
         if summary.get('readiness')=='needs_reference_instance':next_step='Choose one listed reference ligand and target chain in chat; no consensus was generated.'
+        if summary.get('readiness')=='needs_template_state_review':next_step='Selected templates fail crystal self-controls. Review the receptor state and template choices; /guided is blocked for this design.'
         return json.dumps(summary,indent=2)+'\n'+next_step
     if summary.get('kind')=='guided_selection':return json.dumps(summary,indent=2)
     if summary.get('kind') in {'structure_survey','anchor_recommendation','anchor_design','guided_funnel'}:

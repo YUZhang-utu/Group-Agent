@@ -1,0 +1,47 @@
+{
+  "status": "complete",
+  "scope": "Exploratory local regression, no production adoption or library scan",
+  "independent_pair_comparison": {
+    "expected": 6905,
+    "actual": 6905,
+    "identical": true
+  },
+  "ligand_chemistry": {
+    "CCD_perceived_protonation_unvalidated": 48
+  },
+  "contact_classes": {
+    "heavy_atom_proximity": 6905,
+    "carbon_sulfur_proximity": 3671,
+    "halogen_proximity_not_halogen_bond": 1153,
+    "donor_acceptor_proximity": 59
+  },
+  "spatial_counts": {
+    "3": 46,
+    "2": 2
+  },
+  "template_review": {
+    "incompatible_design_readiness": "needs_template_state_review",
+    "failed_templates": [
+      "4JV9:1MO:A:201"
+    ],
+    "compatible_design_readiness": "ready_for_consensus_funnel"
+  },
+  "fresh_cohort_fixture": {
+    "prepared": 45,
+    "anchors": 119,
+    "templates": 39,
+    "readiness": "ready_for_consensus_funnel",
+    "crystal_controls_passed": 45,
+    "cutoff": 0.2902589373300852
+  },
+  "admission_recheck_counts": {
+    "admitted": 45,
+    "pending": 3
+  },
+  "tests": {
+    "passed": 412,
+    "skipped": 2
+  },
+  "real_target_validation": "MDM2 only; non-MDM2 coverage is synthetic software validation",
+  "library_NH_and_new_independent_active_retention": "pending"
+}

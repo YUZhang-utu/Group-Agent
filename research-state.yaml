@@ -1,7 +1,22 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E053-general-target-consensus-contract
+current_experiment: E054-general-contact-groups
+general_contact_groups:
+  status: implemented_local_regression_and_real_structure_validation
+  protocol: experiments/E054-general-contact-groups.md
+  guide: to_human/E054_GENERAL_CONTACT_GROUPS.md
+  local_regression: 412_passed_2_skipped
+  historical_atom_pairs_independently_matched: 6905
+  compatible_prepared_complexes: 45
+  compatible_feature_modes: 119
+  compatible_templates: 39
+  compatible_atom_pairs: 6507
+  fresh_fixture_crystal_controls: 45_of_45
+  generality: target_independent_engine_non_MDM2_fixtures_real_MDM2_validation_only
+  workstation_verified: false
+  production_design_adopted: false
+  library_NH_and_new_independent_active_retention: pending
 parallel_development:
   experiment: E051-structure-guided-chat
   branch: feature/structure-guided-chat
@@ -31,17 +46,21 @@ general_target_consensus:
   prerequisite: explicit_reference_chain_ligand_and_protein_aligned_site_admission
   prior_e052_cohort: exploratory_not_consensus_accepted
   guide: to_human/E053_CONSENSUS_CHAT_TEST.md
-  local_regression: 372_passed_2_skipped
-  mdm2_admitted_instances: 48
-  consensus_spatial_directional_modes: 126
+  local_regression: 412_passed_2_skipped
+  mdm2_admitted_instances: 45
+  consensus_spatial_directional_modes: 119
   independent_chembl_evidence_and_conformer_preparation: real_api_verified_three_records
   independent_binding_panel: 23_of_23_retained_one_reference_overlap_excluded_exploratory
-  live_llm_recommendation: workstation_HTTP_400_invalid_request_error_48031_prompt_characters
+  live_llm_recommendation: user_reported_complete_proposal_ready_2026_09_23
   latest_executable_fix: explicit_JSON_output_instruction_2026_09_23
   latest_fix_local_validation: 41_passed_1_skipped_mock_provider_not_live
   provider_failure_hypothesis: missing_JSON_instruction_reproduced_with_mock_provider
-  latest_fix_workstation_verified: false
-  next_action: restart_updated_chat_then_new_recommend_in_same_conversation
+  latest_fix_workstation_verified: user_reported_recommendation_complete
+  next_action: update_workstation_rebuild_consensus_then_review_new_ids_and_recommendation
+  subpocket_design_review: to_human/20260923_MDM2_SUBPOCKET_DESIGN_REVIEW.md
+  subpocket_coordinate_audit: 48_complexes_45_PDBs_complete_exploratory
+  subpocket_audit_report: to_human/20260923_MDM2_SUBPOCKET_AUDIT_RESULTS.md
+  grouped_scoring: implemented_E054_optional_families_and_spatial_rewards
   overnight_handoff: to_human/20260922_E053_OVERNIGHT_HANDOFF.md
   latest_repair_handoff: to_human/20260923_E053_JSON_MODE_REPAIR.md
   workstation_checkout: /mnt/medchem_taltio/wrk/yu_agent/Group-Agent

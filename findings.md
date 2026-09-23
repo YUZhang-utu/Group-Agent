@@ -540,3 +540,16 @@ The implementation records weighted optional evidence and actual pose scores;
 multi-template union never makes cross-pose anchor combinations simultaneous.
 The prior E050 run is now user-confirmed stopped. Workstation measurements of
 new funnel selectivity and independent-active retention are still required.
+
+## E054: contact completeness and spatial grouping are separate contracts
+
+The sparse feature ledger substantially underrepresented observed atom proximity.
+A general atom ledger now preserves nearby pairs and explicit uncertainty. This
+does not convert every proximity into a chemical bond or make contact recurrence
+an energetic requirement. Residue-only groups obscure distinct spatial occupancy;
+reference-bound regions and disjoint same-pose assignment address that ambiguity.
+Optional alternatives use a family maximum, and occupancy rewards remain explicit
+and exploratory. Fixed-reference compatibility is checked before pooling: three
+MDM2 instances now remain pending rather than being silently treated as one state.
+The 45-instance compatible-cohort fixture passes crystal self-controls, which
+still does not establish independent active retention or general-target recall.

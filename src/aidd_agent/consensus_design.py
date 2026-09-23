@@ -8,18 +8,24 @@ from .gaussian_batch import _atomic_json, _load_query
 from .expanded_wee1 import fingerprint
 from .screening_selection import check_hashes
 
-FIELDS={'mandatory_anchors','alternative_groups','optional_weights','template_ids','evidence_ids','rationale',
+from .contact_groups import EXTENSION_FIELDS, selected_anchors, validate_extensions, resolve_regions
+
+BASE_FIELDS={'mandatory_anchors','alternative_groups','optional_weights','template_ids','evidence_ids','rationale',
         'exclusions','permissiveness','gaussian_weight','optional_weight','minimum_pose_score'}
+FIELDS=BASE_FIELDS|EXTENSION_FIELDS
 MAX_EVIDENCE_CHARS=100000
 
 
 def validate(design, survey, llm=False):
-    if not isinstance(design,dict) or set(design)!=FIELDS:raise ValueError('Invalid consensus design fields')
+    if not isinstance(design,dict) or not BASE_FIELDS<=set(design) or set(design)-FIELDS:raise ValueError('Invalid consensus design fields')
     anchors={a['anchor_id']:a for a in survey['anchors']}
     required=design['mandatory_anchors'];groups=design['alternative_groups'];weights=design['optional_weights']
     if not isinstance(required,list) or not isinstance(groups,list) or not isinstance(weights,dict):raise ValueError('Invalid anchor rules')
     if any(not isinstance(g,list) or not g for g in groups):raise ValueError('Empty alternative group')
-    core=required+[a for g in groups for a in g];all_ids=core+list(weights)
+    if any(not isinstance(a,str) for a in required+list(weights)+[a for g in groups for a in g]):
+        raise ValueError('Anchor IDs must be strings')
+    validate_extensions(design,survey)
+    core=required+[a for g in groups for a in g];all_ids=core+list(weights)+[a for g in design.get('optional_groups',[]) for a in g['anchor_ids']]
     if not all_ids or len(set(all_ids))>20 or any(not isinstance(a,str) or a not in anchors for a in all_ids):raise ValueError('Choose 1 to 20 known pocket anchors')
     if len(set(required))!=len(required) or set(core)&set(weights):raise ValueError('Duplicate or contradictory anchor role')
     def number(x,lo,hi):return type(x) in (int,float) and np.isfinite(x) and lo<=x<=hi
@@ -35,7 +41,7 @@ def validate(design, survey, llm=False):
     for key,lo,hi in [('permissiveness',.1,3),('gaussian_weight',0,1),('optional_weight',0,1)]:
         if not number(design[key],lo,hi):raise ValueError('Invalid '+key)
     if design['minimum_pose_score'] is not None and not number(design['minimum_pose_score'],0,1):raise ValueError('Invalid minimum_pose_score')
-    if design['gaussian_weight']+design['optional_weight']<=0:raise ValueError('Ranking needs a positive weight')
+    if design['gaussian_weight']+design['optional_weight']+design.get('occupancy_weight',0)<=0:raise ValueError('Ranking needs a positive weight')
     if not isinstance(design['exclusions'],list):raise ValueError('Invalid exclusion list')
     for region in design['exclusions']:
         if set(region)!={'mode','center','radius','weight','evidence','rationale'}:raise ValueError('Invalid exclusion region fields')
@@ -57,6 +63,9 @@ def recommend(source, output, provider, adviser=None):
           'distinct_structures','eligible_structures','distinct_chemotypes','mandatory_proposal_eligible','pdb_ids')} for a in survey['anchors']],
         templates=[{k:q[k] for k in ('query_id','smiles','resolution')} for q in survey['templates']],
         proposed_template_ids=survey['proposed_template_ids'],limitations=survey['limitations'])
+    if survey.get('contact_evidence'):
+        context['contact_evidence_status']={k:survey['contact_evidence'][k] for k in ('version','complexes','pairs','scope')}
+        context['contact_evidence_status']['interpretation']='Anchors are sparse feature modes, not an exhaustive contact map. Do not infer absent contacts from omitted anchors. Spatial regions need explicit reviewed reference atom selections.'
     # No evidence silently removed: require a smaller explicit cohort if context is too large.
     encoded_context=json.dumps(context,ensure_ascii=False,separators=(',',':'))
     if len(encoded_context)>MAX_EVIDENCE_CHARS:raise ValueError('Consensus context exceeds the 100000-character evidence budget; partition receptor states before recommendation')
@@ -101,7 +110,8 @@ def adopt(source, output, overrides=None):
         if set(overrides)-FIELDS:raise ValueError('Unknown consensus design edit')
         design.update(overrides)
     validate(design,survey)
-    order=sorted(set(design['mandatory_anchors'])|set(design['optional_weights'])|{a for g in design['alternative_groups'] for a in g})
+    order=selected_anchors(design)
+    if design.get('spatial_groups'):design['resolved_spatial_groups']=resolve_regions(design,survey)
     _,expanded=_load_query(Path(survey['consensus_npz']))
     queries=[_load_query(Path(q['query_npz']))[1] for q in survey['prepared_complexes']]
     design.update(version='consensus-pocket-v1',minimum_score=.5,pocket=copy.deepcopy(DEFAULTS['pocket']),
@@ -132,7 +142,13 @@ def adopt(source, output, overrides=None):
             control['reference_pose_score']=terms['composite_score'];scores.append(terms['composite_score'])
         design['minimum_pose_score']=max(0.,min(scores)*.8/design['permissiveness'])
         design['pose_threshold_derivation']='0.8 * minimum passing crystal identity-pose composite / permissiveness; exploratory, independent-active recall reported separately'
-    result=dict(kind='consensus_design',status='complete',readiness='ready_for_consensus_funnel',design=design,anchor_order=order,
+    failed_templates=[c['query_id'] for c in controls if c['query_id'] in design['template_ids'] and
+                      not (c['rule_passed'] and c['pocket_passed'])]
+    missing_templates=set(design['template_ids'])-{c['query_id'] for c in controls}
+    if missing_templates:raise ValueError('Selected templates lack crystal self-controls')
+    result=dict(kind='consensus_design',status='complete',
+        readiness='needs_template_state_review' if failed_templates else 'ready_for_consensus_funnel',
+        failed_template_self_controls=failed_templates,design=design,anchor_order=order,
         anchors=[a for a in survey['anchors'] if a['anchor_id'] in order],consensus_npz=survey['consensus_npz'],templates=[q for q in survey['templates'] if q['query_id'] in design['template_ids']],
         reference=survey['cohort']['reference'],target=survey['target'],reference_smiles=[q['smiles'] for q in survey['prepared_complexes']],
         crystal_self_controls=controls,independent_active_validation='not_run',

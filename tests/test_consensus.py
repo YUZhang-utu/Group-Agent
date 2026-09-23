@@ -132,7 +132,9 @@ def test_same_pocket_rejects_displaced_ligand_even_with_chain_identity(monkeypat
            for i,p in enumerate(rng.normal(size=(20,3)))]
     lig=[dict(auth_asym_id='L',auth_seq_id='1',auth_comp_id='LIG',group_PDB='HETATM',xyz=p) for p in [[0.,0,0],[1,0,0],[0,1,0]]]
     ref=dict(atoms=atoms+lig,chains={'A':atoms});row=dict(chain='L',residue='1',ccd_id='LIG',query_id='P:LIG:L:1')
-    assert admit(ref,row,'A',ref,row,'A')['status']=='admitted'
+    # This synthetic alignment-only fixture intentionally overlaps CA points;
+    # isolate alignment acceptance from the separately tested state-clash gate.
+    assert admit(ref,row,'A',ref,row,'A',policy={'minimum_reference_heavy_atom_distance':0.})['status']=='admitted'
     moved=copy.deepcopy(ref)
     for a in moved['atoms'][-3:]:a['xyz']=np.array(a['xyz'])+[30,0,0]
     assert admit(ref,row,'A',moved,row,'A')['status']=='rejected'
