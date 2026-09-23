@@ -218,7 +218,13 @@ def test_large_consensus_recommendation_preserves_all_evidence(tmp_path,monkeypa
     sent=[]
     class Opener:
         def open(self,request,timeout):
-            sent.append(json.loads(request.data)['messages'][1]['content'])
+            from urllib.error import HTTPError
+            payload=json.loads(request.data)
+            if payload.get('response_format')=={'type':'json_object'} and not any(
+                    'json' in message['content'].lower() for message in payload['messages']):
+                raise HTTPError(request.full_url,400,'Bad Request',{},io.BytesIO(json.dumps(
+                    dict(error=dict(code='invalid_request_error',message='JSON mode requires json in messages'))).encode()))
+            sent.append(payload['messages'][1]['content'])
             return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason='stop',message=dict(content=json.dumps(design)))])).encode())
     original=prompt_plan.chat_plan
     monkeypatch.setattr(prompt_plan,'chat_plan',lambda *args,**kwargs:original(*args,opener=Opener(),**kwargs))

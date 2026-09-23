@@ -1427,3 +1427,20 @@ no E053 full-library run is confirmed. Reuse completed consensus in the same
 conversation; do not repeat discovery, resume changed-code failed tasks, erase
 untracked k or restart the explicitly stopped E050 job. No new experiment was
 launched for this documentation checkpoint.
+
+## 2026-09-23: Repair explicit JSON instructions for consensus recommendation
+
+User supplied HTTP 400 / invalid_request_error with 48031 prompt characters and
+120-second timeout. Inspection found that the custom consensus prompt lacked an
+explicit JSON instruction despite the default JSON-object response format.
+A mock provider enforcing that documented contract reproduced the same error
+category before the fix. The shared client now requests a single JSON object for
+all callers, including profiles with provider JSON mode disabled; local strict
+validation remains mandatory. The complete 126-anchor/42-template regression now
+passes. Focused suite: 41 passed, one skipped; English-content guard passed.
+This is a confirmed local compatibility defect and a candidate explanation for
+the workstation rejection, not a confirmed live resolution. No evidence trimming,
+scientific ranking change, provider fallback, live API call or library scan.
+Continuation is recorded in to_human/20260923_E053_JSON_MODE_REPAIR.md. Restart the
+updated Chat and create a new /recommend in the same conversation using completed
+consensus evidence. The stopped E050 job remains stopped.

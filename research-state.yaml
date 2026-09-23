@@ -36,11 +36,14 @@ general_target_consensus:
   consensus_spatial_directional_modes: 126
   independent_chembl_evidence_and_conformer_preparation: real_api_verified_three_records
   independent_binding_panel: 23_of_23_retained_one_reference_overlap_excluded_exploratory
-  live_llm_recommendation: workstation_failed_RuntimeError_underlying_cause_unknown
-  latest_executable_fix: f64bbb8
+  live_llm_recommendation: workstation_HTTP_400_invalid_request_error_48031_prompt_characters
+  latest_executable_fix: explicit_JSON_output_instruction_2026_09_23
+  latest_fix_local_validation: 41_passed_1_skipped_mock_provider_not_live
+  provider_failure_hypothesis: missing_JSON_instruction_reproduced_with_mock_provider
   latest_fix_workstation_verified: false
   next_action: restart_updated_chat_then_new_recommend_in_same_conversation
   overnight_handoff: to_human/20260922_E053_OVERNIGHT_HANDOFF.md
+  latest_repair_handoff: to_human/20260923_E053_JSON_MODE_REPAIR.md
   workstation_checkout: /mnt/medchem_taltio/wrk/yu_agent/Group-Agent
   workstation_chat_storage: /mnt/local/hand/yuzhang/aidd/e053-chat-workspace
   e053_full_library_running: not_confirmed

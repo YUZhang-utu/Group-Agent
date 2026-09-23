@@ -81,6 +81,27 @@ def test_compatible_chat_request_and_no_secret_in_payload(monkeypatch):
     assert len(json.loads(request.data)["messages"]) == 2
 
 
+@pytest.mark.parametrize('json_mode', [True, False])
+def test_custom_prompt_requests_json_and_preserves_local_validation(json_mode):
+    class Opener:
+        def open(self, request, timeout):
+            payload = json.loads(request.data)
+            system = payload['messages'][0]['content']
+            assert 'JSON' in system
+            assert 'single JSON object' in system
+            assert payload['messages'][1]['content'] == 'evidence'
+            assert ('response_format' in payload) is json_mode
+            if json_mode:
+                assert payload['response_format'] == {'type': 'json_object'}
+            return io.BytesIO(json.dumps(dict(choices=[dict(
+                finish_reason='stop', message=dict(content='{"unknown": true}'))])).encode())
+    # A custom caller must request JSON even when the provider's JSON mode is off.
+    # The ordinary strict plan validator must still reject an invalid response.
+    with pytest.raises(ValueError):
+        chat_plan('evidence', dict(base_url='https://example.org/v1', model='test', json_mode=json_mode),
+                  Opener(), system_prompt='Propose a screening design.', capabilities={})
+
+
 def test_chat_errors_redact_body_and_reject_truncated_output(monkeypatch):
     class Error:
         def open(self, request, timeout):

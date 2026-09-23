@@ -254,8 +254,11 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
         headers["Authorization"] = "Bearer " + key
     timeout = profile.get("timeout_seconds", 120)
     if type(timeout) not in (int, float) or not 1 <= timeout <= 300: raise ValueError("Invalid API timeout")
+    # JSON-mode providers require an explicit JSON instruction, including for custom callers.
+    # Keep the output contract explicit when provider-side JSON mode is disabled as well.
+    output_instruction = "Return a single JSON object matching the required fields, without Markdown fences or surrounding text."
     payload = {"model": profile["model"], "messages": [
-        {"role": "system", "content": system_prompt + "\n" + json.dumps(capabilities, ensure_ascii=False)},
+        {"role": "system", "content": system_prompt + "\n" + output_instruction + "\n" + json.dumps(capabilities, ensure_ascii=False)},
         {"role": "user", "content": prompt}]}
     if profile.get("json_mode", True): payload["response_format"] = {"type": "json_object"}
     request = Request(url + "/chat/completions", data=json.dumps(payload).encode(), headers=headers)
