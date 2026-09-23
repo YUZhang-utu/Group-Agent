@@ -1586,3 +1586,17 @@ The local current-proposal migration removed six water modes, kept 14 anchors an
 budget 9.75. Eighty-two focused tests passed. This is a modeling-scope decision,
 not a claim that crystallographic waters are universally unreliable. Explicit
 water modeling and biological validation remain outside the current scope.
+
+## 2026-09-23: E057 bounded full-chain pilot
+
+Implemented uniform registry-molecule sampling with every catalog conformer and
+every selected template through production preselection compute. Explicit-ID
+tasks preserve ordinary contiguous task behavior. Pilot saves poses, unions
+molecules, groups scaffolds and reports stage survival, timing and complete-sample
+projections. Incomplete samples produce no population extrapolation. Validation:
+448 passed, 2 skipped; no real workstation throughput measured yet. User confirmed
+runtime prompt-runtime-apptainer.local.json and library-precompute-20260911,
+24 CPU cores and RTX 5090. First probe uses 256 molecules, 24 single-threaded
+workers, four molecules per chunk and a 600-second checked budget. Current
+consensus kernel is CPU-only despite a separate legacy CuPy path. GPU acceleration
+requires separate implementation and numerical equivalence validation.

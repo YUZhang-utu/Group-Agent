@@ -1,7 +1,7 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E056-contact-diagnostics
+current_experiment: E057-bounded-consensus-pilot
 protein_contact_policy:
   water_bridge: evidence_only_excluded_from_new_screening
   unmodeled_metal_coordination: evidence_only
@@ -646,3 +646,15 @@ overnight_full_validation:
   running_code_expected: 1533883
   actual_output_directory: not_supplied
   handoff: to_human/20260921_OVERNIGHT_HANDOFF.md
+
+bounded_consensus_pilot:
+  status: implemented_workstation_pending
+  protocol: experiments/E057-bounded-consensus-pilot.md
+  guide: to_human/E057_FAST_PILOT.md
+  regression: 448_passed_2_skipped
+  workstation_first_sample: 256_molecules_all_conformers_all_templates
+  workstation_workers: 24
+  worker_blas_threads: 1
+  budget_seconds: 600
+  gpu_consensus_backend: not_implemented
+  incomplete_sample_extrapolation: disabled

@@ -105,7 +105,7 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
 
 def compute(task):
     global _GUIDED_CACHE
-    start, stop, target = task
+    start, stop, target = task[:3]
     target = Path(target)
     reader, original, expanded, q = full._STATE
     policy = q['condition_policy']
@@ -125,7 +125,9 @@ def compute(task):
     counts['input_conformers'] = stop-start
     seconds = Counter()
     tick = time.perf_counter()
-    ids = np.arange(start, stop, dtype=np.int64)
+    ids = np.arange(start, stop, dtype=np.int64) if len(task)==3 else np.asarray(task[3],dtype=np.int64)
+    if ids.ndim!=1 or len(ids)!=stop-start or len(np.unique(ids))!=len(ids) or np.any(ids<0):
+        raise ValueError('Invalid explicit pilot conformer IDs')
     mids = []
     levels = []
     records = []
