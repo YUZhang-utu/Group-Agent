@@ -10,7 +10,7 @@ from .screening_selection import check_hashes
 
 
 def validate_budget(value, page=False):
-    allowed={'export_molecules','start_rank'} if page else {'retrieval_molecules','export_molecules','chunk_conformers'}
+    allowed={'export_molecules','start_rank'} if page else {'retrieval_molecules','export_molecules','chunk_conformers','workers'}
     if not isinstance(value,dict) or set(value)-allowed:raise ValueError('Unknown budget fields')
     if any(type(v) is not int or not 1<=v<=1000000000 for v in value.values()):raise ValueError('Budgets must be positive integer molecule counts')
     if not page and value.get('export_molecules',100000)>value.get('retrieval_molecules',1000000):
@@ -68,7 +68,7 @@ def execute(action,source,output,params,cfg,allow_compute):
         run=output/'search';start=1;count=settings.get('export_molecules',100000)
         os.environ.setdefault('AIDD_ASSIGNMENT_BACKEND','numba')
         args=SimpleNamespace(batch=batch,recommendation=prepared,definitions=definitions,output=run,
-            retrieval_molecules=settings.get('retrieval_molecules',1000000),workers=search.get('workers',24),
+            retrieval_molecules=settings.get('retrieval_molecules',1000000),workers=settings.get('workers',search.get('workers',24)),
             chunk_conformers=settings.get('chunk_conformers',search.get('refine_chunk',64)),nprobe=128,template_quota=count,rrf_k=60,retrieve_only=False)
         screen(args)
     result=export(batch,run,output/f'page-{start:09d}',start,count)

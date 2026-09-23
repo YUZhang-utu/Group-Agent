@@ -50,17 +50,25 @@ class GuidedFilter:
     def pocket_mask(self, points, transforms):
         matrices=np.asarray(transforms).reshape(-1,4,4)
         points=np.asarray(points)
-        answer=np.empty(len(matrices),dtype=bool)
+        answer=np.zeros(len(matrices),dtype=bool)
         batch=max(1,16384//max(1,len(points)))
         hard=[r for r in self.design.get('exclusions',[]) if r['mode']=='hard']
+        probes=np.linspace(0,len(points)-1,8,dtype=int) if len(points)>8 and self.fraction==0 else None
         for start in range(0,len(matrices),batch):
             block=matrices[start:start+batch]
+            survivors=np.arange(len(block))
+            if probes is not None:
+                moved_probe=points[probes] @ block[:,:3,:3].transpose(0,2,1)+block[:,None,:3,3]
+                distances,_=self.tree.query(moved_probe.reshape(-1,3),k=1)
+                survivors=np.flatnonzero(~np.any(distances.reshape(len(block),len(probes))<self.cutoff-1e-8,axis=1))
+                if not len(survivors):continue
+                block=block[survivors]
             moved=points @ block[:,:3,:3].transpose(0,2,1)+block[:,None,:3,3]
             distances,_=self.tree.query(moved.reshape(-1,3),k=1)
             physical=np.mean(distances.reshape(len(block),len(points))<self.cutoff-1e-8,axis=1)<=self.fraction
             for region in hard:
                 physical &= ~np.any(np.linalg.norm(moved-np.array(region['center']),axis=2)<region['radius'],axis=1)
-            answer[start:start+len(block)]=physical
+            answer[start+survivors]=physical
         return answer
 
 

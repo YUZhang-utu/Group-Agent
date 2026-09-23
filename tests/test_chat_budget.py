@@ -30,11 +30,12 @@ def test_chat_budget_queues_owned_search_and_next_page(tmp_path):
     assert step['action']=='consensus_budget'
     assert step['params']==dict(source_run=folder.name)
     with pytest.raises(ValueError):app.ask(app.new_session(),'/budget '+job['id'],'deepseek')
-    app.router=lambda *args:dict(intent='budget',message='',request='',task_id=job['id'],budget=dict(retrieval_molecules=500000,export_molecules=100000,chunk_conformers=4048))
+    app.router=lambda *args:dict(intent='budget',message='',request='',task_id=job['id'],budget=dict(retrieval_molecules=500000,export_molecules=100000,chunk_conformers=4048,workers=20))
     app.ask(sid,'Search and deliver the top 100000 molecules','deepseek')
     natural=json.loads(Path(app.task(sid)['plan']).read_text())['plan']['steps'][0]
     assert natural['action']=='consensus_budget' and natural['params']['retrieval_molecules']==500000
     assert natural['params']['chunk_conformers']==4048
+    assert natural['params']['workers']==20
     report.write_text(json.dumps(dict(steps=dict(guided=dict(action='consensus_budget',status='complete')))))
     app.update(queued['id'],status='complete',plan=str(plan),report=str(report))
     app.ask(sid,'/budget_page','deepseek')
@@ -83,7 +84,8 @@ def test_budget_search_is_target_generic(tmp_path,monkeypatch):
         (out/'report.json').write_text(json.dumps(result));return result
     monkeypatch.setattr(budget_screen,'execute',screen);monkeypatch.setattr(budget_export,'export',export)
     monkeypatch.setenv('AIDD_ASSIGNMENT_BACKEND','python')
-    result=execute('consensus_budget',source,tmp_path/'out',dict(chunk_conformers=4048),dict(search=dict(batch=str(tmp_path))),True)
+    result=execute('consensus_budget',source,tmp_path/'out',dict(chunk_conformers=4048,workers=20),dict(search=dict(batch=str(tmp_path))),True)
     assert result['exported_molecules']==100000 and result['target']['accession']=='OTHER'
     assert calls[0].definitions is None and calls[0].retrieval_molecules==1000000
     assert calls[0].chunk_conformers==4048
+    assert calls[0].workers==20

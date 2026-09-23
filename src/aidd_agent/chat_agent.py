@@ -114,6 +114,7 @@ retrieval_molecules and export_molecules. Defaults are 1000000 retrieved unique 
 and 100000 exported unique molecules. Contact ranks precede shape tie-breaks and template RRF.
 The user may additionally specify chunk_conformers (conformers per work chunk,
 not molecules). Preserve explicit values such as 4048; otherwise use the trusted runtime.
+It may also specify workers, for example 20 CPU worker processes; otherwise use the trusted runtime.
 Use budget_page to deliver the next molecules from an existing consensus_budget or budget_page
 task without rescoring; include budget {} or export_molecules and optional start_rank.
 Both intents have empty request. They include MOL2/name export in the authorized task.

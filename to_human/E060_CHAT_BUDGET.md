@@ -82,3 +82,20 @@ not change retrieval or output molecule budgets. At the user-reported 2.789s per
 speedup. Progress and checkpoints become coarser. Keep the existing runtime
 configuration unchanged; use a fresh budget task after stopping/updating the
 old worker and server. Never resume the old task with changed code/chunk settings.
+
+## Early clash checks and 20 workers
+
+New Chat budget tasks accept an explicit `workers` integer. Example:
+"Run a new budget search with 20 workers, chunk_conformers=4048, retrieve
+1000000 unique molecules, and export the first 100000 molecules."
+The coordinator seals both scheduling parameters in the new run. Do not modify
+an active task or resume its old code seal under a new executable.
+
+With zero allowed clashes and more than eight ligand atoms, eight evenly spaced
+actual atoms are tested first. Any probe clash proves rejection under the exact
+existing rule. All surviving poses receive complete physical checks, including
+hard exclusions. Nonzero permitted clash fractions retain the complete batched
+path. Centroid proximity or membership in a new pocket sphere is not used as a
+substitute. Seed generation still precedes these tests. Twenty workers offer at
+most 25% ideal throughput growth over sixteen; actual scaling and memory headroom
+must be measured on the workstation.

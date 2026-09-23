@@ -1713,3 +1713,18 @@ At the reported receipt rate this is about 176s per chunk; it reduces dispatch
 and file counts, not the number of evaluated conformers or seeds. Full regression
 474 passed, 2 skipped; English guard and diff checks passed. Workstation run with
 4048 remains user-side pending; no remote configuration was changed here.
+
+## 2026-09-23 - E063 early exact clash rejection and 20 workers
+
+Added eight-actual-atom probe checks for zero-clash designs only. Probe failures
+prove a full-predicate clash; all survivors get complete checks. Batched KD
+queries remain memory bounded. Centroid/pocket-sphere heuristics were not adopted:
+they cannot establish the original physical predicate. Seed generation remains
+unchanged. Added per-task Chat workers override; tests verify 20 workers plus
+4048 conformers reach the executor. Existing active runs/configs were not changed.
+
+Exploratory regression: 475 passed, 2 skipped; English guard/diff checks passed.
+Randomized masks match scalar reference across fractions, hard exclusions and
+boundary cases. A constructed ten-pose panel queried 140 rather than 600 atom
+positions while retaining exact decisions; this is a work-count fixture, not a
+real speedup measurement. Workstation timing/scaling remains pending.

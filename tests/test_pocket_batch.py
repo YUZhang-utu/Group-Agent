@@ -36,3 +36,20 @@ def test_pocket_strict_boundary_unchanged():
     matrices=np.repeat(np.eye(4)[None],3,axis=0)
     matrices[:,0,3]=[1.2-1e-8-1e-10,1.2-1e-8,1.2-1e-8+1e-10]
     np.testing.assert_array_equal(gate.pocket_mask(np.zeros((1,3)),matrices),[False,True,True])
+
+
+def test_probe_clash_avoids_complete_queries_but_not_survivor_checks():
+    from types import SimpleNamespace
+    gate=GuidedFilter.__new__(GuidedFilter);tree=cKDTree([[0.,0,0]])
+    queried=[]
+    def query(points,k):
+        queried.append(len(points));return tree.query(points,k=k)
+    gate.tree=SimpleNamespace(query=query);gate.cutoff=1.2;gate.fraction=0.;gate.design=dict(exclusions=[])
+    points=np.zeros((60,3));matrices=np.repeat(np.eye(4)[None],10,axis=0)
+    matrices[-1,0,3]=100
+    assert gate.pocket_mask(points,matrices).tolist()==[False]*9+[True]
+    assert queried==[80,60]
+    # A clash only on an unprobed atom must still be rejected by the full check.
+    points[:]=10;points[1]=0;queried.clear()
+    assert not gate.pocket_mask(points,matrices[:1])[0]
+    assert queried==[8,60]
