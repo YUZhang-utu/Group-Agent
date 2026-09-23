@@ -1544,3 +1544,33 @@ selection. No automatic variance estimator or 0.4/0.4/0.2 default was introduced
 Final E055 audit additionally seals implementation hashes in
  data/e055-score-audit-sealed/report.json. The tracked portable summary is
  to_human/E055_VALIDATION_SUMMARY.json. Final English guard passed 316 files.
+
+## 2026-09-23: E056 contact diagnostics and source provenance
+
+Protocol recorded in experiments/E056-contact-diagnostics.md before execution.
+Added source feature/atom mappings, extraction criterion metadata and representative
+source identity to consensus without changing IDs. Added scoring-contract visibility
+in recommendation/adoption Chat reports. Extraction metadata is shared by class in
+LLM context, avoiding repeated long criterion text for each anchor.
+
+New evidence_audit performs feature identity, isolated source-observation recovery
+and selected-consensus matching. It emits named type/direction distributions,
+unmatched rows, spatial/angular factors, weighted contributions, profiling and
+source-scoped pairwise suspected duplicates without transitive grouping. Optional
+unit assignment is an explicitly diagnostic alternative, verified against exhaustive
+small cases; production matching, weights and sigma are unchanged.
+
+Full suite: 439 passed, 2 skipped. Final focused suite: 92 passed. Offline raw
+rebuild: 45 prepared complexes, 119 modes, 39 templates, 6507 atom pairs, no failures;
+anchor ID set identical to prior cohort. Real audit: 878 identity features and 283
+source observations score approximately one, zero unresolved mappings. Selected
+consensus: 900 rows, 456 unmatched; this is expected geometric coverage, not a
+biological failure. Sixty-three suspected shared-evidence pairs require review.
+Optional-only reassignment improves the objective in 13/45 poses, maximum numerator
+gain 0.0828388993. This does not establish safe replacement of hard-rule/hit-mask
+semantics. No biological recall or library execution was performed.
+
+Final artifact: data/e056-evidence-sealed/report.json and review.md. Handoff:
+to_human/E056_CONTACT_DIAGNOSTICS.md; portable summary E056_VALIDATION_SUMMARY.json.
+Desktop can audit the saved existing recommendation via verified source recovery,
+without rebuilding consensus. Permanent new metadata appears in future rebuilds.

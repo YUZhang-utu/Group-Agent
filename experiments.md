@@ -1745,3 +1745,11 @@ Protocol: experiments/E055-score-contract.md. Confirmatory software invariants:
 real-structure diagnostic: 495 template/identity-pose scores, 45/45 frozen-budget
 water-removal invariants and joint crystal controls. No library run. See
  to_human/E055_SCORE_VALIDATION.md for workstation commands and acceptance scope.
+
+## E056 diagnostics
+
+Protocol: experiments/E056-contact-diagnostics.md. Confirmatory implementation:
+439 full tests passed, 2 skipped; 92 final focused tests passed; exhaustive small
+assignment comparisons passed. Exploratory crystal evidence: 878 identity and 283
+source-recovery rows near one, 63 suspected pairs, 13/45 assignment improvements.
+No activity test. See to_human/E056_CONTACT_DIAGNOSTICS.md.

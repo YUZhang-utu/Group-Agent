@@ -9,6 +9,7 @@ import numpy as np
 from .gaussian_batch import _atomic_json, _load_query, write_gaussian_query
 from .expanded_wee1 import fingerprint
 from .contact_groups import contact_semantics
+from .contact_diagnostics import extraction_metadata
 
 
 def transform_query(query, matrix, output, source):
@@ -53,6 +54,9 @@ def consensus(observations, prepared, distance=1.0):
             frequency=fraction,distinct_chemotypes=len(chemotypes),pdb_ids=pdbs,eligible_pdb_ids=eligible,
             mandatory_proposal_eligible=len(pdbs)>=3 and len(chemotypes)>=2 and fraction>=.5,
             observations=group,representative_query=representative['query_id'],
+            extraction=extraction_metadata(interaction),
+            representative_source_anchor=representative['source_anchor'],
+            representative_ligand_atom_indices=representative.get('ligand_atom_indices',[]),
             interpretation='Observed mode-specific geometric recurrence, not proof of energetic necessity'))
         features.append(representative)
     return anchors,features
@@ -89,6 +93,8 @@ def build(source, output, reference_query=None, target_chain=None, maximum_templ
             atoms,waters,metals=crystal_environment(cif,qid)
             chain=row['admission']['target_chain'];atoms=[a for a in atoms if a['chain']==chain]
             anchors+=extra_hypotheses(qid,query,atoms,waters,metals)
+            native_manifest,_=_load_query(native)
+            feature_members=native_manifest['source'].get('feature_atom_indices',[])
             structure=read_structure(cif,protein)
             mapping={(a['auth_asym_id'],a['auth_seq_id']):a['canonical_residue'] for a in structure['chains'][chain]}
             matrix=np.array(row['admission']['transform']);aligned=folder/'aligned.npz'
@@ -106,6 +112,9 @@ def build(source, output, reference_query=None, target_chain=None, maximum_templ
                 interaction=anchor.get('interaction_class',anchor['feature_class'])
                 observations.append(dict(key=[res,partner.get('atom_name',''),interaction,ft,kind],
                     query_id=qid,pdb_id=row['pdb_id'],chemotype=scaffold,source_anchor=anchor['anchor_id'],
+                    source_feature_index=i,ligand_atom_indices=feature_members[i] if i<len(feature_members) else [],
+                    source_instance=dict(query_id=qid,native_manifest=str(native.with_suffix('.manifest.json').resolve())),
+                    extraction=extraction_metadata(interaction),
                     point=transformed['feature_points'][i].tolist(),direction=transformed['feature_directions'][i].tolist(),kind=kind,
                     evidence=anchor['evidence'],source_url=f'https://www.rcsb.org/structure/{row["pdb_id"]}'))
             report['sources'].update(fingerprint([cif,ccd,manifest,*paths,aligned,aligned.with_suffix('.manifest.json')]))

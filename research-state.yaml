@@ -1,7 +1,20 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E055-score-contract
+current_experiment: E056-contact-diagnostics
+contact_diagnostics:
+  protocol: experiments/E056-contact-diagnostics.md
+  guide: to_human/E056_CONTACT_DIAGNOSTICS.md
+  status: implemented_local_validation_workstation_pending
+  full_regression: 439_passed_2_skipped
+  final_focused_regression: 92_passed
+  source_mapping_unresolved: 0
+  feature_identity_rows: 878
+  source_recovery_rows: 283
+  suspected_shared_evidence_pairs: 63
+  optional_assignment_improved_crystal_poses: 13_of_45
+  production_assignment_changed: false
+  biological_validation: deferred_by_user
 score_contract:
   status: implemented_local_validation_workstation_pending
   protocol: experiments/E055-score-contract.md

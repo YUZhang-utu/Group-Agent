@@ -173,11 +173,11 @@ def screening_summary(job):
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
                 'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation',
-                'failed_template_self_controls','contact_evidence','limitations','failures') if k in child}
+                'failed_template_self_controls','contact_evidence','limitations','failures','scoring_contract') if k in child}
             if child.get('cohort'):
                 summary['reference']=child['cohort'].get('reference');summary['reference_options']=child['cohort'].get('reference_options',[])
                 summary['admitted_instances']=len(child['cohort'].get('admitted',[]))
-            summary['anchors']=[{k:a[k] for k in ('anchor_id','feature_class','target_residue','protein_atom','frequency','distinct_structures','eligible_structures','mandatory_proposal_eligible','evidence_id') if k in a} for a in child.get('anchors',[])]
+            summary['anchors']=[{k:a[k] for k in ('anchor_id','feature_class','target_residue','protein_atom','frequency','distinct_structures','eligible_structures','mandatory_proposal_eligible','evidence_id','protein_part','ligand_role','extraction') if k in a} for a in child.get('anchors',[])]
             summary['templates']=[q['query_id'] for q in child.get('templates',[])]
             return summary
         if step.get('action')=='structure_diversity' and step.get('status')=='complete':

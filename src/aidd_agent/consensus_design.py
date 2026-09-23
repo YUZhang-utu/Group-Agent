@@ -16,6 +16,19 @@ FIELDS=BASE_FIELDS|EXTENSION_FIELDS
 MAX_EVIDENCE_CHARS=100000
 
 
+def scoring_contract(design):
+    return dict(version='consensus-score-contract-v2',
+        matching='interaction_fast.match_batch; one-to-one feature assignment with unit consensus weights',
+        matching_aggregate='discarded; per-anchor scores consumed by guided_filters.pose_rank',
+        gaussian='same_pose_gaussian: 0.5 * shape_tanimoto + 0.5 * color_tanimoto',
+        optional_normalization=design.get('optional_normalization','weighted_mean'),
+        optional_denominator=design.get('optional_budget') if design.get('optional_normalization')=='fixed_budget' else optional_weight_total(design),
+        dimension_weights={k:design.get(k,0.) for k in ('gaussian_weight','optional_weight','occupancy_weight')},
+        grouping='post-assignment family maximum; not a group-optimal assignment',
+        assignment_diagnostic='python -m aidd_agent.evidence_audit; optional-only alternative, no automatic replacement',
+        cross_target_calibration='not_performed')
+
+
 def validate(design, survey, llm=False):
     if not isinstance(design,dict) or not BASE_FIELDS<=set(design) or set(design)-FIELDS:raise ValueError('Invalid consensus design fields')
     anchors={a['anchor_id']:a for a in survey['anchors']}
@@ -72,6 +85,9 @@ def recommend(source, output, provider, adviser=None):
         context['contact_evidence_status']['interpretation']='Anchors are sparse feature modes, not an exhaustive contact map. Do not infer absent contacts from omitted anchors. Spatial regions need explicit reviewed reference atom selections.'
     for anchor in context['anchors']:
         anchor.update(contact_semantics(anchor['protein_atom'],anchor['feature_class']))
+    from .contact_diagnostics import extraction_metadata
+    context['extraction_criteria_by_class']={kind:extraction_metadata(kind) for kind in
+        sorted({a['feature_class'] for a in context['anchors']})}
     # No evidence silently removed: require a smaller explicit cohort if context is too large.
     encoded_context=json.dumps(context,ensure_ascii=False,separators=(',',':'))
     if len(encoded_context)>MAX_EVIDENCE_CHARS:raise ValueError('Consensus context exceeds the 100000-character evidence budget; partition receptor states before recommendation')
@@ -101,6 +117,7 @@ Do not invent exclusion volumes, binding energies, activity evidence or coordina
     value.update(optional_normalization='fixed_budget',optional_budget=optional_weight_total(value) or 1.)
     validate(value,survey,True)
     result=dict(kind='consensus_recommendation',status='complete',readiness='proposal_ready',recommendation=value,model=model,
+                scoring_contract=scoring_contract(value),
                 evidence_context=dict(characters=len(encoded_context),character_limit=MAX_EVIDENCE_CHARS,
                     anchors=len(context['anchors']),templates=len(context['templates']),truncated=False),
                 survey=str(Path(source).resolve()),sources={**survey['sources'],**fingerprint([source])})
@@ -168,6 +185,7 @@ def adopt(source, output, overrides=None):
     result=dict(kind='consensus_design',status='complete',
         readiness='needs_template_state_review' if failed_templates else 'ready_for_consensus_funnel',
         failed_template_self_controls=failed_templates,design=design,anchor_order=order,
+        scoring_contract=scoring_contract(design),
         anchors=[dict(a,**contact_semantics(a['protein_atom'],a['feature_class'])) for a in survey['anchors'] if a['anchor_id'] in order],consensus_npz=survey['consensus_npz'],templates=[q for q in survey['templates'] if q['query_id'] in design['template_ids']],
         reference=survey['cohort']['reference'],target=survey['target'],reference_smiles=[q['smiles'] for q in survey['prepared_complexes']],
         crystal_self_controls=controls,independent_active_validation='not_run',

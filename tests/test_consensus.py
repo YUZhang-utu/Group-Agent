@@ -236,7 +236,9 @@ def test_large_consensus_recommendation_preserves_all_evidence(tmp_path,monkeypa
     result=consensus_design.recommend(source,tmp_path/'proposal','gpt')
     assert 20000<len(sent[0])<=100000
     from aidd_agent.contact_groups import contact_semantics
+    from aidd_agent.contact_diagnostics import extraction_metadata
     assert json.loads(sent[0])['anchors']==[dict(a,**contact_semantics(a['protein_atom'],a['feature_class'])) for a in anchors]
+    assert json.loads(sent[0])['extraction_criteria_by_class']=={'hydrogen_bond':extraction_metadata('hydrogen_bond')}
     assert result['recommendation']['optional_normalization']=='fixed_budget'
     assert result['recommendation']['optional_budget']==1.5
     assert len(json.loads(sent[0])['templates'])==42

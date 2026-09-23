@@ -1,0 +1,715 @@
+{
+  "checks": {
+    "feature_identity_passed": true,
+    "source_recovery_passed": true,
+    "source_mapping_unresolved": 0
+  },
+  "distributions": [
+    {
+      "layer": "feature_identity",
+      "feature_type": 1,
+      "direction_kind": 1,
+      "count": 120,
+      "unmatched": 0,
+      "feature_name": "Donor",
+      "direction_name": "signed",
+      "score": {
+        "count": 120,
+        "quantiles": [
+          0.9999999999999976,
+          0.9999999999999991,
+          0.9999999999999998,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 120,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 120,
+        "quantiles": [
+          0.9999999999999976,
+          0.9999999999999991,
+          0.9999999999999998,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "feature_identity",
+      "feature_type": 2,
+      "direction_kind": 1,
+      "count": 217,
+      "unmatched": 0,
+      "feature_name": "Acceptor",
+      "direction_name": "signed",
+      "score": {
+        "count": 217,
+        "quantiles": [
+          0.9999999999999969,
+          0.9999999999999989,
+          0.9999999999999998,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 217,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 217,
+        "quantiles": [
+          0.9999999999999969,
+          0.9999999999999991,
+          0.9999999999999998,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "feature_identity",
+      "feature_type": 3,
+      "direction_kind": 0,
+      "count": 19,
+      "unmatched": 0,
+      "feature_name": "PosIonizable",
+      "direction_name": "none",
+      "score": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "feature_identity",
+      "feature_type": 4,
+      "direction_kind": 0,
+      "count": 19,
+      "unmatched": 0,
+      "feature_name": "NegIonizable",
+      "direction_name": "none",
+      "score": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 19,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "feature_identity",
+      "feature_type": 5,
+      "direction_kind": 0,
+      "count": 358,
+      "unmatched": 0,
+      "feature_name": "Hydrophobe",
+      "direction_name": "none",
+      "score": {
+        "count": 358,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 358,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 358,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "feature_identity",
+      "feature_type": 6,
+      "direction_kind": 2,
+      "count": 145,
+      "unmatched": 0,
+      "feature_name": "Aromatic",
+      "direction_name": "axial",
+      "score": {
+        "count": 145,
+        "quantiles": [
+          0.9999999999999969,
+          0.9999999999999996,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 145,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 145,
+        "quantiles": [
+          0.9999999999999969,
+          0.9999999999999996,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "selected_consensus",
+      "feature_type": 1,
+      "direction_kind": 1,
+      "count": 45,
+      "unmatched": 25,
+      "feature_name": "Donor",
+      "direction_name": "signed",
+      "score": {
+        "count": 45,
+        "quantiles": [
+          0.0,
+          0.0,
+          0.0,
+          0.0004495223758711646,
+          0.9999999999999996
+        ]
+      },
+      "spatial_factor": {
+        "count": 20,
+        "quantiles": [
+          5.362800195991709e-05,
+          0.00062070395757916,
+          0.4537808597641678,
+          0.9826010150677068,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 20,
+        "quantiles": [
+          1.5699731072747838e-05,
+          0.08154749641383764,
+          0.8458777166464875,
+          0.9887125211875238,
+          0.9999999999999996
+        ]
+      }
+    },
+    {
+      "layer": "selected_consensus",
+      "feature_type": 2,
+      "direction_kind": 1,
+      "count": 450,
+      "unmatched": 323,
+      "feature_name": "Acceptor",
+      "direction_name": "signed",
+      "score": {
+        "count": 450,
+        "quantiles": [
+          0.0,
+          0.0,
+          0.0,
+          0.00035430172810731685,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 127,
+        "quantiles": [
+          6.619365630410379e-05,
+          0.03004440989735306,
+          0.4326126528846767,
+          0.8213079276336406,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 127,
+        "quantiles": [
+          0.00033107299477925346,
+          0.3009674712999101,
+          0.7525080339028231,
+          0.9569474545217584,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "selected_consensus",
+      "feature_type": 4,
+      "direction_kind": 0,
+      "count": 45,
+      "unmatched": 34,
+      "feature_name": "NegIonizable",
+      "direction_name": "none",
+      "score": {
+        "count": 45,
+        "quantiles": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 11,
+        "quantiles": [
+          0.36129458266111875,
+          0.6810086136776761,
+          0.8309856406483214,
+          0.8720102632530504,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 11,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "selected_consensus",
+      "feature_type": 5,
+      "direction_kind": 0,
+      "count": 225,
+      "unmatched": 36,
+      "feature_name": "Hydrophobe",
+      "direction_name": "none",
+      "score": {
+        "count": 225,
+        "quantiles": [
+          0.0,
+          0.005238765863590298,
+          0.2173108976966753,
+          0.9050032759461398,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 189,
+        "quantiles": [
+          5.515536338587229e-05,
+          0.06431728488262449,
+          0.6172497648934431,
+          0.9391803061868128,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 189,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "selected_consensus",
+      "feature_type": 6,
+      "direction_kind": 2,
+      "count": 135,
+      "unmatched": 38,
+      "feature_name": "Aromatic",
+      "direction_name": "axial",
+      "score": {
+        "count": 135,
+        "quantiles": [
+          0.0,
+          0.0,
+          4.92654752440891e-05,
+          0.6780022435641522,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 97,
+        "quantiles": [
+          4.248083241889196e-05,
+          0.00015890589366699968,
+          0.1888431944284361,
+          0.861156368315739,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 97,
+        "quantiles": [
+          0.0011049830416010023,
+          0.3529021265787549,
+          0.7026827445678996,
+          0.9449852625995407,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 1,
+      "direction_kind": 1,
+      "count": 31,
+      "unmatched": 0,
+      "feature_name": "Donor",
+      "direction_name": "signed",
+      "score": {
+        "count": 31,
+        "quantiles": [
+          0.9999999999999978,
+          0.9999999999999982,
+          0.9999999999999996,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 31,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 31,
+        "quantiles": [
+          0.9999999999999978,
+          0.9999999999999982,
+          0.9999999999999996,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 2,
+      "direction_kind": 1,
+      "count": 86,
+      "unmatched": 0,
+      "feature_name": "Acceptor",
+      "direction_name": "signed",
+      "score": {
+        "count": 86,
+        "quantiles": [
+          0.9999999999999973,
+          0.9999999999999987,
+          0.9999999999999996,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 86,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 86,
+        "quantiles": [
+          0.9999999999999973,
+          0.9999999999999987,
+          0.9999999999999996,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 3,
+      "direction_kind": 0,
+      "count": 1,
+      "unmatched": 0,
+      "feature_name": "PosIonizable",
+      "direction_name": "none",
+      "score": {
+        "count": 1,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 1,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 1,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 4,
+      "direction_kind": 0,
+      "count": 8,
+      "unmatched": 0,
+      "feature_name": "NegIonizable",
+      "direction_name": "none",
+      "score": {
+        "count": 8,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 8,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 8,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 5,
+      "direction_kind": 0,
+      "count": 123,
+      "unmatched": 0,
+      "feature_name": "Hydrophobe",
+      "direction_name": "none",
+      "score": {
+        "count": 123,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 123,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 123,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "layer": "source_observation",
+      "feature_type": 6,
+      "direction_kind": 2,
+      "count": 34,
+      "unmatched": 0,
+      "feature_name": "Aromatic",
+      "direction_name": "axial",
+      "score": {
+        "count": 34,
+        "quantiles": [
+          0.9999999999999987,
+          0.9999999999999993,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "spatial_factor": {
+        "count": 34,
+        "quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "angular_factor": {
+        "count": 34,
+        "quantiles": [
+          0.9999999999999987,
+          0.9999999999999993,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  ],
+  "contributions_by_interaction_type": {
+    "hydrophobic": {
+      "contact_contribution_sum": 7.651428987814548,
+      "composite_contribution_sum": 2.295428696344366
+    },
+    "HBD": {
+      "contact_contribution_sum": 0.6907123841037427,
+      "composite_contribution_sum": 0.20721371523112284
+    },
+    "water_bridge": {
+      "contact_contribution_sum": 1.6193230628046247,
+      "composite_contribution_sum": 0.4857969188413873
+    },
+    "pi_stacking": {
+      "contact_contribution_sum": 2.8991309790239836,
+      "composite_contribution_sum": 0.8697392937071953
+    },
+    "salt_bridge": {
+      "contact_contribution_sum": 0.6813585416066009,
+      "composite_contribution_sum": 0.20440756248198025
+    },
+    "HBA": {
+      "contact_contribution_sum": 1.0223290181387732,
+      "composite_contribution_sum": 0.3066987054416318
+    }
+  },
+  "parameters": {
+    "sigma_angstrom": 1.0,
+    "angular_power": 2.0,
+    "cutoff_angstrom": 4.5,
+    "duplicate_distance_angstrom": 0.5
+  },
+  "scope": "Identity and geometric diagnostics only; no biological discrimination claim, library scan or production assignment change",
+  "full_regression": "439 passed, 2 skipped",
+  "anchor_ids_unchanged": true,
+  "suspected_pairs": 63,
+  "assignment_improved_poses": 13,
+  "maximum_optional_numerator_gain": 0.08283889926895727,
+  "production_assignment_changed": false,
+  "final_focused_regression": "92 passed",
+  "recommendation_context_characters": 58131,
+  "audit": "data/e056-evidence-sealed/report.json",
+  "fresh_consensus": "data/e056-consensus-final/report.json"
+}

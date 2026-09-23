@@ -562,3 +562,12 @@ choices. Template union is implemented but statistical calibration is not. Local
 crystal score distributions differ across templates. Optional contact count,
 region occupancy, template similarity and library retention must be validated
 separately before claiming biological discrimination or choosing global weights.
+
+## E056: identity correctness is distinct from assignment and evidence redundancy
+
+Feature identity and isolated source recovery are numerically consistent on the
+local MDM2 cohort. This does not validate angular penalties as biological signals.
+Pairwise atom-sharing evidence is reviewable but is not automatically one physical
+interaction. Group-max scoring after individual assignment can lose optional score;
+a collapsed optional-unit diagnostic improves 13 of 45 crystal poses. Production
+replacement requires explicit decisions about hard rules and retained contact masks.
