@@ -1,7 +1,19 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E058-pilot-remediation
+current_experiment: E059-budget-library
+molecule_budget_handoff:
+  status: implemented_local_tests_workstation_execution_pending
+  protocol: experiments/E059-budget-library.md
+  guide: to_human/E059_BUDGET_SCREEN.md
+  retrieval_molecules: 1000000
+  export_page_molecules: 100000
+  backend: USRCAT_FAISS_ANN_not_pharmacophore_pair_index
+  current_target_recall: not_measured
+  full_regression: 460_passed_2_skipped
+  original_mol2_hash_checked_export: implemented
+  later_rank_pages_without_rescoring: implemented
+  legacy_companion_rebuild: not_performed
 protein_contact_policy:
   water_bridge: evidence_only_excluded_from_new_screening
   unmodeled_metal_coordination: evidence_only

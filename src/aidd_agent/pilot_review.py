@@ -48,7 +48,20 @@ def compare_topology(mol, chem):
         bonds_equal=bonds==saved,
         aromatic_heteroatom_hydrogens=[dict(index=i,element=a.GetSymbol(),hydrogens=a.GetTotalNumHs(includeNeighbors=True))
             for i,a in enumerate(heavy) if a.GetIsAromatic() and a.GetAtomicNum()!=6],
-        hydrogen_metadata_in_companion=False)
+        hydrogen_metadata_in_companion=getattr(chem,'total_hydrogens',None) is not None)
+
+
+def reference_comparison(pilot):
+    adopted=json.loads((pilot/'adopted-design/report.json').read_text())
+    with sqlite3.connect((pilot/'candidates.sqlite').resolve().as_uri()+'?mode=ro',uri=True) as db:
+        candidates=[float(r[0]) for r in db.execute('SELECT MAX(score) FROM poses GROUP BY mid')]
+    references=[float(r['reference_pose_score']) for r in adopted['crystal_self_controls'] if 'reference_pose_score' in r]
+    return dict(candidate_molecule_best=distribution(candidates),reference_crystal_best_template=distribution(references),
+        candidate_molecules=len(candidates),reference_controls=len(references),
+        candidate_scores=candidates,reference_scores=references,
+        limitations=['Candidates are threshold-selected, not an unbiased library sample.',
+            'Optimized candidate poses versus crystal identity poses; not equivalent search protocols.',
+            'Crystal self-controls are not independent positives. No activity or enrichment inference.'])
 
 
 def recover(batch, db, limit):
@@ -114,6 +127,7 @@ def main():
         report['source_recovery']=recover(a.batch,db,a.recover) if a.recover else []
     report['sources']=fingerprint([a.pilot/'report.json',a.pilot/'candidates.sqlite'])
     report['production_changed']=False
+    report['reference_comparison']=reference_comparison(a.pilot)
     if a.compare:report['rerun_comparison']=compare_runs(a.pilot,a.compare)
     (a.output/'report.json').write_text(json.dumps(report,indent=2))
     print(json.dumps(report,indent=2))

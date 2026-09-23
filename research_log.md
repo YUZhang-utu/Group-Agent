@@ -1623,3 +1623,27 @@ Final stable-source regression: 452 passed, 2 skipped; explicit compiled-backend
 preselection/consensus/remediation checks: 25 passed. Earlier full-suite runs
 while source edits were active hit resume checks; isolated checks and the final
 unchanged-source full run passed. English-content and whitespace checks passed.
+
+## 2026-09-23 E059: explicit molecule-budget handoff
+
+User authorized ANN retrieval, molecule-budget ranking and 100,000-molecule MOL2
+pages, with subsequent nonoverlapping rank pages. Wrote protocol before changes.
+Implemented USRCAT FAISS molecule-deduplicated retrieval with increasing search
+depth, RRF union budget, all-conformer expansion and resumable template-major
+consensus refinement. Empirical eligibility predicates are bypassed only in the
+new budget mode; physical collision checking remains. Entire molecule ranking
+and template representatives are retained, with dual-region occupancy annotation.
+
+Original MOL2 export verifies registry content hashes and chemical heavy topology;
+provides names, source records, rigid representative poses, all template evidence
+and hydrogen/charge round-trip QC. New companion builds store additive hydrogen
+metadata and audits; old libraries are unchanged. Saved pilot review now compares
+molecule-best score distributions with crystal identity-pose controls, explicitly
+not an independent activity benchmark.
+
+Exploratory local checks: 460 passed, 2 skipped in full regression; English guard
+passed. Real MDM2 5C5A query descriptor generation returned a finite 60-vector.
+ANN orchestration, rank merge and export pagination tested on small fixtures;
+current-target ANN recall, million-molecule timing and real 100,000 export remain
+workstation pending. No full library is mounted in this Windows workspace.
+No claim that a same-day full run has completed or will complete.

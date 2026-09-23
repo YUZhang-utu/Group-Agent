@@ -172,6 +172,8 @@ def _process_group(task):
     output = []
     for global_id, conformer_id, molecule_id, raw_text in task:
         mol, sanitization = load_rdkit_mol2(raw_text, conformer_id)
+        from .budget_export import hydrogen_roundtrip
+        hydrogen_audit = hydrogen_roundtrip(mol)
         heavy = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetAtomicNum() > 1]
         heavy_map = {original: local for local, original in enumerate(heavy)}
         atoms = np.empty(len(heavy), dtype=ATOM_DTYPE)
@@ -217,6 +219,7 @@ def _process_group(task):
             "torsions": np.asarray(torsion_rows, dtype=TORSION_DTYPE),
             "torsion_members": np.asarray(torsion_members, dtype="<u2"),
             "sanitization": sanitization,
+            "hydrogen_audit": hydrogen_audit,
         })
     return output
 
@@ -327,7 +330,7 @@ def build_chemical_companion_shard(
     partial.mkdir(parents=True)
     names = ("chem-meta.bin", "atoms.bin", "bonds.bin", "feature-directions.bin",
              "feature-members.bin", "torsions.bin", "torsion-members.bin",
-             "conformer_ids.bin", "molecule_ids.bin")
+             "conformer_ids.bin", "molecule_ids.bin", "hydrogen-audit.jsonl", "total-h.bin")
     streams = {name: (partial / name).open("wb") for name in names}
     offsets = {"atom": 0, "bond": 0, "feature": 0, "member": 0,
                "torsion": 0, "torsion_member": 0}
@@ -347,6 +350,9 @@ def build_chemical_companion_shard(
                         raise ValueError(
                             f"companion/artifact shape mismatch at row {written}")
                     record["atoms"].tofile(streams["atoms.bin"])
+                    audit=record['hydrogen_audit']
+                    streams['hydrogen-audit.jsonl'].write((json.dumps(dict(global_id=record['global_id'],**audit))+'\n').encode())
+                    np.asarray([a['total_h'] for a in audit['atoms']],dtype='<u2').tofile(streams['total-h.bin'])
                     record["bonds"].tofile(streams["bonds.bin"])
                     record["features"].tofile(streams["feature-directions.bin"])
                     record["feature_members"].tofile(streams["feature-members.bin"])
@@ -465,6 +471,7 @@ class ChemicalConformer:
     feature_kinds: np.ndarray
     feature_members: tuple[np.ndarray, ...]
     torsions: tuple[TerminalTorsion, ...]
+    total_hydrogens: np.ndarray | None = None
 
 
 class ChemicalCompanionReader:
@@ -494,6 +501,9 @@ class ChemicalCompanionReader:
                 "conformers": mapped(directory / "conformer_ids.bin", "S16"),
                 "molecules": mapped(directory / "molecule_ids.bin", "S16"),
             }
+            if 'total-h.bin' in manifest.get('files',{}):
+                arrays['hydrogens']=mapped(directory/'total-h.bin','<u2')
+                if len(arrays['hydrogens'])!=len(arrays['atoms']):raise ValueError('Hydrogen metadata length mismatch')
             if not len(arrays["meta"]) == len(arrays["conformers"]) == len(arrays["molecules"]) == count:
                 raise ValueError(f"chemical companion row count mismatch: {directory}")
             self._shards.append((start, start + count, arrays))
@@ -534,5 +544,6 @@ class ChemicalCompanionReader:
                 np.asarray(atoms["flags"], dtype=np.uint8), np.asarray(bonds),
                 np.asarray(features["direction"], dtype=np.float64),
                 np.asarray(features["kind"], dtype=np.uint8),
-                feature_members, definitions)
+                feature_members, definitions,
+                np.asarray(sliced('hydrogens',row['atom_offset'],row['atoms'])) if 'hydrogens' in arrays else None)
         raise IndexError(f"global ID outside chemical companion: {gid}")

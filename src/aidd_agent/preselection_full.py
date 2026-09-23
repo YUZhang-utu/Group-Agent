@@ -61,7 +61,7 @@ def coarse_stages(candidate, features, original, rule, bound, joint=None, timing
     return 4 if bound is not None and bound.check(features)[0] else 3
 
 
-def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None, gaussian_scores=None, shape_points=None):
+def pose_representatives(features, seeds, possible, expanded, columns, threshold, design=None, anchor_order=None, gaussian_scores=None, shape_points=None, budget_mode=False):
     """Keep one actual pose per exact required-anchor bitmask, never a union pose."""
     indices = expanded['anchor_feature_indices']
     query = tuple(expanded[k][indices] for k in (
@@ -80,12 +80,12 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
             values, assigned = scores[i, columns], assignments[i, columns]
             hits = (assigned >= 0) & (values >= threshold)
             mask = sum(1 << j for j, passed in enumerate(hits) if passed)
-            if not mask:
+            if not mask and not budget_mode:
                 continue
-            if design is not None:
+            if design is not None and not budget_mode:
                 from .guided_filters import rule_passes
                 if not rule_passes(mask,anchor_order,design):continue
-            quality = float(values[hits].min())
+            quality = float(values[hits].min()) if hits.any() else 0.
             row = dict(mask=mask, matched_anchor_count=int(hits.sum()),
                        min_matched_score=quality, seed_index=int(number),
                        seed_id=str(seeds[number].seed_id), scores=values.tolist(),
@@ -93,11 +93,12 @@ def pose_representatives(features, seeds, possible, expanded, columns, threshold
             if gaussian_scores is not None:
                 from .guided_filters import pose_rank
                 row.update(pose_rank(values,assigned,anchor_order,gaussian_scores[number],shape_points,matrices[i],design))
-                if row['composite_score']<design['minimum_pose_score']:continue
+                if budget_mode:row['legacy_score_threshold_passed'] = row['composite_score']>=design['minimum_pose_score']
+                elif row['composite_score']<design['minimum_pose_score']:continue
             matching_seeds += 1
             rank=row.get('composite_score',quality)
             signature=json.dumps(sorted(row.get('occupied_spatial_groups',[])),separators=(',',':'))
-            key=(mask,signature)
+            key=(0,'') if budget_mode else (mask,signature)
             if key not in best or rank > best[key].get('composite_score',best[key]['min_matched_score']):
                 best[key] = row
     return [best[k] for k in sorted(best)], matching_seeds
@@ -109,6 +110,9 @@ def compute(task):
     target = Path(target)
     reader, original, expanded, q = full._STATE
     policy = q['condition_policy']
+    mode=q.get('selection_mode','threshold')
+    if mode not in ('threshold','budget'):raise ValueError('Unknown selection mode')
+    budget_mode=mode=='budget'
     guided=None
     if q.get('guided_design'):
         from .guided_filters import GuidedFilter
@@ -136,7 +140,9 @@ def compute(task):
         candidate = reader.get(int(gid))
         mids.append(candidate.molecule_id)
         seconds['artifact_read'] += time.perf_counter()-t
-        if guided is not None and getattr(guided,'design',{}).get('adaptive_coarse'):
+        if budget_mode:
+            stage=4
+        elif guided is not None and getattr(guided,'design',{}).get('adaptive_coarse'):
             from .guided_filters import adaptive_stage
             stage=adaptive_stage(candidate,guided.design['adaptive_coarse'])
         else:
@@ -150,14 +156,14 @@ def compute(task):
                 not np.array_equal(candidate.feature_types, features.feature_types) or
                 not np.array_equal(candidate.feature_points, features.feature_points)):
                 raise ValueError(f'Artifact/chemical mismatch: {gid}')
-            stage = 4 if full._BOUND.check(features)[0] else 3
+            stage = 4 if budget_mode or full._BOUND.check(features)[0] else 3
             seconds['chemical_read_and_anchor_bound'] += time.perf_counter()-t
         levels.append(stage)
         for j, name in enumerate(('size_passed', 'coverage_passed', 'extent_passed', 'anchor_bound_passed')):
             counts[name] += int(stage > j)
         if stage != 4:
             continue
-        if guided is not None:
+        if guided is not None and not budget_mode:
             t=time.perf_counter()
             geometry_ok=guided.geometry_possible(features)
             seconds['mandatory_feature_geometry']+=time.perf_counter()-t
@@ -170,8 +176,8 @@ def compute(task):
         seconds['seed_generation'] += time.perf_counter()-t
         counts['original_seeds'] += len(seeds)
         t = time.perf_counter()
-        possible = possible_seed_mask(full._BOUND, features, seeds)
-        if guided is not None:possible=guided.geometry_seeds(features,seeds,possible)
+        possible = np.ones(len(seeds),dtype=bool) if budget_mode else possible_seed_mask(full._BOUND, features, seeds)
+        if guided is not None and not budget_mode:possible=guided.geometry_seeds(features,seeds,possible)
         seconds['seed_feasibility'] += time.perf_counter()-t
         counts['possible_seeds'] += int(possible.sum())
         if not possible.any():
@@ -209,7 +215,7 @@ def compute(task):
         levels[-1] = 6
         t = time.perf_counter()
         poses, matching_seeds = pose_representatives(features, seeds, possible, expanded, columns,
-                                                     policy['minimum_score'],q.get('guided_design'),policy['required_anchors'],gaussian_scores,candidate.shape_points)
+                                                     policy['minimum_score'],q.get('guided_design'),policy['required_anchors'],gaussian_scores,candidate.shape_points,budget_mode=budget_mode)
         seconds['anchor_assignment'] += time.perf_counter()-t
         counts['exact_seed_annotations'] += int(possible.sum())
         counts['matching_seeds'] += matching_seeds
@@ -283,8 +289,12 @@ def scaffold_key(chemistry):
     from rdkit import Chem
     from rdkit.Chem.Scaffolds import MurckoScaffold
     mol = Chem.RWMol()
-    for number, charge in zip(chemistry.atomic_numbers, chemistry.formal_charges):
-        atom = Chem.Atom(int(number)); atom.SetFormalCharge(int(charge)); mol.AddAtom(atom)
+    for index,(number, charge) in enumerate(zip(chemistry.atomic_numbers, chemistry.formal_charges)):
+        atom = Chem.Atom(int(number)); atom.SetFormalCharge(int(charge))
+        hydrogens=getattr(chemistry,'total_hydrogens',None)
+        if hydrogens is not None:
+            atom.SetNumExplicitHs(int(hydrogens[index]));atom.SetNoImplicit(True)
+        mol.AddAtom(atom)
     orders = {1: Chem.BondType.SINGLE, 2: Chem.BondType.DOUBLE,
               3: Chem.BondType.TRIPLE, 4: Chem.BondType.AROMATIC}
     for bond in chemistry.bonds:
