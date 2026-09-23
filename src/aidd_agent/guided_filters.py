@@ -97,6 +97,12 @@ def pose_rank(values, assignments, order, gaussian, points, transform, design):
         numerator=float(np.dot(weights,np.where(assignments>=0,values,0)))+sum(
             g['weight']*extensions['optional_group_scores'][g['id']] for g in families)
         optional=numerator/total if total else 0.
+    if design.get('optional_normalization')=='fixed_budget':
+        numerator=float(np.dot(weights,np.where(assignments>=0,values,0)))+sum(
+            g['weight']*extensions['optional_group_scores'][g['id']] for g in design.get('optional_groups',[]))
+        optional=numerator/design['optional_budget']
+        extensions.update(optional_numerator=numerator,optional_denominator=design['optional_budget'],
+                          optional_normalization='fixed_budget')
     penalty=sum(r['weight']*float(np.mean(np.linalg.norm(moved-np.array(r['center']),axis=1)<r['radius']))
                 for r in design.get('exclusions',[]) if r['mode']=='soft')
     gw=design['gaussian_weight'];ow=design['optional_weight']

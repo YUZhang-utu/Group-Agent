@@ -8,6 +8,7 @@ import numpy as np
 
 from .gaussian_batch import _atomic_json, _load_query, write_gaussian_query
 from .expanded_wee1 import fingerprint
+from .contact_groups import contact_semantics
 
 
 def transform_query(query, matrix, output, source):
@@ -47,6 +48,7 @@ def consensus(observations, prepared, distance=1.0):
         fraction=len(pdbs)/max(len(eligible),1)
         anchors.append(dict(anchor_id=aid,feature_index=len(features),score_column=len(features),
             target_residue=residue,protein_atom=partner,feature_class=interaction,
+            **contact_semantics(partner,interaction),
             evidence_id='consensus:'+aid,distinct_structures=len(pdbs),eligible_structures=len(eligible),
             frequency=fraction,distinct_chemotypes=len(chemotypes),pdb_ids=pdbs,eligible_pdb_ids=eligible,
             mandatory_proposal_eligible=len(pdbs)>=3 and len(chemotypes)>=2 and fraction>=.5,

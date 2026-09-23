@@ -23,6 +23,9 @@ def run(source, output, search):
         library={k:acceptance[k] for k in ('library_conformers','library_molecules')},template_reports=reports,
         scope='Each selected template scans every catalog conformer; same-pose scores and anchor masks; no candidate Top-K',
         scheduling='Sequential template scans, parallel conformer chunks; repeated catalog I/O is included in runtime',
+        template_score_policy=dict(membership='union_of_per_template_passes',pose_retention='per_molecule_template_anchor_mask_spatial_signature',
+            shape_averaging=False,cross_template_calibration='not_performed',
+            global_rank='not_defined; raw scores are template-conditional and not calibrated affinity'),
         independent_active_validation=adopted['independent_active_validation'])
     from .active_controls import run as controls
     ev.log('Checking independent binding controls separately from full-library coverage')

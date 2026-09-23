@@ -553,3 +553,12 @@ and exploratory. Fixed-reference compatibility is checked before pooling: three
 MDM2 instances now remain pending rather than being silently treated as one state.
 The 45-instance compatible-cohort fixture passes crystal self-controls, which
 still does not establish independent active retention or general-target recall.
+
+## E055: score scale is part of the scientific design
+
+A frozen contact budget preserves unchanged contributions during contact edits;
+weighted means instead encode relative preferences. Both are explicit versioned
+choices. Template union is implemented but statistical calibration is not. Local
+crystal score distributions differ across templates. Optional contact count,
+region occupancy, template similarity and library retention must be validated
+separately before claiming biological discrimination or choosing global weights.

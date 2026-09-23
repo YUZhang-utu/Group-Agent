@@ -289,3 +289,13 @@ retention separately from crystal self-controls and catalog coverage. The ETKDG
 control route is not a full MOL2 ingestion validation. Template scans are currently
 sequential with parallel chunks, so include repeated I/O in measured latency.
 Do not claim speedup, full-library acceptance or calibrated recall from fixtures.
+
+## E055 score semantics acceptance
+
+Check legacy score equivalence; fixed-budget deletion and reweighting invariance;
+family maximum counted once; overflow rejection; per-region ambiguity and group
+order invariance; explicit per-template pose union. Crystal identity-pose score
+distributions exclude self-template pairs but remain dependent controls. Use a
+common budget and documented threshold for later coefficient comparisons. The
+portable audit is python -m aidd_agent.score_audit; never infer library recall
+from its arithmetic-invariance flag.

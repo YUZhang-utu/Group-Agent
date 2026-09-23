@@ -1,0 +1,249 @@
+{
+  "kind": "score_contract_audit",
+  "status": "complete",
+  "scope": "Crystal identity poses only; no pose search, library scan, gate acceptance or independent activity validation",
+  "template_distributions": [
+    {
+      "template_id": "6Q9L:HTZ:A:201",
+      "heavy_atoms": 46,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.20402236700713341,
+        "q25": 0.2860685875261493,
+        "median": 0.3217335065553104,
+        "q75": 0.3488380050435023,
+        "max": 0.6566725020205479
+      },
+      "nonself_best_template_fractional_count": 9.0
+    },
+    {
+      "template_id": "5C5A:NUT:A:201",
+      "heavy_atoms": 40,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.19750321986221125,
+        "q25": 0.28795389399352156,
+        "median": 0.3302748418353286,
+        "q75": 0.36069607433037476,
+        "max": 0.6478306816933117
+      },
+      "nonself_best_template_fractional_count": 5.0
+    },
+    {
+      "template_id": "5LN2:6ZT:A:201",
+      "heavy_atoms": 41,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.18179266985272705,
+        "q25": 0.2556405222279158,
+        "median": 0.29433259323346417,
+        "q75": 0.31245969257636547,
+        "max": 0.6427831084523523
+      },
+      "nonself_best_template_fractional_count": 2.0
+    },
+    {
+      "template_id": "7BJ6:TVK:A:207",
+      "heavy_atoms": 37,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.20534130924665814,
+        "q25": 0.2537866604878401,
+        "median": 0.2911900880117758,
+        "q75": 0.33534048074175704,
+        "max": 0.970954223944051
+      },
+      "nonself_best_template_fractional_count": 4.0
+    },
+    {
+      "template_id": "4OBA:2TW:A:501",
+      "heavy_atoms": 37,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.165351252717924,
+        "q25": 0.26541573479696445,
+        "median": 0.3280445210435624,
+        "q75": 0.3927260854717601,
+        "max": 0.8775461272871308
+      },
+      "nonself_best_template_fractional_count": 10.0
+    },
+    {
+      "template_id": "6Q96:HRE:A:201",
+      "heavy_atoms": 39,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.21363975410864983,
+        "q25": 0.27724144327421785,
+        "median": 0.30486641913533674,
+        "q75": 0.3486929719630941,
+        "max": 0.719083277964029
+      },
+      "nonself_best_template_fractional_count": 5.0
+    },
+    {
+      "template_id": "7BMG:U3Z:A:204",
+      "heavy_atoms": 37,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.20325238955421457,
+        "q25": 0.27315667743590855,
+        "median": 0.3087268378638946,
+        "q75": 0.3590268463344689,
+        "max": 0.7599342362651201
+      },
+      "nonself_best_template_fractional_count": 3.0
+    },
+    {
+      "template_id": "7NA2:1I0:A:201",
+      "heavy_atoms": 39,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.15130535208916557,
+        "q25": 0.2614530225761913,
+        "median": 0.2852357714951319,
+        "q75": 0.3312334789858863,
+        "max": 0.6055451147998159
+      },
+      "nonself_best_template_fractional_count": 1.0
+    },
+    {
+      "template_id": "3W69:LTZ:A:201",
+      "heavy_atoms": 47,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.1139179449724173,
+        "q25": 0.21639722683654092,
+        "median": 0.2462401101995701,
+        "q75": 0.2559200835196706,
+        "max": 0.32772832587619216
+      },
+      "nonself_best_template_fractional_count": 1.0
+    },
+    {
+      "template_id": "3JZK:YIN:A:1",
+      "heavy_atoms": 31,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.1756789919107021,
+        "q25": 0.30247992877901153,
+        "median": 0.35686867032540526,
+        "q75": 0.40600401735896924,
+        "max": 0.46809309336462834
+      },
+      "nonself_best_template_fractional_count": 3.0
+    },
+    {
+      "template_id": "5HMK:62Q:A:1001",
+      "heavy_atoms": 50,
+      "nonself_count": 44,
+      "nonself_quantiles": {
+        "min": 0.14947232433997473,
+        "q25": 0.18626256174122047,
+        "median": 0.22279428494280695,
+        "q75": 0.23811007238660836,
+        "max": 0.7190810699281289
+      },
+      "nonself_best_template_fractional_count": 2.0
+    }
+  ],
+  "cross_template_calibration": "not_performed; distributions are diagnostics on dependent crystal controls",
+  "implementation_sources": {
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\__init__.py": "9cdd729d4104ea0f11984f83dac0cc634d197397beba717c70e9a976b92e8b9e",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\acquisition.py": "fa6986bad603da19947aed545df9dec850887c5e3ba9580f480334390467d9fb",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\active_controls.py": "fc159d98dbb088ca49713c93e6aaf1c2d1bb95f61ba24c4575b6952c0f7f9d40",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\ai_recommendation.py": "a301a3d3ea1ebfcc9b08563affe62917d78cd7e9cb1487ab1dfd18cf75acca00",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\anchor_advice.py": "bfe9b7ac2d9f260bf50ef9cd412ce7e66e9d3108bfc5900b0da81dbdc4deda48",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\anchor_extraction.py": "cad9a7c916bf937f2542b8f8b36a8728e9574dcbe6d2155a8f10e0cdfbdfd99b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\artifact_catalog.py": "b5b80de0260e61a41ffd16ce64780a5191ee57788210fe9b25ad7d406b755522",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\campaign.py": "1f3ffe68c46251a3c8f3fe3a578669b50924e794fa1859fc35d5f545273f823a",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chat_agent.py": "16c9c5720b67f10eb30c315184fc67c3f9036f33f91d82823d5addb63291e1cb",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chat_web.py": "c904b1cfc5e73a5e26b6fb9c4427e6a93bb3440c220257bdeb051655d48fcae6",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chemical_companion.py": "7f20f394454d8769d4dd1d38d1f5e136377959c7738e13e56ab22c487a331a63",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chemical_geometry.py": "d70c110e937cd7c6450ae508b8992f409a1fbb7a24bb97cd1e13cdef49b48608",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chemistry_prep.py": "f9a02ebc2cbe2eadccd1b12939549f9c6617a9be0d6d1797b91f7a8a3ae3c702",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\chunk_execution.py": "de713c5617372009e5a0b17556706becf9267bb5263bb0d44645a71cd34cb71c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\classified_features.py": "7b0c641f534ccfaae0bd69116639adfe0c4b335642df62a03fe9c7aa2ca2951b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\cli.py": "9933d11d7717b84922e0bb1755ccd1eea09027ffef0156caaed28686b11bcc23",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\cluster.py": "3e8531fd0963431bb7b7eec8d2a28a225dac91270742829acfd873460baf6dfa",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\conformer_artifacts.py": "31bd0fabec941a533ecc016b3468edef56507f9fd97d28263267d8b81425150d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_admission.py": "0601eb8d878485c428103745644c468ee46763921fb0e91b808d58f76b8501ed",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_design.py": "7d1d89d5b31e3ac7045d57b6dc64fc1a1769a34a8f06af2ba1bfe33edc729c55",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_funnel.py": "db20a77719a44c84d88873d7f635a98ad03ebd5421675eaa6480a8b2d37b9e5c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_model.py": "fb27ec1e6ac60930474f0e9221d3790204088c0267508f80328fb7342188839e",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_report.py": "c7f591fc8613b0e770797e479925a4df314c5d4a56e1233ada25c73a10925c6b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\contact_evidence.py": "32c0d064941fecfdcd3e65064d0ef2a00db0f4ce532973826359b48147e067f1",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\contact_groups.py": "e14206391d504f0d9bbe2ca65e30eb6357e27a088981a8eb228983f40f53167d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\context.py": "3f0e89b3805fd70aedbb94ce65673b4d47497370526eb46cb3022bd07d180118",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\docking_discovery.py": "9d431aedda4bbabec8c413afe6b8335275de851e9a05f9b58839ebb32c58fa06",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\docking_preparation.py": "fc64352d641191a83ae7b114fb7f38d8cba527bab466ac895ddc43b701b402cc",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\doctor.py": "2f7ef9b3ad04f7bcd8a6d43858eea15d678ac54e1dfc5cf1fcb4e93b28a1e196",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\e035_validation.py": "42c5a3db2ad9e6a531713014df28892974021d28cc0f7c226383a7d2b4a0efc5",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\expanded_wee1.py": "ded643f61ee7bec7035956cbad6359931bc5c913fc24479877fdbfc64e2fb909",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\faiss_benchmark.py": "5e4582e5aadfd08ea4f36b951aed0b66997afbc5011fc602db0b835877097f68",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\faiss_real_benchmark.py": "d282a0ec3049661635c2d62e0cd33e6274a2f422d9936f0626118a1a13960def",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\fast_3d_search.py": "99173fed57e2bffd5fa2665473ea25ac779e71b2db8511a7e9fb7b717f859192",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\full_library_screen.py": "5421dfe5d2859fcd7c32afa382d3c07565ca4a20c45fc988acc39e31a5fdaaed",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\funnel_benchmark.py": "1ab4817308a0a98eee100f39f015b736424eaa7db4a023b45fc69e2fe5e9bf35",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\gaussian_batch.py": "95486c44d8554dd6b58814d1e4c111a6c59078d1995cfb00153d491ca99289f6",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\gaussian_overlay.py": "a1f2f2546e5040b0dffa0fa0a1103dd157419fae56da67c72bb2baba654b3daf",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\guided_filters.py": "f4715a518142ee53313776ad12fdde33c313ac6d775f0eff0f52b9739bc51fb9",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\guided_workflow.py": "71604be18cf19827d0b2209419d79f6ee2191e84ea2c8d54339b2d4296208b06",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\importer.py": "2981a1ac5a65717eb2555c6e11840bf4e11d4ad837117cd5c98ba354f8c3523c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\incremental_faiss.py": "efbb3c70c70932a880690d0abe7c40d1bb9b9a331ed4a47bcc89c7ad89a12fe2",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\incremental_faiss_validation.py": "0e824c41a446bdb00985c85a846438ef73ba0652d7811cee5c28c7d2b1dbb109",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\interaction_fast.py": "15fee62d0f6a91f19fbdc95cc9d1494f2cbc04b60a4578c8531e236d68210da5",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\interaction_matching.py": "d8f779cbfdb309487e24d7050457c766eb12ed3d46cf80ba413355af07563971",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\interaction_review.py": "235ff81d1181469fe3e142ce8cefe3edf3c0bd19eda82cf420746432926c364d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\joint_coarse.py": "6195ae70eeb629ff6dad22cefc9e72a2858d8fe5086a67ed240b58ec2f59d0f6",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\language_policy.py": "5d522740c7afc8a2952a183bc77e2005092f6d6ffe0d8d18ebbd66142b3e424c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\library_acceptance.py": "fad5ad29ffd96277049d4cc4cfa7678ea8b8470626bef850ea11e285a7901001",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\ligand_workflow.py": "0985497d199281587c97300b315518330e72ab7142e39071f87518961525b5c4",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\llm_profiles.py": "9c04340ccd1f0857ccf9d61993cf69b458d70a324df73dc0db2edaf5cac17289",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\mol2.py": "541e5e8c8dee381231d7c122c8f31499cfa26fd0586186e0557296e32bb90f83",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\multi_query_aggregation.py": "c70d2ffe49ca1730bce3ec84e1a269114adf7ba29a0eb5b12c26ad57ba6162d3",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\multi_query_analysis.py": "db1b296d93aa7b12d8ce872298162c26d968ccd2dbd30b6083bdb7221b0cca17",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\necessary_conditions.py": "59a0675b1d8118fc32da8776eb395e8f9534fe13164321c3c3d35ce64416f2b6",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\overnight_validation.py": "a7f3e95df60e28f6698bca7bbc8180b911f2848ce2b1e6da859d90710b192d13",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\parallel_ingest_benchmark.py": "443c39284c1900930b0996c637bdfff4fcdbfa2d04e9cb9b313fc29982cff0f8",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\pharmacophore_index.py": "571d2f2a34f35bfc799ecd86fb1739e2b93ca4e3acaf48f14f0d010d4079349c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\pharmacophore_validation.py": "0ccd080d8e3ce30d3fb3a29ba214d6279563cd7a9480a864fd58ae59f8c4821b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\polymer_ligand_diversity.py": "3f157ac41872fa5bfa4bfb9eae08e9fcf80ff3e9630f1bf9b04d7ec150de3631",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\pose_acceleration.py": "d1bd159ba1ecaea282a6bf97a5878f6226486d8ff7f0ddc67539ceab59367c7b",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\pose_feasibility.py": "f3027de550f07305fbc078a9bcf575510b2e73baf43b93592bd828c13afbc20d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\prediction.py": "3bb25b3a7b22292f22196a1a4d94d84f3c80fbb2b6b47b717a989f29d0ae59d5",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\predocking_qc.py": "de59c254712f29bd8fd4ccfda4a96a0eb8b6f53202391f80a474dbc864259956",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\preselection_full.py": "4e51e28955d6508cde02dcc35f4d02822c5ccf1959b99743f836bbb08411db63",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\project_context.py": "62b3c9f3eb01d6ffd5f83083fc18238ee7440ca0bb7f08a499de036637a97df0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\prompt_plan.py": "5b855b0bac583c5e6188a0c071ec134fd64175ec56baf171dd44d80dfbc31af4",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\prompt_smoke.py": "3dea446cbbb1e539a07f034dedbf91b0f1a30c9cc0294dea6dfca8ed77a63527",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\prompt_workflow.py": "145e9d0425d3f687f6f86428fa3b79ea3ad69101ecf99575158e01beb3c5344f",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\protein_data.py": "e45e35e1148e230c92b21d89ffbdb26f1b976e4bdc130afd521bad50a3d6e9e5",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\provenance.py": "cf58f8e734e50f3ffdcfa67060a82acca795b5689dd2c8e33be2559d59a876c0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\rcsb.py": "60fe202c353194598200688fbb1fc2bed1881686d354e1296d2ee6b2b0483af1",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\real_baselines.py": "05ad5ac56bbc652f69c33b25edc5e3365b0afe2b5f79a9e84434793dfa457ca0",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\real_usrcat.py": "34020ddff0ca9e1937deb0ab56dbf13c618c3ea78183496d7343b6ad723066ca",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\reduce_pocket.py": "4bc198fc296a050e0706669f4cb557d6053a94acaeb9d0b3fa507f3fa8c31132",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\registry.py": "0dc2fe4c37428356ec2cf5fdfa798dca7700ee48ef5bc4d7d2219bba69e011d8",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\scaled_search.py": "e89482ad239950f52c58d9138b9151d3c6f05392d9b58b3ce63e675c4db09d0d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\score_audit.py": "9173a400a915a1b6434dd7375a5038396889058a50af6588dc07ffbf1893bc98",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\screening_rerank.py": "b73cabc1717ee34d95e98c8397dc720060209d3623aacea0d836a2544bf0b179",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\screening_selection.py": "356762b8215d73cc97a131e782fd5b91da1d9786ba1b1f4b8e8d49ba708d9df5",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\shapealign_benchmark.py": "323abfd473510d3dff3e9adf0d32e9eff1df1eba98296cff6f20a231933c621c",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\similarity.py": "32c6cb3cf4845585f99b351486e4d805432488f789e420bfdc262b58bcf7285d",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\structure_compare.py": "db67b25ebde89e6c852a6b9184d4e713136253329cdadb707cf341f7d260a68f",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\structure_diversity.py": "4aea38ce96924a2d89c075e2bea73796c58808306821d64a984a68bd89b989fd",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\structure_diversity_report.py": "5fbdb12cbb47c1cdd5efc76cdeb5474059c19c106f4e5cfac94ca5d0c3d01847",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\structure_survey.py": "382dd8a6fcc80de8b48917fe470beb0598e3055f90b09f2e32674e9960399579",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\survivor_validation.py": "fc53ae0d5f225bb8b0d8583c8db16f337a2b88d212c4ce5f22560c8596f07386",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\workflow_skills.py": "f955e7ae9dcc03cfd6cbd804541ea341958612b14323bf354e946a7b3bf95958",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\workstation_suite.py": "83a821a84ae6f8e6f48447e1b37f226d2d261c0afb0da96e317dd2f9360f1f88"
+  },
+  "crystal_template_pairs": 495,
+  "fixed_budget": 9.75,
+  "fixed_budget_invariance_passed": true,
+  "crystal_controls": 45,
+  "production_design_adopted": false,
+  "full_regression": "426 passed, 2 skipped",
+  "final_focused_regression": "79 passed"
+}

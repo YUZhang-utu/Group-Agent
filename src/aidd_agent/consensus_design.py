@@ -8,7 +8,7 @@ from .gaussian_batch import _atomic_json, _load_query
 from .expanded_wee1 import fingerprint
 from .screening_selection import check_hashes
 
-from .contact_groups import EXTENSION_FIELDS, selected_anchors, validate_extensions, resolve_regions
+from .contact_groups import EXTENSION_FIELDS, selected_anchors, validate_extensions, resolve_regions, optional_weight_total, contact_semantics
 
 BASE_FIELDS={'mandatory_anchors','alternative_groups','optional_weights','template_ids','evidence_ids','rationale',
         'exclusions','permissiveness','gaussian_weight','optional_weight','minimum_pose_score'}
@@ -70,6 +70,8 @@ def recommend(source, output, provider, adviser=None):
     if survey.get('contact_evidence'):
         context['contact_evidence_status']={k:survey['contact_evidence'][k] for k in ('version','complexes','pairs','scope')}
         context['contact_evidence_status']['interpretation']='Anchors are sparse feature modes, not an exhaustive contact map. Do not infer absent contacts from omitted anchors. Spatial regions need explicit reviewed reference atom selections.'
+    for anchor in context['anchors']:
+        anchor.update(contact_semantics(anchor['protein_atom'],anchor['feature_class']))
     # No evidence silently removed: require a smaller explicit cohort if context is too large.
     encoded_context=json.dumps(context,ensure_ascii=False,separators=(',',':'))
     if len(encoded_context)>MAX_EVIDENCE_CHARS:raise ValueError('Consensus context exceeds the 100000-character evidence budget; partition receptor states before recommendation')
@@ -90,9 +92,13 @@ Sparse anchor modes do not define complete subpocket occupancy. Spatial groups a
 and coefficients via a later user design edit; do not invent them or pretend optional feature groups implement whole-subpocket occupancy.
 Choose diverse templates independently of anchors, using proposed_template_ids as a starting point. Explain uncertainty in English.
 Do not invent exclusion volumes, binding energies, activity evidence or coordinate changes. All numerical defaults are exploratory.'''
+    prompt+='\nThe coordinator freezes the initial sum of optional contact and family weights as optional_budget after validation. Subsequent edits preserve that denominator; do not invent normalization fields. Weights are scoring preferences, not frequencies or affinities.'
     if adviser:value=adviser(context);model=dict(mode='injected',provider=provider)
     else:value,model=chat_plan(encoded_context,ev.read(select_llm_profile(provider)),system_prompt=prompt,
                               capabilities={},validator=lambda v:validate(v,survey,True),max_prompt_chars=MAX_EVIDENCE_CHARS)
+    validate(value,survey,True)
+    value=copy.deepcopy(value)
+    value.update(optional_normalization='fixed_budget',optional_budget=optional_weight_total(value) or 1.)
     validate(value,survey,True)
     result=dict(kind='consensus_recommendation',status='complete',readiness='proposal_ready',recommendation=value,model=model,
                 evidence_context=dict(characters=len(encoded_context),character_limit=MAX_EVIDENCE_CHARS,
@@ -162,7 +168,7 @@ def adopt(source, output, overrides=None):
     result=dict(kind='consensus_design',status='complete',
         readiness='needs_template_state_review' if failed_templates else 'ready_for_consensus_funnel',
         failed_template_self_controls=failed_templates,design=design,anchor_order=order,
-        anchors=[a for a in survey['anchors'] if a['anchor_id'] in order],consensus_npz=survey['consensus_npz'],templates=[q for q in survey['templates'] if q['query_id'] in design['template_ids']],
+        anchors=[dict(a,**contact_semantics(a['protein_atom'],a['feature_class'])) for a in survey['anchors'] if a['anchor_id'] in order],consensus_npz=survey['consensus_npz'],templates=[q for q in survey['templates'] if q['query_id'] in design['template_ids']],
         reference=survey['cohort']['reference'],target=survey['target'],reference_smiles=[q['smiles'] for q in survey['prepared_complexes']],
         crystal_self_controls=controls,independent_active_validation='not_run',
         sources={**proposal['sources'],**fingerprint([source])},limitations=survey['limitations'])

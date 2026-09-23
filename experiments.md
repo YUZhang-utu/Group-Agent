@@ -1737,3 +1737,11 @@ Reference-chain admission precedes preparation and consensus; 48 instances and
 checked separately, never added to library coverage counts. Unit/integration
 regression: 372 passed, two skipped. Full-library acceptance is pending the user's
 workstation run described in to_human/E053_CONSENSUS_CHAT_TEST.md.
+
+## E055 score contract validation
+
+Protocol: experiments/E055-score-contract.md. Confirmatory software invariants:
+426 full-suite tests passed, 2 skipped; 79 final focused tests passed. Exploratory
+real-structure diagnostic: 495 template/identity-pose scores, 45/45 frozen-budget
+water-removal invariants and joint crystal controls. No library run. See
+ to_human/E055_SCORE_VALIDATION.md for workstation commands and acceptance scope.

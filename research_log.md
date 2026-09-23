@@ -1512,3 +1512,35 @@ under existing evidence checks. Sixty-eight focused regression tests passed.
 No user proposal adopted and no source evidence or ranking coefficients changed.
 Reuse the user's completed new consensus after updating/restarting the SAME Chat
 workspace, and create one fresh recommendation. See the dated hard-group review.
+
+## 2026-09-23: E055 score contracts and supplied-proposal audit
+
+Protocol recorded before execution in experiments/E055-score-contract.md.
+New recommendations freeze their initial optional-weight budget in trusted code;
+legacy designs retain weighted means. Explicit edits preserve the denominator,
+reject overflow, and require dimension weights summing to one. Added per-region
+ambiguity margins with order-independent conservative assignment, atom-part and
+ligand-role semantics without ID changes, and explicit multi-template union policy.
+The funnel preserves per-template poses; no template shape averaging or statistical
+cross-template calibration is performed. Added a source-sealed read-only score audit.
+
+Validation: full local suite 426 passed, 2 skipped. After final evidence-output
+and policy assertions, 79 focused tests passed. English guard: 315 files passed.
+Real local replay: 45 crystal identity poses x 11 templates = 495 scores. Frozen
+budget 9.75 water-removal invariance passed all 45. Fixed-budget adoption fixture
+passed 45/45 joint crystal controls, with no failed selected templates. This is
+confirmatory for software invariants and exploratory for scientific scoring;
+not library recall, held-out activity validation or production design adoption.
+
+LYS94 evidence traced to 4ERE, 4ERF, 4OAS, 4QO4 and 4QOC. NegIonizable features
+are ionization hypotheses; nearby CCD-perceived ligand oxygens have formal charge
+zero. Protonation, solvent exposure and energetic contribution remain unresolved.
+Template nonself medians vary (approximately 0.223 to 0.357); raw scores are not
+statistically interchangeable, and larger templates do not uniformly score higher.
+See to_human/E055_SCORE_VALIDATION.md and data/e055-score-audit-final/report.json.
+Next: desktop pull/restart same workspace, run regressions/read-only audit, then
+review spatial selections and independent/library controls before coefficient
+selection. No automatic variance estimator or 0.4/0.4/0.2 default was introduced.
+Final E055 audit additionally seals implementation hashes in
+ data/e055-score-audit-sealed/report.json. The tracked portable summary is
+ to_human/E055_VALIDATION_SUMMARY.json. Final English guard passed 316 files.

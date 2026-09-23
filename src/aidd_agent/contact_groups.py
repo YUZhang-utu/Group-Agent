@@ -8,7 +8,21 @@ from scipy.spatial.distance import cdist
 
 from .screening_selection import check_hashes
 
-EXTENSION_FIELDS = {'optional_groups','spatial_groups','occupancy_rewards','occupancy_weight','spatial_ambiguity'}
+EXTENSION_FIELDS = {'optional_groups','spatial_groups','occupancy_rewards','occupancy_weight','spatial_ambiguity',
+                    'optional_normalization','optional_budget'}
+
+
+def optional_weight_total(design):
+    return sum(design['optional_weights'].values())+sum(g['weight'] for g in design.get('optional_groups',[]))
+
+
+def contact_semantics(atom, feature_class):
+    """Annotations for canonical protein atom names; never alter evidence IDs."""
+    names=set(atom.split('/'))
+    backbone={'N','CA','C','O','OXT'}
+    part='backbone' if names<=backbone else ('mixed' if names & backbone else 'sidechain')
+    return dict(protein_part=part,ligand_role={'HBA':'acceptor','HBD':'donor'}.get(feature_class,'not_specified'),
+                interaction_type=feature_class)
 
 
 def selected_anchors(design):
@@ -38,7 +52,8 @@ def validate_extensions(design, survey):
     if len(set(members))!=len(members) or occupied.intersection(members):
         raise ValueError('Optional family members must not be double counted or required')
     for group in spatial:
-        if not isinstance(group,dict) or set(group)!={'id','reference_query','ligand_atoms','radius','minimum_atoms'}:
+        required={'id','reference_query','ligand_atoms','radius','minimum_atoms'}
+        if not isinstance(group,dict) or not required<=set(group) or set(group)-required-{'ambiguity_margin'}:
             raise ValueError('Spatial group requires explicit reference atom selection and thresholds')
         names.append(group['id'])
         if not isinstance(group['reference_query'],str) or not isinstance(group['ligand_atoms'],list) or not group['ligand_atoms'] or any(not isinstance(a,str) or not a for a in group['ligand_atoms']):
@@ -46,6 +61,8 @@ def validate_extensions(design, survey):
         if len(set(group['ligand_atoms']))!=len(group['ligand_atoms']):raise ValueError('Duplicate spatial reference atoms')
         if not number(group['radius'],.1,4) or type(group['minimum_atoms']) is not int or not 1<=group['minimum_atoms']<=100:
             raise ValueError('Invalid spatial geometry thresholds')
+        if 'ambiguity_margin' in group and not number(group['ambiguity_margin'],0,2):
+            raise ValueError('Invalid per-region ambiguity margin')
     if any(not isinstance(n,str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}',n) for n in names) or len(set(names))!=len(names):
         raise ValueError('Group identifiers must be unique short ASCII names')
     ambiguity=design.get('spatial_ambiguity',.5)
@@ -59,6 +76,17 @@ def validate_extensions(design, survey):
         resolve_regions(design,survey)
     elif rewards or weight:
         raise ValueError('Occupancy rewards require explicit spatial groups')
+    mode=design.get('optional_normalization','weighted_mean')
+    if mode not in {'weighted_mean','fixed_budget'}:raise ValueError('Unknown optional normalization')
+    if mode=='fixed_budget':
+        budget=design.get('optional_budget')
+        if not number(budget,1e-6,20):raise ValueError('Fixed normalization needs a positive optional_budget <= 20')
+        total=optional_weight_total(design)
+        if total>budget+1e-9:raise ValueError('Optional weights exceed the frozen budget; explicitly revise the budget or weights')
+        top=sum(design.get(k,0.) for k in ('gaussian_weight','optional_weight','occupancy_weight'))
+        if not np.isclose(top,1.,rtol=0,atol=1e-9):raise ValueError('Fixed-budget dimension weights must sum to one')
+    elif 'optional_budget' in design:
+        raise ValueError('optional_budget requires fixed_budget normalization')
 
 
 def resolve_regions(design,survey):
@@ -104,7 +132,10 @@ def grouped_terms(values,assignments,order,moved,design):
         for row in distances:
             eligible=sorted((i for i,g in enumerate(regions) if row[i]<=g['radius']),key=lambda i:row[i])
             if not eligible:continue
-            if len(eligible)>1 and row[eligible[1]]-row[eligible[0]]<=design.get('spatial_ambiguity',.5):
+            # Every competing eligible region participates, not only the second closest.
+            winner=eligible[0]
+            margin=regions[winner].get('ambiguity_margin',design.get('spatial_ambiguity',.5))
+            if any(row[i]-row[winner]<=max(margin,regions[i].get('ambiguity_margin',design.get('spatial_ambiguity',.5))) for i in eligible[1:]):
                 ambiguous+=1;continue
             counts[regions[eligible[0]]['id']]+=1
     occupied=[g['id'] for g in regions if counts[g['id']]>=g['minimum_atoms']]

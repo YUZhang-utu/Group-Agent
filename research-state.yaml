@@ -1,7 +1,19 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E054-general-contact-groups
+current_experiment: E055-score-contract
+score_contract:
+  status: implemented_local_validation_workstation_pending
+  protocol: experiments/E055-score-contract.md
+  guide: to_human/E055_SCORE_VALIDATION.md
+  new_recommendations: fixed_budget_frozen_by_coordinator
+  legacy_scores: unchanged_weighted_mean
+  region_specific_ambiguity: explicit_optional_margin_no_variance_estimator
+  crystal_template_score_pairs: 495
+  fixed_budget_deletion_invariance: 45_of_45
+  cross_template_calibration: not_performed
+  production_design_adopted: false
+  local_full_regression: 426_passed_2_skipped
 general_contact_groups:
   status: implemented_local_regression_and_real_structure_validation
   protocol: experiments/E054-general-contact-groups.md
@@ -59,7 +71,7 @@ general_target_consensus:
   latest_fix_local_validation: 41_passed_1_skipped_mock_provider_not_live
   provider_failure_hypothesis: missing_JSON_instruction_reproduced_with_mock_provider
   latest_fix_workstation_verified: user_reported_recommendation_complete
-  next_action: update_recommendation_policy_restart_same_workspace_then_new_recommend_reuse_completed_consensus
+  next_action: pull_E055_restart_same_workspace_run_score_audit_then_new_recommend_reuse_completed_consensus
   subpocket_design_review: to_human/20260923_MDM2_SUBPOCKET_DESIGN_REVIEW.md
   subpocket_coordinate_audit: 48_complexes_45_PDBs_complete_exploratory
   subpocket_audit_report: to_human/20260923_MDM2_SUBPOCKET_AUDIT_RESULTS.md

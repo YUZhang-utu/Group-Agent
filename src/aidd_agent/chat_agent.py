@@ -115,11 +115,15 @@ On structure_consensus use recommend. On consensus_recommend use adopt/design. O
 For consensus designs, editable fields are mandatory_anchors, alternative_groups, optional_weights (ID to weight),
 template_ids, evidence_ids, rationale, exclusions, permissiveness, gaussian_weight, optional_weight, minimum_pose_score.
 Optional extensions: optional_groups (objects with id, anchor_ids, weight; best member counts once),
-spatial_groups (objects with id, reference_query, ligand_atoms, radius, minimum_atoms),
+spatial_groups (objects with id, reference_query, ligand_atoms, radius, minimum_atoms, optional ambiguity_margin in Angstrom),
 occupancy_rewards (monotone list starting at zero, one entry per occupied-group count), occupancy_weight,
 and spatial_ambiguity. Spatial reference atom names must be explicitly supplied or present in evidence;
 never invent atom selections, radii or rewards. Spatial groups require the new contact ledger.
 Optional groups are scoring bonuses, unlike alternative_groups which are hard requirements.
+optional_normalization supports weighted_mean (legacy) or fixed_budget with a positive optional_budget.
+New recommendations freeze the initial contact-weight total. Preserve optional_budget when editing weights or deleting contacts.
+Reject budget overflow; do not silently raise the budget. Fixed-budget dimension weights must sum to one.
+For old recommendations explicitly set both normalization and budget to migrate. An ambiguity_margin concerns competing region assignments, not the region radius.
 No spatial occupancy count is a hard filter. Do not promise universal contact or affinity validation.
 Keep template choice independent of pocket anchors. Rare contacts cannot become mandatory.
 Exclusions require explicit reviewed coordinates, mode hard/soft, radius, weight, evidence and rationale; never invent these.

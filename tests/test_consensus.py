@@ -171,6 +171,9 @@ def test_multi_template_union_preserves_provenance_and_same_pose_selection(tmp_p
     monkeypatch.setattr(preselection_full,'run',scan)
     result=module.run(source,tmp_path/'output',dict(batch=str(batch),workers=1,refine_chunk=2))
     assert calls==['T1','T2'] and result['matching_molecules']==1 and result['pose_records']==2
+    assert result['template_score_policy']['membership']=='union_of_per_template_passes'
+    assert result['template_score_policy']['shape_averaging'] is False
+    assert result['template_score_policy']['cross_template_calibration']=='not_performed'
     with sqlite3.connect(result['outputs']['candidates.sqlite']) as db:
         assert {r[0] for r in db.execute('SELECT template FROM poses')}=={'T1','T2'}
     selected=select_candidates(tmp_path/'output/report.json',tmp_path/'selected',dict(required_anchors=['A','B'],minimum_score=.5,match_mode='all'))
@@ -232,7 +235,10 @@ def test_large_consensus_recommendation_preserves_all_evidence(tmp_path,monkeypa
     monkeypatch.setattr(prompt_plan,'chat_plan',lambda *args,**kwargs:original(*args,opener=Opener(),**kwargs))
     result=consensus_design.recommend(source,tmp_path/'proposal','gpt')
     assert 20000<len(sent[0])<=100000
-    assert json.loads(sent[0])['anchors']==anchors
+    from aidd_agent.contact_groups import contact_semantics
+    assert json.loads(sent[0])['anchors']==[dict(a,**contact_semantics(a['protein_atom'],a['feature_class'])) for a in anchors]
+    assert result['recommendation']['optional_normalization']=='fixed_budget'
+    assert result['recommendation']['optional_budget']==1.5
     assert len(json.loads(sent[0])['templates'])==42
     assert result['evidence_context']['truncated'] is False
     with pytest.raises(ValueError,match='20000'):original(sent[0],{},opener=Opener())
