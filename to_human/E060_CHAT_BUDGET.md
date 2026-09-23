@@ -71,3 +71,14 @@ MDM2 ANN recall or activity enrichment. Start the workstation job to obtain thos
 execution results; completion today cannot be inferred from the old small pilot.
 Old E059 runs cannot resume under changed ranking/code fingerprints; start a new
 budget task. Do not change code or runtime during that sealed task.
+
+## Larger work chunks
+
+Chat search requests may specify `chunk_conformers`, for example: "Run a new
+budget search with 4048 conformers per chunk and export the first 100000 unique
+molecules." This overrides search.refine_chunk for that new task only. It does
+not change retrieval or output molecule budgets. At the user-reported 2.789s per
+64-conformer chunk, 4048 projects to about 176s per chunk, not a 63x compute
+speedup. Progress and checkpoints become coarser. Keep the existing runtime
+configuration unchanged; use a fresh budget task after stopping/updating the
+old worker and server. Never resume the old task with changed code/chunk settings.

@@ -25,7 +25,7 @@ ACTION_FIELDS = {
     "consensus_recommend": ({"source_run", "provider"}, set()),
     "consensus_design": ({"source_run"}, {"design"}),
     "consensus_funnel": ({"source_run"}, set()),
-    "consensus_budget": ({"source_run"}, {"retrieval_molecules", "export_molecules"}),
+    "consensus_budget": ({"source_run"}, {"retrieval_molecules", "export_molecules", "chunk_conformers"}),
     "budget_page": ({"source_run"}, {"start_rank", "export_molecules"}),
     "guided_select": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
     "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd"}),

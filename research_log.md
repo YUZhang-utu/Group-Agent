@@ -1702,3 +1702,14 @@ Artifact data/e062/synthetic.json. Synthetic single-process kernels only; no
 workstation end-to-end claim. Full regression 474 passed, 2 skipped; English
 and diff checks passed. Active runs must retain original code/seals. Broad
 runtime reduction would need separately evaluated search-budget changes.
+
+## 2026-09-23 - E062 explicit Chat chunk override
+
+User requested 4048 or larger work chunks. Added coordinator-validated
+chunk_conformers to new budget tasks, overriding only the trusted runtime chunk
+size for that task. Natural-language route and adapter tests verify exact 4048
+propagation. Retrieval/export budgets and current sealed runs are unchanged.
+At the reported receipt rate this is about 176s per chunk; it reduces dispatch
+and file counts, not the number of evaluated conformers or seeds. Full regression
+474 passed, 2 skipped; English guard and diff checks passed. Workstation run with
+4048 remains user-side pending; no remote configuration was changed here.
