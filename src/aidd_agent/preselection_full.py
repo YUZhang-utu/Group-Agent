@@ -140,6 +140,9 @@ def compute(task):
     mode=q.get('selection_mode','threshold')
     if mode not in ('threshold','budget'):raise ValueError('Unknown selection mode')
     budget_mode=mode=='budget'
+    seed_settings=q.get('seed_search')
+    if seed_settings is not None and not budget_mode:raise ValueError('Seed experiments require budget mode')
+    seed_diagnostics=[]
     guided=None
     if q.get('guided_design'):
         from .guided_filters import GuidedFilter
@@ -199,8 +202,16 @@ def compute(task):
                 continue
             counts['guided_geometry_passed']+=1
         t = time.perf_counter()
-        seeds, pairs = prepare_seeds(candidate, original, **full.POSE_PARAMETERS)
-        seconds['seed_generation'] += time.perf_counter()-t
+        precomputed_pocket=None
+        if seed_settings is None:
+            seeds, pairs = prepare_seeds(candidate, original, **full.POSE_PARAMETERS)
+            seconds['seed_generation'] += time.perf_counter()-t
+        else:
+            from .seed_search import prepare as prepare_experimental
+            seeds,precomputed_pocket,diagnostic,seed_seconds=prepare_experimental(
+                candidate,original,guided,seed_settings,full.POSE_PARAMETERS)
+            seconds.update(seed_seconds)
+            seed_diagnostics.append(dict(global_id=int(gid),molecule_id=candidate.molecule_id,**diagnostic))
         counts['original_seeds'] += len(seeds)
         t = time.perf_counter()
         possible = np.ones(len(seeds),dtype=bool) if budget_mode else possible_seed_mask(full._BOUND, features, seeds)
@@ -213,11 +224,11 @@ def compute(task):
             t=time.perf_counter()
             positions=np.flatnonzero(possible)
             transforms=np.asarray([seeds[i].transform_matrix for i in positions]).reshape(-1,4,4)
-            pocket=guided.pocket_mask(candidate.shape_points,transforms)
+            pocket=(guided.pocket_mask(candidate.shape_points,transforms) if precomputed_pocket is None else precomputed_pocket[positions])
             counts['pocket_tested_seeds']+=len(positions)
             counts['pocket_rejected_seeds']+=int((~pocket).sum())
             possible[positions]=pocket
-            seconds['pocket_exclusion']+=time.perf_counter()-t
+            if precomputed_pocket is None:seconds['pocket_exclusion']+=time.perf_counter()-t
             if not possible.any():
                 counts['pocket_rejected_conformers']+=1
                 continue
@@ -280,6 +291,7 @@ def compute(task):
     receipt = dict(start=start, stop=stop, counts=dict(counts), worker_seconds=dict(seconds),
                    wall_seconds=time.perf_counter()-tick,
                    files=full.fingerprint([target, poses_path]))
+    if seed_settings is not None:receipt['seed_search']=dict(settings=seed_settings,conformers=seed_diagnostics)
     record_json(target.with_suffix('.receipt.json'), receipt)
     return receipt
 

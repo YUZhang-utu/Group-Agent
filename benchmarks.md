@@ -299,3 +299,13 @@ distributions exclude self-template pairs but remain dependent controls. Use a
 common budget and documented threshold for later coefficient comparisons. The
 portable audit is python -m aidd_agent.score_audit; never infer library recall
 from its arithmetic-invariance flag.
+
+
+## E064 kernel and molecular budget metrics
+
+scripts/benchmark_seed_kernel.py alternates bounded reference/batched kernels,
+compares exact ordered payloads, and records source hashes plus numeric versions.
+Local 12-panel median speedup: 1.8646 (kernel only). seed_budget_audit freezes
+molecule IDs before eight replays and reports all stored conformers including
+zero-survivor cases. Largest-budget top-rank overlap is an engineering search
+metric within the ANN pool, not independent activity or full-library recall.

@@ -1728,3 +1728,26 @@ Randomized masks match scalar reference across fractions, hard exclusions and
 boundary cases. A constructed ten-pose panel queried 140 rather than 600 atom
 positions while retaining exact decisions; this is a work-count fixture, not a
 real speedup measurement. Workstation timing/scaling remains pending.
+
+
+## 2026-09-23 - E064 bounded seed kernels and search-width audit
+
+User reports the workstation budget job is running and requests development for
+next-day tests. No remote job, checkout, configuration or receipt was changed.
+Added opt-in batched axial matrix/rounding/validation work with deterministic
+streaming and the original rounded-set first occurrence semantics. The complete
+Cartesian product is never materialized. Reference/default pair cap stays 512.
+Added generated caps and physically surviving seed targets with mandatory finite
+pair caps, per-conformer stop diagnostics, and fresh protocol-sealed CLI settings.
+
+An eight-variant replay freezes a molecular sample from the existing ANN pool,
+expands all stored conformers, executes all templates, and compares contact-first
+RRF ranking and exact reference/batched-512 payloads. This is not an ANN recall
+or activity experiment. Added offline deduplicated block-tail max/top-k/sample-size
+statistics; no adaptive block rejection or multi-route retrieval was adopted.
+
+Confirmatory implementation regression: 499 passed, 2 skipped. Synthetic kernel
+benchmark: 12 panels, alternating order, five repeats, exact payloads throughout;
+median per-panel speedup 1.8646. This is exploratory local kernel timing, not a
+workstation or end-to-end speedup. Artifact: data/e064/seed-kernel.json. Added final
+upstream-hash revalidation and its focused regression after the full suite.

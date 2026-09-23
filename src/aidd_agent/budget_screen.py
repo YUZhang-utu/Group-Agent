@@ -127,7 +127,7 @@ def collect_conformers(batch, keys):
     return ids
 
 
-def make_queries(batch, design):
+def make_queries(batch, design, seed_search=None):
     queries=[]
     for template in design['templates']:
         q=dict(template,anchors=copy.deepcopy(design['anchors']),consensus_npz=design['consensus_npz'],
@@ -138,6 +138,9 @@ def make_queries(batch, design):
         if q['guided_design'].get('exclusions'):raise ValueError('Budget mode requires an explicit exclusion-free design')
         indices=sorted({a['feature_index'] for a in q['anchors']})
         for a in q['anchors']:a['score_column']=indices.index(a['feature_index'])
+        if seed_search is not None:
+            from .seed_search import policy
+            q['seed_search']=policy(seed_search)
         queries.append(q)
     return queries
 
@@ -166,9 +169,9 @@ def verified_chunk(path, ids):
     return True
 
 
-def run_refinement(batch,out,design,ids,workers,chunk):
+def run_refinement(batch,out,design,ids,workers,chunk,seed_search=None):
     from .chunk_execution import bounded_results
-    queries=make_queries(batch,design);ctx=mp.get_context('spawn');done=0
+    queries=make_queries(batch,design,seed_search);ctx=mp.get_context('spawn');done=0
     total=len(queries)*((len(ids)+chunk-1)//chunk);started=time.perf_counter()
     with ProcessPoolExecutor(workers,mp_context=ctx,initializer=init_worker,initargs=(queries,)) as pool:
         # Template-major scheduling amortizes reader initialization.
@@ -240,6 +243,8 @@ def validate_regions(design, definitions):
 
 def execute(args):
     from .consensus_design import adopt
+    from .seed_search import policy as seed_policy
+    seed_search=seed_policy(getattr(args,'seed_search',None)) if getattr(args,'seed_search',None) is not None else None
     batch=args.batch.resolve();out=args.output.resolve()
     if out.is_relative_to(batch) or batch.is_relative_to(out):raise ValueError('Output overlaps library')
     out.mkdir(parents=True,exist_ok=True)
@@ -251,6 +256,7 @@ def execute(args):
             chunk_conformers=args.chunk_conformers,nprobe=args.nprobe,template_quota=args.template_quota,rrf_k=args.rrf_k,
             assignment_backend=os.environ.get('AIDD_ASSIGNMENT_BACKEND','python'),
             sources=fingerprint(sourcepaths),code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))))
+        if seed_search is not None:protocol['seed_search']=seed_search
         if (out/'protocol.json').exists():
             if ev.read(out/'protocol.json')!=protocol:raise ValueError('Changed protocol; use a fresh output directory')
         else:_atomic_json(out/'protocol.json',protocol)
@@ -290,7 +296,7 @@ def execute(args):
                 report=ev.read(out/'report.json');check_hashes(report['outputs'])
                 _atomic_json(out/'status.json',dict(status='complete'));return
             ids=np.load(out/'selected-conformers.npy',allow_pickle=False,mmap_mode='r')
-            timing=run_refinement(batch,out,design,ids,args.workers,args.chunk_conformers)
+            timing=run_refinement(batch,out,design,ids,args.workers,args.chunk_conformers,seed_search)
             count=merge_and_rank(out,design,definitions,batch,args.template_quota,args.rrf_k)
             check_hashes(protocol['sources']);check_hashes(protocol['code'])
             report=dict(kind='consensus_budget_ranking',status='complete',ranked_molecules=count,retrieval=retrieval,refinement=timing,
@@ -310,7 +316,14 @@ def main():
     p.add_argument('--retrieval-molecules',type=int,default=1000000);p.add_argument('--workers',type=int,default=24)
     p.add_argument('--chunk-conformers',type=int,default=64);p.add_argument('--nprobe',type=int,default=128)
     p.add_argument('--template-quota',type=int,default=100000);p.add_argument('--rrf-k',type=int,default=60)
+    p.add_argument('--max-pair-seeds',type=int)
+    p.add_argument('--survivor-target',type=int,default=0)
+    p.add_argument('--seed-backend',choices=['reference','batched'],default='reference')
+    p.add_argument('--seed-batch',type=int,default=64)
     p.add_argument('--retrieve-only',action='store_true');args=p.parse_args()
+    args.seed_search=(dict(max_pair_seeds=512 if args.max_pair_seeds is None else args.max_pair_seeds,
+        survivor_target=args.survivor_target,backend=args.seed_backend,seed_batch=args.seed_batch)
+        if args.max_pair_seeds is not None or args.survivor_target or args.seed_backend!='reference' or args.seed_batch!=64 else None)
     if min(args.retrieval_molecules,args.workers,args.chunk_conformers,args.nprobe,args.template_quota,args.rrf_k)<=0:p.error('Positive parameters required')
     execute(args)
 

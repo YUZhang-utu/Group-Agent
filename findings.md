@@ -571,3 +571,14 @@ Pairwise atom-sharing evidence is reviewable but is not automatically one physic
 interaction. Group-max scoring after individual assignment can lose optional score;
 a collapsed optional-unit diagnostic improves 13 of 45 crystal poses. Production
 replacement requires explicit decisions about hard rules and retained contact masks.
+
+
+## E064: generated capacity differs from surviving search width
+
+The pair cap stops before receptor collision tests; mean surviving seed count is
+an outcome, not a calibrated search target. Bounded streaming supports separate
+experiments on generated caps and survivor targets while preserving defaults.
+Local batching retains exact tested payloads and improves synthetic kernel time,
+but neither ranking convergence nor workstation gains have been established.
+Block-tail statistics require matched sample/search budgets; maxima alone cannot
+justify dropping unsampled blocks.

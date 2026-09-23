@@ -1753,3 +1753,13 @@ Protocol: experiments/E056-contact-diagnostics.md. Confirmatory implementation:
 assignment comparisons passed. Exploratory crystal evidence: 878 identity and 283
 source-recovery rows near one, 63 suspected pairs, 13/45 assignment improvements.
 No activity test. See to_human/E056_CONTACT_DIAGNOSTICS.md.
+
+
+## E064 seed search-width audit
+
+Protocol: experiments/E064-seed-budget.md. Independent fresh-output replay:
+reference 512; batched 128/256/512/1024/2048; survivor 100/200 with cap 4096.
+Uniform retrieved molecule panel, all stored conformers, all templates. Measure
+zero-survivor rate, survivor distribution, contact improvements, top-rank recall
+against generated-2048, exact kernel equivalence and stage timing. Local full
+regression 499 passed, 2 skipped. Workstation execution remains pending.

@@ -191,8 +191,19 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
                          query_points: Sequence[Sequence[float]],
                          query_types: Sequence[int], *, tolerance: float = 2.0,
                          axial_samples: int = 6,
-                         max_seeds: int | None = None) -> tuple[RigidSeed, ...]:
-    """Generate deterministic proper rotations from compatible invariant pairs."""
+                         max_seeds: int | None = None, backend: str = 'reference') -> tuple[RigidSeed, ...]:
+    """Generate a bounded ordered prefix; reference remains the default kernel."""
+    return tuple(iter_pair_alignment_seeds(candidate_points, candidate_types, query_points,
+        query_types, tolerance=tolerance, axial_samples=axial_samples,
+        max_seeds=max_seeds, backend=backend))
+
+
+def iter_pair_alignment_seeds(candidate_points, candidate_types, query_points, query_types,
+                              *, tolerance=2.0, axial_samples=6, max_seeds=None,
+                              backend='reference'):
+    """Stream unique seeds without expanding the full Cartesian product."""
+    if backend not in ('reference', 'batched'):
+        raise ValueError('Unknown seed backend')
     candidate = _points(candidate_points, "candidate_points")
     query = _points(query_points, "query_points")
     candidate_types, query_types = np.asarray(candidate_types), np.asarray(query_types)
@@ -204,7 +215,7 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
         raise ValueError("max_seeds must be a non-negative integer or None")
     if max_seeds == 0:
         return ()
-    seeds, seen = [], set()
+    count, seen = 0, set()
     candidate_distances={}
     for qi in range(len(query)):
         for qj in range(qi + 1, len(query)):
@@ -233,21 +244,43 @@ def pair_alignment_seeds(candidate_points: Sequence[Sequence[float]],
                         vector = candidate[second] - candidate[first]
                         base = _rotation_between(vector, query_vector)
                         source_mid = (candidate[first] + candidate[second]) / 2.0
+                        if backend == 'batched':
+                            rotations = np.asarray(axials) @ base
+                            matrices = np.broadcast_to(np.eye(4), (axial_samples,4,4)).copy()
+                            matrices[:,:3,:3] = rotations
+                            matrices[:,:3,3] = target_mid - (rotations @ source_mid)
+                            rounded = np.round(matrices.reshape(-1,16),10)
+                            # Validate the entire numeric batch before constructing records.
+                            if not np.isfinite(matrices).all() or not np.allclose(
+                                    np.linalg.det(rotations),1.,atol=1e-6):
+                                raise ValueError('Invalid batched rigid transform')
                         for sample,axial in enumerate(axials):
-                            rotation = axial @ base
-                            translation = target_mid - rotation @ source_mid
-                            matrix = np.eye(4); matrix[:3, :3] = rotation; matrix[:3, 3] = translation
-                            key = tuple(np.round(matrix.ravel(), 10))
+                            if backend == 'reference':
+                                rotation = axial @ base
+                                translation = target_mid - rotation @ source_mid
+                                matrix = np.eye(4); matrix[:3, :3] = rotation; matrix[:3, 3] = translation
+                                key = tuple(np.round(matrix.ravel(), 10))
+                            else:
+                                matrix = matrices[sample]
+                                key = tuple(rounded[sample])
                             if key in seen:
                                 continue
                             seen.add(key)
-                            seeds.append(RigidSeed(
-                                f"pair-q{qi}-{qj}-c{first}-{second}-r{sample}",
-                                (first, second), (qi, qj), sample,
-                                tuple(map(float, matrix.ravel()))))
-                            if max_seeds is not None and len(seeds) >= max_seeds:
-                                return tuple(seeds)
-    return tuple(seeds)
+                            values = (f"pair-q{qi}-{qj}-c{first}-{second}-r{sample}",
+                                      (first,second),(qi,qj),sample,tuple(map(float,matrix.ravel())))
+                            if backend == 'reference':
+                                seed = RigidSeed(*values)
+                            else:
+                                # The same finite/proper-rotation checks were applied in bulk above.
+                                seed = object.__new__(RigidSeed)
+                                for name,value in zip(('seed_id','candidate_pair','query_pair',
+                                                       'axial_sample','transform_matrix'),values):
+                                    object.__setattr__(seed,name,value)
+                            count += 1
+                            yield seed
+                            if max_seeds is not None and count >= max_seeds:
+                                return
+
 
 
 def principal_axis_seeds(candidate_points: Sequence[Sequence[float]],
