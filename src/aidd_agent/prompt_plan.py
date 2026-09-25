@@ -25,10 +25,10 @@ ACTION_FIELDS = {
     "consensus_recommend": ({"source_run", "provider"}, set()),
     "consensus_design": ({"source_run"}, {"design"}),
     "consensus_funnel": ({"source_run"}, set()),
-    "consensus_budget": ({"source_run"}, {"retrieval_molecules", "export_molecules", "chunk_conformers", "workers"}),
+    "consensus_budget": ({"source_run"}, {"retrieval_molecules", "export_molecules", "chunk_conformers", "workers", "seed_search"}),
     "budget_page": ({"source_run"}, {"start_rank", "export_molecules"}),
     "guided_select": ({"source_run", "required_anchors", "match_mode", "minimum_score"}, {"max_molecules", "coarse_constraints"}),
-    "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd"}),
+    "af3_prepare": ({"protein_step", "name"}, {"start", "end", "seeds", "ligand_ccd", "ligand_smiles"}),
     "af3_run": ({"input_step"}, set()),
     "search_3d": ({"query"}, {"retrieval_mode"}),
     "review_screening": ({"source_run"}, set()),
@@ -73,6 +73,10 @@ New-target guided screening is exploratory and requires a coordinate-backed adop
 do not claim the existing search_3d WEE1 calibration applies to it.
 af3_prepare consumes a prior protein step, optional 1-based inclusive start/end ONLY if the user
 specified the construct, seeds (default [1]), ligand_ccd (only user-requested CCD identifiers).
+ligand_smiles accepts a list of exact user-supplied SMILES, including stereochemistry and charges.
+Never generate SMILES from a ligand name or alter the supplied string. CCD and SMILES
+lists represent separate ligand entities, not two representations of the same ligand.
+Custom covalent protein-ligand bonds are not supported by this adapter.
 Do not invent a construct, ligand, accession or chain. Use full sequence when no construct requested.
 af3_run consumes an af3_prepare step and should only appear when the user asks to run prediction.
 search_3d currently supports only the three supplied calibrated WEE1 query names; never substitute
@@ -157,6 +161,10 @@ def validate_plan(plan):
             ligands = params.get("ligand_ccd", [])
             if not isinstance(ligands, list) or len(ligands) > 8 or any(not isinstance(c, str) or not re.fullmatch(r"[A-Z0-9]{1,5}", c) for c in ligands):
                 raise ValueError("Invalid ligand CCD identifiers")
+            from .af3_analysis import validate_smiles_list
+            smiles = validate_smiles_list(params.get('ligand_smiles', []))
+            if len(smiles) + len(ligands) > 8:
+                raise ValueError('At most eight ligand entities are supported')
         if action == "search_3d" and params["query"] not in CAPABILITIES["search_queries"]:
             raise ValueError("Only calibrated WEE1 queries are available")
         if action == "search_3d" and params.get("retrieval_mode", "exhaustive") not in {"exhaustive", "approximate"}:

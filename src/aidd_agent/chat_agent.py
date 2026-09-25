@@ -22,7 +22,8 @@ WORKFLOWS = [
     {"name":"Structure-guided chat", "status":"survey, recommend, adopt/design and guided full-library adapters",
      "scope":"Mapped crystal recurrence, literature fallback, evidence-grounded LLM advice and editable coordinate-backed designs; mandatory geometry and receptor exclusion precede Gaussian. Exploratory, not calibrated new-target affinity."},
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
-    {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein and optional CCD ligands; installed native or Apptainer profile."},
+    {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein with supplied CCD or SMILES ligands; installed native or Apptainer profile. Confidence explanations via /confidence; live SMILES workstation validation pending."},
+    {"name": "PyMOL structure review", "status": "desktop bridge; workstation validation pending", "scope": "Open owned PDB, diverse references, aligned consensus and AF3 models; structured display, polar contacts, snapshots and sessions. Configure runtime.pymol.executable."},
     {"name": "3D screening", "status": "WEE1 templates; exhaustive coarse retrieval by default", "scope": "All conformer descriptors compared before budgeted Gaussian refinement. Approximate mode requires explicit selection. New exhaustive runs are not claimed equivalent to old ANN candidate sets."},
     {"name": "Uncapped library condition counts", "status": "full_count adapter; workstation validation pending", "scope": "Evaluate every conformer pose against classified features without descriptor Top-K or Gaussian Top-N. Long batch job, not all possible orientations or torsions. Reuse completed classification as query definition."},
     {"name": "Necessary-condition funnel", "status": "rule-based adapter; workstation speedup pending", "scope": "Use an explicit selection rule across all library conformers; reject only impossible feature type/assignment/pair geometry, then refine every survivor without Top-K. Per-feature counts are conditional on that rule."},
@@ -108,6 +109,24 @@ JSON example: {"intent":"status","message":"Checking task status.","task_id":nul
 
 
 ROUTER += '''
+Use pymol for opening or controlling desktop PyMOL. Add view with operation:
+open, cartoon, sticks, surface, hide_surface, polar_contacts, contacts, hide_contacts,
+zoom, color, label_residues, hide_labels, show, hide, snapshot, save_session, status, align.
+Also rotate (axis x/y/z, angle in degrees), background (color), transparency (opacity 0..1).
+For open, collection is diverse (default proposed references) or all_admitted (all prepared
+same-pocket consensus complexes); do not claim an unaligned diversity collection is admitted.
+Optional view fields: objects (catalog IDs such as v001), target (all/protein/ligand/pocket/water),
+color (cyan/green/yellow/orange/magenta/white/gray/red/blue/marine/salmon), cutoff (1..8 angstroms),
+chain (exact chain ID), residue (author residue ID), reference (catalog ID for align).
+Use task_id for open; omit it for control of the currently open session catalog.
+Never invent object IDs, residue IDs, ligand atom names or arbitrary PyMOL/Python commands.
+Use confidence to explain recorded AF3 ipTM/pTM/PAE metrics; no extra fields.
+Use interactions with review {} or query_id, residue, contact_class, limit (1..500)
+to inspect the consensus atom ledger. Distinguish proximity hypotheses from confirmed
+hydrogen bonds. For AF3/PDB polar visualization use pymol polar_contacts.
+These intents have empty request and do not launch prediction or screening.
+Copy SMILES verbatim in run requests. Do not replace them with generated chemistry.
+
 Use budget when the user requests a budgeted library search and molecule delivery from a
 completed consensus recommendation or design. Include budget {}, or explicit integer
 retrieval_molecules and export_molecules. Defaults are 1000000 retrieved unique molecules
@@ -115,6 +134,9 @@ and 100000 exported unique molecules. Contact ranks precede shape tie-breaks and
 The user may additionally specify chunk_conformers (conformers per work chunk,
 not molecules). Preserve explicit values such as 4048; otherwise use the trusted runtime.
 It may also specify workers, for example 20 CPU worker processes; otherwise use the trusted runtime.
+Only when explicitly requested, budget may include seed_search with backend reference/batched,
+max_pair_seeds, survivor_target and seed_batch. Batched 512 is experimental; validate with
+the seed_budget_audit before a new production run. Do not silently reduce seed budgets.
 Use budget_page to deliver the next molecules from an existing consensus_budget or budget_page
 task without rescoring; include budget {} or export_molecules and optional start_rank.
 Both intents have empty request. They include MOL2/name export in the authorized task.
@@ -146,6 +168,19 @@ All these intents use an empty request. On consensus_funnel use select to choose
 
 
 def validate_route(value):
+    if isinstance(value,dict) and value.get('intent') in {'pymol','confidence','interactions'}:
+        intent=value['intent'];extra={'pymol':{'view'},'confidence':set(),'interactions':{'review'}}[intent]
+        if set(value)!={'intent','message','task_id','request'}|extra:raise ValueError('Invalid review routing fields')
+        validate_route(dict(intent='status',message=value['message'],task_id=value['task_id'],request=value['request']))
+        if intent=='pymol':
+            from .pymol_bridge import validate_view
+            validate_view(value['view'])
+        if intent=='interactions':
+            review=value['review']
+            if not isinstance(review,dict) or set(review)-{'query_id','residue','contact_class','limit'}:raise ValueError('Invalid review filter')
+            if type(review.get('limit',50)) is not int or not 1<=review.get('limit',50)<=500:raise ValueError('Review limit must be 1..500')
+            if any(not isinstance(v,str) or len(v)>200 for k,v in review.items() if k!='limit'):raise ValueError('Invalid review identifier')
+        return value
     if isinstance(value,dict) and value.get('intent') in {'budget','budget_page'}:
         from .budget_workflow import validate_budget
         if set(value)!={'intent','message','task_id','request','budget'}:raise ValueError('Budget routing requires a budget object')
@@ -179,6 +214,7 @@ def validate_route(value):
 
 
 def read_json(path):
+    if path is None:return None
     try: return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError): return None
 
@@ -442,8 +478,46 @@ class ChatAgent:
             tasks.append(dict(id=job["id"], status=job["status"], provider=job["provider"], request=job["request"],
                               plan=job["plan"], report=job["report"], log=job["log"], error=job["error"],
                               details=report, progress=tail))
-        return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,
+        from .pymol_bridge import bridge_status
+        viewer=bridge_status(self.root/'viewers'/sid) if sid else {}
+        return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,
                     compute_enabled=self.allow_compute)
+
+    def review_action(self,sid,decision):
+        from . import structure_review as review
+        from .pymol_bridge import submit, bridge_status, write_json
+        from .prompt_workflow import project_root
+        ctx=self.context;project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
+        intent=decision['intent'];root=self.root/'viewers'/sid
+        if intent=='pymol' and decision['view']['operation']=='status':
+            result=bridge_status(root)
+            result['catalog']=read_json(root/'catalog.json') or {}
+            return json.dumps(result,indent=2)
+        if intent=='pymol' and decision['view']['operation']!='open':
+            saved=read_json(root/'catalog.json')
+            if not saved:raise ValueError('Open a completed task in PyMOL first')
+            self.task(sid,saved['task_id'])
+            if decision['task_id'] and decision['task_id']!=saved['task_id']:raise ValueError('Open the requested task before controlling it')
+            catalog=saved['structures']
+        else:
+            if decision['task_id']:job=self.task(sid,decision['task_id'])
+            else:
+                expected={'confidence':{'af3_run'},'interactions':{'structure_consensus','consensus_design','consensus_recommend'},
+                          'pymol':{'af3_run','pdb_fetch','structure_diversity','structure_consensus','consensus_design','consensus_recommend'}}[intent]
+                candidates=[j for j in self.jobs(sid) if j['status']=='complete' and any(
+                    s.get('action') in expected and s.get('status')=='complete'
+                    for s in (read_json(j.get('report')) or {}).get('steps',{}).values())]
+                if not candidates:raise ValueError('No completed compatible structure task in this conversation')
+                job=candidates[-1]
+            if intent=='confidence':return json.dumps(review.confidence(job,project),indent=2)
+            if intent=='interactions':return json.dumps(review.contacts(job,project,**decision['review']),indent=2)
+            catalog=review.structures(job,project,decision['view'].get('collection','diverse'))
+            root.mkdir(parents=True,exist_ok=True)
+            write_json(root/'catalog.json',dict(task_id=job['id'],structures=catalog))
+        cfg=read_json(self.runtime) if self.runtime else {}
+        result=submit(root,decision['view'],catalog,(cfg or {}).get('pymol',{}).get('executable'))
+        result['catalog']=[{k:r[k] for k in ('id','label','kind')} for r in catalog]
+        return json.dumps(result,indent=2)
 
     def ask(self, sid, text, provider):
         self.session(sid)
@@ -456,10 +530,17 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {"/budget", "/budget_page", "/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking", "/recommend", "/adopt", "/guided"}:
+            if command=='/view':
+                from .prompt_plan import strict_json
+                decision=dict(intent='pymol',message='',request='',task_id=None,view=strict_json(text.strip()[5:].strip()))
+                validate_route(decision)
+            elif command in {"/pymol", "/pymol_status", "/confidence", "/interactions", "/budget", "/budget_page", "/status", "/results", "/capabilities", "/resume", "/cancel", "/evidence", "/classify", "/full_count", "/funnel", "/benchmark", "/coarse", "/export", "/prepare_docking", "/run_docking", "/recommend", "/adopt", "/guided"}:
                 if len(parts) > 2: raise ValueError("Use /command followed by an optional task ID")
                 decision = dict(intent=command[1:], message="", task_id=parts[1] if len(parts)==2 else None, request="")
                 if command in {'/budget','/budget_page'}:decision['budget']={}
+                if command in {'/pymol','/pymol_status'}:
+                    decision.update(intent='pymol',view=dict(operation='open' if command=='/pymol' else 'status'))
+                if command=='/interactions':decision['review']={}
             else:
                 profile = select_llm_profile(provider, config_dir=self.config_dir)
                 snapshot = self.snapshot(sid)
@@ -476,6 +557,8 @@ class ChatAgent:
                         q['anchors']=[{k:a[k] for k in ('anchor_id','feature_class')} for a in q['anchors'][:64]]
                         q['context_note']='At most 64 anchor IDs per query shown; ask for exact IDs from the full table if missing.'
                 context["latest_message"] = text
+                catalog=read_json(self.root/'viewers'/sid/'catalog.json')
+                if catalog:context['viewer_catalog']=[{k:r[k] for k in ('id','label','kind')} for r in catalog['structures']]
                 prompt = json.dumps(context, ensure_ascii=False)
                 if len(prompt) > 20000: context["conversation"] = context["conversation"][-4:]; prompt = json.dumps(context, ensure_ascii=False)
                 while len(prompt) > 19000 and context["tasks"]:
@@ -485,6 +568,10 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
+            if intent in {'pymol','confidence','interactions'}:
+                answer=self.review_action(sid,decision)
+                self.message(sid,'assistant',answer)
+                return answer
             if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus'}:
                 expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
                           'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'},
@@ -558,9 +645,14 @@ class ChatAgent:
             elif intent == "run":
                 jid = uuid.uuid4().hex[:16]
                 log = str(self.root / (jid + ".log"))
+                # Preserve literal chemistry alongside the router's contextual rewrite.
+                request = decision['request']
+                if 'smiles' in (request+' '+text).lower():
+                    literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user')
+                    request += '\nOriginal user request (preserve literal SMILES):\n' + literal
                 with self.connect() as db:
                     db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,log,created) VALUES(?,?,?,?,?,?,?,?)",
-                               (jid,sid,decision["request"],provider,str(profile),"queued",log,time.time()))
+                               (jid,sid,request,provider,str(profile),"queued",log,time.time()))
                 answer = f"Task {jid} queued. I will show its plan, progress and result paths here."
             elif intent in {"status", "results", "resume", "cancel"}:
                 job = self.task(sid, decision["task_id"])
@@ -586,11 +678,11 @@ class ChatAgent:
                         if step.get("error"): lines.append(step["error"])
                         if intent == "results":
                             for key, value in step.get("result", {}).items():
-                                if key in {"model", "report", "source_url", "status", "accession", "pose_quality", "biological_quality"}:
+                                if key in {"model", "report", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
                                     lines.append(f"{key}: {value}")
                             result = step.get("result", {})
                             confidence = result.get("confidence", {})
-                            for key in ("ptm", "ranking_score", "fraction_disordered"):
+                            for key in ("iptm", "ptm", "ranking_score", "fraction_disordered", "has_clash", "chain_pair_iptm", "chain_ids"):
                                 if key in confidence: lines.append(f"{key}: {confidence[key]}")
                             nested = result.get("report")
                             if nested and job["plan"]:

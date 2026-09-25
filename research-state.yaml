@@ -1,7 +1,23 @@
 project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E064-seed-budget
+current_experiment: E066-chat-structure-review
+chat_structure_review:
+  status: implemented_local_validation_workstation_pending
+  full_regression: 515_passed_4_skipped
+  guide: to_human/E066_CHAT_STRUCTURE_REVIEW.md
+  acceptance_checklist: to_human/E066_WORKSTATION_CHECKLIST.md
+  planned_workstation_test_date: '2026-09-25'
+  workstation_acceptance_status: not_run
+  smiles: literal_user_input_strict_rdkit_no_silent_enumeration
+  pymol: local_file_queue_allowlisted_operations
+  af3_inference_on_workstation: not_run_this_turn
+  live_provider_and_gui_acceptance: pending
+  experimental_seed_backend: explicit_chat_opt_in
+macrocycle_blocks:
+  status: design_only_production_clustering_deferred
+  design: to_human/MACROCYCLE_BLOCK_DESIGN.md
+  offline_replay: implemented_not_live_block_assignment
 seed_budget_audit:
   status: implemented_local_validation_workstation_pending
   full_regression: 499_passed_2_skipped

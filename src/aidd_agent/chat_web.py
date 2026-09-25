@@ -25,7 +25,7 @@ def make_server(agent, port=8765, token=None):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers(); self.wfile.write(data)
         def authorized(self):
             return hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer "+secret)
@@ -36,6 +36,21 @@ def make_server(agent, port=8765, token=None):
                 name, mime = assets[path.path]
                 self.send(200,(Path(__file__).parent / "web" / name).read_bytes(),mime); return
             if not self.authorized(): self.send(401,{"error":"Open the local access link printed by the server."}); return
+            if path.path=='/api/viewer/artifact':
+                try:
+                    from .project_context import ensure_within
+                    import re
+                    query=parse_qs(path.query);sid=query['session'][0];agent.session(sid)
+                    identifier=query['id'][0];key=query['artifact'][0]
+                    if not re.fullmatch(r'\d+-[a-f0-9]{12}',identifier):raise ValueError('Invalid viewer operation ID')
+                    root=agent.root/'viewers'/sid
+                    receipt=json.loads((root/(identifier+'.result.json')).read_text(encoding='utf-8'))
+                    file=ensure_within(Path(receipt['artifacts'][key]),root)
+                    mime={'.png':'image/png','.pse':'application/octet-stream','.json':'application/json','.csv':'text/csv'}[file.suffix]
+                    if mime=='application/json':self.send(200,json.loads(file.read_text(encoding='utf-8')))
+                    else:self.send(200,file.read_bytes(),mime)
+                except (ValueError,KeyError,OSError):self.send(400,{'error':'Viewer artifact unavailable'})
+                return
             if path.path != "/api/state": self.send(404,{"error":"Not found"}); return
             try: self.send(200,agent.snapshot(parse_qs(path.query).get("session",[None])[0]))
             except ValueError as exc: self.send(400,{"error":str(exc)})

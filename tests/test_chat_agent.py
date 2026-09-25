@@ -139,6 +139,19 @@ def test_http_token_origin_and_assets(tmp_path):
         with urlopen(Request(base+'/api/state?session='+sid,headers={'Authorization':'Bearer fixture-token'})) as r:
             state=json.load(r)
             assert len(state['messages'])==2 and not state['tasks']
+        viewer=app.root/'viewers'/sid;viewer.mkdir(parents=True)
+        identifier='123-abcdefabcdef';artifact=viewer/'contacts.csv'
+        artifact.write_text('distance\n3.2\n')
+        receipt=viewer/(identifier+'.result.json')
+        receipt.write_text(json.dumps(dict(artifacts=dict(contacts_csv=str(artifact)))))
+        endpoint=base+'/api/viewer/artifact?session='+sid+'&id='+identifier+'&artifact=contacts_csv'
+        with pytest.raises(HTTPError) as err:urlopen(endpoint)
+        assert err.value.code==401
+        with urlopen(Request(endpoint,headers={'Authorization':'Bearer fixture-token'})) as r:
+            assert b'3.2' in r.read()
+        receipt.write_text(json.dumps({'artifacts': {'contacts_csv': str(tmp_path/'outside.csv')}}))
+        with pytest.raises(HTTPError) as err:urlopen(Request(endpoint,headers={'Authorization':'Bearer fixture-token'}))
+        assert err.value.code==400
     finally:
         server.shutdown();server.server_close();app.close()
 

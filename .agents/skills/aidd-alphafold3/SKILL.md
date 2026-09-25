@@ -13,7 +13,10 @@ unreviewed shell commands.
 Use a preceding verified `protein_fetch` or `protein_resolve` result. Accept an
 explicit full sequence or user-specified construct interval; the LLM must not
 generate the sequence. The current prompt adapter supports one protein chain and
-optional RCSB-validated CCD ligands. Basic AF3 dialect-v1 JSON preserves configured
+optional RCSB-validated CCD ligands or user-supplied SMILES ligands. SMILES must be
+copied literally and pass strict RDKit parsing; preserve stereochemistry and charge.
+Do not infer missing stereochemistry or enumerate protonation states silently.
+Basic AF3 dialect-v1 JSON preserves configured
 seeds and construct provenance. Installed AF3 handles MSA/templates.
 
 DNA/RNA, multiple protein chains, custom CCD/covalent bonds and automatic domain
@@ -40,3 +43,7 @@ Import the final model, structure hash, input provenance and confidence using
 reason to pick an arbitrary file. Report model version as recorded, or explicitly
 unspecified. AF3 confidence is not binding affinity, docking quality or biological
 acceptance. Resume only matching plans/configuration/code and valid output receipts.
+
+Chat confidence explanations and desktop PyMOL controls are documented in
+[the structure review guide](../../../to_human/E066_CHAT_STRUCTURE_REVIEW.md).
+Local adapter tests do not establish successful AF3 inference or desktop GUI operation.

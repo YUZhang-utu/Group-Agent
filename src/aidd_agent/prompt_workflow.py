@@ -71,6 +71,11 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
         plan, model = chat_plan(prompt, strict_json(Path(llm_profile).read_text(encoding="utf-8")))
         if any("source_run" in s["params"] for s in plan["steps"]):
             raise ValueError("Use separate chat evidence/selection/export actions for prior tasks")
+    chemistry_prompt = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
+    for step in plan['steps']:
+        for smiles in step['params'].get('ligand_smiles', []):
+            if smiles not in chemistry_prompt:
+                raise ValueError('Ligand SMILES must be copied exactly from the user request')
     with connect(db) as connection:
         request_id = create_ai_review_request(connection, user, project, task_type="workflow_planning",
             subject_type="project", subject_id=project, prompt_version="e038-v1", prompt_text=prompt,
@@ -113,7 +118,9 @@ def load_runtime(path):
     if path is None: return {}, []
     path = Path(path).resolve()
     cfg = strict_json(path.read_text(encoding="utf-8"))
-    if not isinstance(cfg, dict) or set(cfg) - {"af3_profile", "search"}: raise ValueError("Unknown runtime settings")
+    if not isinstance(cfg, dict) or set(cfg) - {"af3_profile", "search", "pymol"}: raise ValueError("Unknown runtime settings")
+    if 'pymol' in cfg and (not isinstance(cfg['pymol'],dict) or set(cfg['pymol'])!={'executable'} or not isinstance(cfg['pymol']['executable'],str) or not cfg['pymol']['executable']):
+        raise ValueError('pymol requires the trusted installed executable')
     inputs = [path]
     if cfg.get("af3_profile"):
         p = Path(cfg["af3_profile"])
@@ -230,12 +237,21 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
             if component.get("chem_comp", {}).get("id") != code: raise ValueError("CCD identity mismatch")
             _atomic_json(directory / f"ccd-{index}.json", component)
             payload["sequences"].append({"ligand": {"id": chr(66+index), "ccdCodes": [code]}})
+        from .af3_analysis import ligand_evidence
+        chemistry = []
+        for smiles in params.get('ligand_smiles', []):
+            evidence_row = ligand_evidence(smiles)
+            chain = chr(65 + len(payload['sequences']))
+            payload['sequences'].append({'ligand': {'id': chain, 'smiles': smiles}})
+            chemistry.append(dict(chain_id=chain, **evidence_row))
+        if chemistry:
+            _atomic_json(directory / 'ligand-chemistry.json', chemistry)
         _atomic_json(path, payload)
         evidence = dict(accession=protein["accession"], source_url=protein["source_url"],
                         evidence_mode=services.mode,
                         full_sequence_sha256=protein["sequence_sha256"], start=start, end=end,
                         construct_sequence_sha256=hashlib.sha256(sequence[start-1:end].encode()).hexdigest(),
-                        input_sha256=ev.sha(path), status="prepared_not_predicted")
+                        input_sha256=ev.sha(path), ligand_chemistry=chemistry, status="prepared_not_predicted")
         _atomic_json(directory / "input-provenance.json", evidence)
         return evidence
     if action in {"af3_run", "search_3d"} and not allow_compute:
@@ -264,8 +280,12 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
                     model_version=str(profile.get("version", "local_unspecified")),
                     chain_ids=[next(iter(entity.values()))["id"] for entity in payload["sequences"]], input_path=input_path)
         _atomic_json(directory / "prediction-manifest.json", manifest)
+        from .af3_analysis import explain_confidence
+        analysis = explain_confidence(manifest['confidence'], manifest['chain_ids'])
+        _atomic_json(directory / 'confidence-analysis.json', analysis)
         return dict(status="prediction_completed", model=manifest["structure_path"],
                     structure_sha256=manifest["structure_sha256"], confidence=manifest["confidence"],
+                    confidence_analysis=str(directory / 'confidence-analysis.json'),
                     pose_quality="not_independently_validated")
     if action == "search_3d":
         search = cfg.get("search")

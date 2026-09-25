@@ -50,6 +50,11 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+Use [E066](../../../to_human/E066_CHAT_STRUCTURE_REVIEW.md) for literal SMILES AF3
+inputs, recorded confidence explanations, owned structure/contact inspection and
+allowlisted desktop PyMOL controls. A queued viewer operation is not successful
+execution. PyMOL GUI and live AF3 compatibility require workstation acceptance.
+
 For explicitly requested budget searches and molecule handoff, use the coordinator
 `budget` and `budget_page` intents described in [E060](../../../to_human/E060_CHAT_BUDGET.md).
 The user's combined search/export request authorizes both stages. Use contact-first

@@ -40,7 +40,7 @@ def inspect_alphafold3_output(
         raise ValueError(
             f"Expected one final AlphaFold 3 model in {root}, found {len(final_models)}")
     structure = final_models[0]
-    ranking_files = sorted(root.rglob("*_ranking_scores.csv"))
+    ranking_files = sorted(set(root.rglob("*_ranking_scores.csv")) | set(root.rglob('ranking_scores.csv')))
     ranking_score = None
     ranking_path = ranking_files[0] if len(ranking_files) == 1 else None
     if ranking_path:
@@ -52,6 +52,11 @@ def inspect_alphafold3_output(
         path for path in root.rglob("*_summary_confidences.json")
         if "seed-" not in path.name and not any(
             part.startswith("seed-") for part in path.relative_to(root).parts))
+    if len(summary_files)>1:
+        raise ValueError('Ambiguous final AF3 summary confidence files')
+    expected_summary=structure.with_name(structure.name.removesuffix('_model.cif')+'_summary_confidences.json')
+    if summary_files and summary_files[0]!=expected_summary:
+        raise ValueError('AF3 final model and confidence prefix mismatch')
     confidence: dict[str, Any] = {}
     summary_path = summary_files[0] if len(summary_files) == 1 else None
     if summary_path:

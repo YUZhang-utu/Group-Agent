@@ -582,3 +582,13 @@ Local batching retains exact tested payloads and improves synthetic kernel time,
 but neither ranking convergence nor workstation gains have been established.
 Block-tail statistics require matched sample/search budgets; maxima alone cannot
 justify dropping unsampled blocks.
+
+## E066: separate structure review from scientific execution
+
+Chat can now prepare literal SMILES AF3 entities and review actual confidence
+fields, while a file-queued desktop PyMOL bridge opens owned structures with saved
+consensus transforms. Contact tables distinguish geometric proximity from validated
+interactions. Viewer requests and completed receipts are separate states. Local
+adapter checks cannot establish real workstation GUI/inference compatibility.
+Macrocycle block construction remains deferred; the capacity/incremental assignment
+design is recorded without introducing new production rejection rules.

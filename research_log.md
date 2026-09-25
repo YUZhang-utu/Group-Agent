@@ -1751,3 +1751,50 @@ benchmark: 12 panels, alternating order, five repeats, exact payloads throughout
 median per-panel speedup 1.8646. This is exploratory local kernel timing, not a
 workstation or end-to-end speedup. Artifact: data/e064/seed-kernel.json. Added final
 upstream-hash revalidation and its focused regression after the full suite.
+
+## 2026-09-24: E066 Chat structure review implementation
+
+Prioritized Chat/PyMOL, SMILES AF3 inputs and result interpretation before production
+macrocycle clustering, as requested. Read the AF3 and prompt-workflow skills and
+checked the official AF3 input/output specification and PyMOL querying source.
+No installed PyMOL-specific skill was found. Added a local structured file bridge,
+recorded alignment/provenance checks, contact exports, confidence explanations,
+strict literal SMILES preparation and explicit Chat seed-backend settings.
+
+RDKit 2026.3.6 was installed in D:/agent/tmp/aidd-review-deps for local tests only;
+the workstation environment was not changed. Existing active jobs and remote
+scientific output were not modified. Real AF3 inference, live provider routing
+and PyMOL GUI acceptance remain pending. E066 guide contains English prompts,
+deterministic fallback commands and a workstation acceptance sequence.
+
+Recorded macrocycle descriptor/capacity/incremental-insertion design; production
+clustering is deferred. Earlier E065 utilities remain offline retrospective replay,
+not a live scheduler. Do not infer library recall or biological enrichment from
+these implementation changes.
+
+E066 confirmatory local result: 515 passed, 4 skipped in the full regression.
+English-content guard and node --check passed. No real GUI, live provider or AF3
+inference was executed. Prepared a portable patch against 34457db for a separate
+workstation checkout; remote deployment remains pending.
+
+## 2026-09-24: next-day acceptance and remaining-work register
+
+Recorded the 2026-09-25 workstation checklist in
+ to_human/E066_WORKSTATION_CHECKLIST.md, with direct bridge checks before live
+English routing, actual contact/PNG/PSE inspection, known-fixture SMILES AF3 input
+comparison and inference, confidence/output matching, and separate E064 seed audit.
+All workstation acceptance entries remain NOT RUN. The register separates locally
+implemented features from unimplemented browser 3D, arbitrary PyMOL control,
+validated interaction profiling, confidence plots, expanded AF3 entity support,
+new retrieval validation, historical chemistry repairs and live macrocycle blocks.
+No new scientific run or workstation deployment was performed. Documentation/state
+only; the portable patch is refreshed to include this checklist.
+
+## 2026-09-25: prepare Git handoff for workstation acceptance
+
+User reports the previous full-library search has completed and requests pulling
+new code before testing. Verified remote feature/structure-guided-chat was still
+34457db. Preparing the locally validated E066 implementation for that branch.
+Prefer Git update over the earlier offline patch; never apply both. Preserve the
+existing Chat storage root to retain conversations and completed tasks. Workstation
+GUI, live routing, AF3 execution and speed acceptance remain not run here.

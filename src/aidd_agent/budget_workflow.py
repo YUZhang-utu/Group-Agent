@@ -10,9 +10,13 @@ from .screening_selection import check_hashes
 
 
 def validate_budget(value, page=False):
-    allowed={'export_molecules','start_rank'} if page else {'retrieval_molecules','export_molecules','chunk_conformers','workers'}
+    allowed={'export_molecules','start_rank'} if page else {'retrieval_molecules','export_molecules','chunk_conformers','workers','seed_search'}
     if not isinstance(value,dict) or set(value)-allowed:raise ValueError('Unknown budget fields')
-    if any(type(v) is not int or not 1<=v<=1000000000 for v in value.values()):raise ValueError('Budgets must be positive integer molecule counts')
+    if any(type(v) is not int or not 1<=v<=1000000000 for k,v in value.items() if k!='seed_search'):raise ValueError('Budgets must be positive integer molecule counts')
+    if 'seed_search' in value:
+        from .seed_search import policy
+        if not isinstance(value['seed_search'],dict):raise ValueError('seed_search must be an object')
+        policy(value['seed_search'])
     if not page and value.get('export_molecules',100000)>value.get('retrieval_molecules',1000000):
         raise ValueError('Export budget exceeds retrieval molecule budget')
     return value
@@ -69,7 +73,8 @@ def execute(action,source,output,params,cfg,allow_compute):
         os.environ.setdefault('AIDD_ASSIGNMENT_BACKEND','numba')
         args=SimpleNamespace(batch=batch,recommendation=prepared,definitions=definitions,output=run,
             retrieval_molecules=settings.get('retrieval_molecules',1000000),workers=settings.get('workers',search.get('workers',24)),
-            chunk_conformers=settings.get('chunk_conformers',search.get('refine_chunk',64)),nprobe=128,template_quota=count,rrf_k=60,retrieve_only=False)
+            chunk_conformers=settings.get('chunk_conformers',search.get('refine_chunk',64)),nprobe=128,template_quota=count,rrf_k=60,retrieve_only=False,
+            seed_search=settings.get('seed_search'))
         screen(args)
     result=export(batch,run,output/f'page-{start:09d}',start,count)
     ranked=ev.read(run/'report.json')
