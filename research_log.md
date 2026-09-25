@@ -1850,3 +1850,29 @@ submission. Confirmatory focused regression: 39 passed, including digit-leading
 ligand identifiers, 120-call programs, rejected unsafe methods and invalid-source
 repair without dispatch. English guard and diff check passed. Real workstation
 retry remains pending; this fix does not establish live rendering success.
+
+## 2026-09-25: E069 reduce misleading interaction-line clutter
+
+User requested chemically differentiated colors and fewer justified interactions,
+not all distance neighbors. Protocol: conservative typed geometry on live state-1
+coordinates, separate complexes, explicit charge/aromatic evidence, fixed colors,
+residue-pair display representatives, hydrophobic opt-in, export accepted evidence,
+and retain an undo checkpoint. Replace the previous all-proximity overview.
+
+Implemented polar donor-to-acceptor candidates, explicit-charge salt and cation-pi,
+aromatic ring distance/normal/offset checks, directed halogen candidates and nonpolar
+carbon contacts. Missing chemistry yields no assignment; water/metal chemistry and
+validated hydrogen bonds remain unsupported. Broad AI distance displays are disabled
+when entering typed display. The LLM uses the trusted adapter rather than inventing
+interaction classifications. Primary PLIP sources were consulted for method context;
+this implementation is explicitly not PLIP-equivalent and uses its own documented
+conservative thresholds. No thresholds or library screening results were changed.
+
+Confirmatory focused fixtures: 47 passed. Tests include rejected side-by-side rings,
+wrong halogen direction, absent charges, residue-pair deduplication, enabled-complex
+scope and no generic-distance fallback when a requested type has no hits. Real
+provider/PyMOL acceptance remains pending. See E069 for prompts and limitations.
+
+Full confirmatory regression after integration: 547 passed, 4 skipped (59.05 s).
+English-content guard and diff whitespace checks passed. No production scientific
+job was rerun and no real GUI interaction classification was claimed as validated.

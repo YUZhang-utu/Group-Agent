@@ -10,6 +10,13 @@ skill_driven_pymol:
   interface: natural_language_or_pymol_agent_command
   execution: bounded_literal_api_interpreter_no_eval_exec
   image_review: user_only_not_llm_vision
+  typed_interactions:
+    status: implemented_synthetic_tests_passed_workstation_pending
+    guide: to_human/E069_TYPED_PYMOL_INTERACTIONS.md
+    default: polar_salt_pi_cation_pi_halogen_candidates
+    hydrophobic: opt_in_residue_pair_representatives
+    water_and_metal: not_implemented
+    full_regression: 547_passed_4_skipped
 chat_structure_review:
   status: implemented_local_validation_workstation_pending
   full_regression: 515_passed_4_skipped

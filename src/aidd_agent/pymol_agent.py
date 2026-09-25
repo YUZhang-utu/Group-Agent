@@ -37,6 +37,18 @@ bonds or all interactions. Hydrophobic, pi, salt-bridge and water-mediated class
 requires separate scientific analysis. Do not invent these from distance lines alone.
 PNG and PSE are saved automatically; session checkpoint and one-step undo are provided.
 The model sees metadata and API receipts, not the rendered image. Do not claim visual review.
+For interaction display ALWAYS use the trusted typed_interactions method instead of
+generating distance calls. It detects and deduplicates conservative typed hypotheses,
+colors them, and replaces old contact lines. Arguments types and objects are optional
+space-separated strings. Types: polar_contact salt_bridge pi_stacking cation_pi
+halogen_bond hydrophobic. Default excludes hydrophobic and processes enabled complexes
+only. Explicit objects can select loaded complexes. Example call:
+{"method":"typed_interactions","arguments":{"types":"polar_contact pi_stacking"}}.
+It is a host adapter, not a native PyMOL API method. Never substitute all-pairs distances
+when a type has zero results. Missing charges/aromaticity can prevent assignments.
+Water bridges and metal coordination are not evaluated. Hydrophobic is opt-in.
+Use typed_interactions as the LAST call after any representation/styling requests;
+do not create distance objects after it. Its fixed per-type colors replace generic lines.
 If a prior program failed and rollback succeeded, replace it with a complete corrected program.
 For invalid_plan, nothing executed: inspect previous_attempt.plan and its error,
 then return a complete corrected calls array, not just the repaired line.

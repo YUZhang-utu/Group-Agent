@@ -14,7 +14,7 @@ import uuid
 OPERATIONS = {'open','cartoon','sticks','surface','hide_surface','polar_contacts',
               'contacts','hide_contacts','zoom','color','label_residues','hide_labels',
               'show','hide','snapshot','save_session','status','align','rotate','background','transparency',
-              'chains','remove_chain','pocket_view','interaction_overview','program','scene','undo'}
+              'chains','remove_chain','pocket_view','interaction_overview','program','scene','undo','typed_interactions'}
 TARGETS = {'all','protein','ligand','pocket','water'}
 COLORS = {'cyan','green','yellow','orange','magenta','white','gray','red','blue','marine','salmon'}
 
@@ -27,7 +27,7 @@ def write_json(path, value):
 
 
 def validate_view(value):
-    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity','scheme','radius','code'}:
+    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity','scheme','radius','code','types'}:
         raise ValueError('Unsupported viewer fields')
     if value.get('operation') not in OPERATIONS:
         raise ValueError('Unsupported PyMOL operation')
@@ -36,6 +36,10 @@ def validate_view(value):
         if set(value)!={'operation','code'}:raise ValueError('Program requires operation and code only')
         compile_program(value['code'])
     elif 'code' in value:raise ValueError('Code requires program operation')
+    if 'types' in value:
+        from .pymol_interactions import COLORS as INTERACTION_COLORS
+        if value['operation'] not in {'typed_interactions','interaction_overview'} or not isinstance(value['types'],list) or any(not isinstance(k,str) or k not in INTERACTION_COLORS for k in value['types']):raise ValueError('Unsupported interaction types')
+    if value['operation'] in {'typed_interactions','interaction_overview'} and set(value)-{'operation','objects','types'}:raise ValueError('Typed interactions support objects and types only')
     if value.get('target','all') not in TARGETS:
         raise ValueError('Unsupported viewer target')
     if value.get('scheme','solid') not in {'solid','element','chain','rainbow'}:
@@ -102,6 +106,9 @@ def execute_command(cmd, message, catalog, root):
     if op in {'program','scene','undo'}:
         from .pymol_program import run_program
         return run_program(cmd,message,catalog,root)
+    if op in {'typed_interactions','interaction_overview'}:
+        from .pymol_interactions import display
+        return display(cmd,message,catalog,root)
     rows = {r['id']:r for r in catalog}
     ids = view.get('objects') or list(rows)
     if set(ids)-rows.keys(): raise ValueError('Unknown viewer object')
@@ -133,18 +140,6 @@ def execute_command(cmd, message, catalog, root):
         output['loaded_objects']=cmd.get_names('objects'); return output
     loaded = set(cmd.get_names('objects'))
     if set(ids)-loaded: raise ValueError('Open the selected structures before controlling them')
-    if op=='interaction_overview':
-        results={}
-        for name,operation in [('pocket','pocket_view'),('nearby','contacts'),('polar','polar_contacts')]:
-            child=dict(view,operation=operation)
-            child.pop('cutoff',None)
-            result=execute_command(cmd,dict(id=message['id']+'-'+name,view=child),catalog,root)
-            results[name]=result
-            output['artifacts'].update({name+'_'+k:v for k,v in result['artifacts'].items()})
-        output['results']=results
-        output['scope']='Pocket residues (default 5 A), heavy-atom proximity (4.5 A), polar candidates (3.6 A). Categories overlap; do not sum counts.'
-        output['not_evaluated']=['validated hydrogen bonds','salt bridges','pi stacking','cation-pi','halogen bonds','water bridges','metal coordination','interaction energies']
-        return output
     if op=='chains':
         output['chains']={}
         for obj in ids:

@@ -7,6 +7,7 @@ import re
 
 # Values are positional API parameter names, with required argument counts.
 METHODS = {
+    'typed_interactions': (['types','objects'],0),
     'show': (['representation','selection'],1),
     'hide': (['representation','selection'],1),
     'color': (['color','selection'],1),
@@ -77,7 +78,12 @@ def compile_program(code):
         except (ValueError,TypeError):raise ValueError('Arguments must be declared literal values') from None
         if any(field not in values for field in fields[:required]):raise ValueError('Missing argument for '+method)
         for key,value in values.items():
-            if key in SELECTION_FIELDS:selection_text(value)
+            if method=='typed_interactions':
+                from .pymol_interactions import COLORS
+                if not isinstance(value,str):raise ValueError('Interaction types and object IDs must be space-separated strings')
+                if key=='types' and any(t not in COLORS for t in value.split()):raise ValueError('Unsupported interaction type')
+                if key=='objects' and any(not re.fullmatch(r'v\d{3}',t) for t in value.split()):raise ValueError('Invalid object ID')
+            elif key in SELECTION_FIELDS:selection_text(value)
             elif key=='rgb':
                 if not isinstance(value,(list,tuple)) or len(value)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or not 0<=v<=1 for v in value):raise ValueError('RGB requires three numbers in [0,1]')
             elif key=='expression':
@@ -147,6 +153,13 @@ def run_program(cmd,message,catalog,root):
     output=dict(status='complete',operation='program',calls=[],artifacts=dict(code=str(codepath),checkpoint=str(checkpoint)))
     try:
         for method,raw in calls:
+            if method=='typed_interactions':
+                from .pymol_interactions import display
+                child=dict(operation=method,**{k:v.split() for k,v in raw.items()})
+                result=display(cmd,dict(id=message['id']+'-typed-'+str(len(output['calls'])),view=child),catalog,root,checkpoint=False)
+                output['artifacts'].update(result['artifacts'])
+                output['calls'].append(dict(method=method,result=result))
+                continue
             values=dict(raw)
             if 'selection' in METHODS[method][0]:values.setdefault('selection','all')
             for field in SELECTION_FIELDS.intersection(values):
