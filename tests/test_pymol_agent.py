@@ -91,6 +91,48 @@ def test_agent_route():
     with pytest.raises(ValueError):validate_route(dict(intent='pymol_agent',message='',task_id=None,request=''))
 
 
+def test_pocket_plan_executes_and_exports_residues(tmp_path):
+    class PocketCmd(Cmd):
+        def __getattr__(self,name):
+            return lambda *args,**kwargs:self.calls.append((name,args,kwargs))
+        def color(self,*args,**kwargs):self.calls.append(('color',args,kwargs))
+    cmd=PocketCmd();submitted=[]
+    catalog=[dict(CATALOG[0],ligand=dict(chain='A',resi='201',resn='HTZ'))]
+    def dispatch(root,view,catalog,executable):
+        submitted.append(view)
+        return run_program(cmd,dict(id='pocket-test',view=view),catalog,root)|dict(operation_id='pocket-test')
+    def planner(prompt,profile,**kwargs):
+        assert json.loads(prompt)['request']=='show residues around ligand in 5 angstrom for v001'
+        assert 'pocket_view' in kwargs['capabilities']['methods']
+        return dict(explanation='Show the ligand neighborhood.',calls=[dict(method='pocket_view',
+                    arguments=dict(objects='v001',radius=5))]),dict(source='test_planner')
+    answer=run_agent('show residues around ligand in 5 angstrom for v001',{},tmp_path,catalog,
+                     dispatch=dispatch,waiter=lambda value:value,planner=planner)
+    assert answer['status']=='complete'
+    pocket=answer['result']['calls'][0]['result']
+    assert pocket['objects']==['v001'] and pocket['residues']['v001']
+    assert Path(pocket['artifacts']['residues_json']).exists()
+    selections=[str(call) for call in cmd.calls if isinstance(call,tuple) and call[0]=='show']
+    assert any('byres' in text and 'within 5' in text and 'resn HTZ' in text for text in selections)
+    assert ('enable',('v001',),{}) in cmd.calls
+
+
+def test_pocket_adapter_validates_arguments():
+    with pytest.raises(ValueError):compile_program('cmd.pocket_view(objects="v001",radius=50)')
+    with pytest.raises(ValueError):compile_program('cmd.pocket_view(objects="all",radius=5)')
+
+
+def test_history_reaches_planner_and_final_error_is_actionable(tmp_path):
+    def dispatch(*args):return dict(operation_id='history-test',result='unused')
+    def planner(prompt,profile,**kwargs):
+        assert json.loads(prompt)['conversation']==[dict(role='user',text='Keep v001 visible')]
+        raise ValueError('Unsupported label expression: example')
+    answer=run_agent('show its pocket',{},tmp_path,CATALOG,planner=planner,dispatch=dispatch,
+        waiter=lambda queued:dict(status='complete',scene=dict(objects=CATALOG)),
+        conversation=[dict(role='user',text='Keep v001 visible')])
+    assert 'Unsupported label expression' in answer['result']['message']
+
+
 def test_structured_calls_quote_identifiers_and_large_scene():
     plan=validate_plan(dict(explanation='Style multiple complexes.',calls=[dict(method='color',
         arguments=dict(color='cyan',selection='v001 and resn 6ZT')) for _ in range(120)]))

@@ -7,6 +7,7 @@ import re
 
 # Values are positional API parameter names, with required argument counts.
 METHODS = {
+    'pocket_view': (['objects','radius'],1),
     'typed_interactions': (['types','objects'],0),
     'show': (['representation','selection'],1),
     'hide': (['representation','selection'],1),
@@ -78,7 +79,11 @@ def compile_program(code):
         except (ValueError,TypeError):raise ValueError('Arguments must be declared literal values') from None
         if any(field not in values for field in fields[:required]):raise ValueError('Missing argument for '+method)
         for key,value in values.items():
-            if method=='typed_interactions':
+            if method=='pocket_view':
+                if key=='objects':
+                    if not isinstance(value,str) or not value.split() or any(not re.fullmatch(r'v\d{3}',t) for t in value.split()):raise ValueError('Specify pocket object IDs as a space-separated string')
+                elif type(value) not in (int,float) or not math.isfinite(value) or not 1<=value<=12:raise ValueError('Pocket radius must be 1..12 angstroms')
+            elif method=='typed_interactions':
                 from .pymol_interactions import COLORS
                 if not isinstance(value,str):raise ValueError('Interaction types and object IDs must be space-separated strings')
                 if key=='types' and any(t not in COLORS for t in value.split()):raise ValueError('Unsupported interaction type')
@@ -155,6 +160,13 @@ def run_program(cmd,message,catalog,root):
     try:
         for method,raw in calls:
             stage=f'call {len(output["calls"])+1}: cmd.{method}({raw!r})'
+            if method=='pocket_view':
+                from .pymol_bridge import execute_command
+                child=dict(operation=method,objects=raw['objects'].split(),radius=raw.get('radius',5))
+                result=execute_command(cmd,dict(id=message['id']+'-pocket-'+str(len(output['calls'])),view=child),catalog,root)
+                output['artifacts'].update(result['artifacts'])
+                output['calls'].append(dict(method=method,result=result))
+                continue
             if method=='typed_interactions':
                 from .pymol_interactions import display
                 child=dict(operation=method,**{k:v.split() for k,v in raw.items()})

@@ -183,6 +183,7 @@ def execute_command(cmd, message, catalog, root):
             lig=selection(obj,row,dict(target='ligand'))
             pocket=selection(obj,row,dict(target='pocket',radius=view.get('radius',5),**{k:view[k] for k in ('chain','residue') if k in view}))
             if not cmd.count_atoms(lig):raise ValueError('No ligand atoms for '+obj)
+            cmd.enable(obj)
             cmd.hide('sticks',selection(obj,row,dict(target='protein')))
             cmd.show('cartoon',selection(obj,row,dict(target='protein')))
             cmd.show('sticks',pocket);cmd.show('sticks',lig)
@@ -291,7 +292,11 @@ def bridge_status(root):
 
 def submit(root, view, catalog, executable=None):
     validate_view(view);root=Path(root).resolve();root.mkdir(parents=True,exist_ok=True)
-    if view['operation'] in {'typed_interactions','interaction_overview','program'}:
+    needs_chemistry=view['operation'] in {'typed_interactions','interaction_overview'}
+    if view['operation']=='program':
+        from .pymol_program import compile_program
+        needs_chemistry=any(method=='typed_interactions' for method,_ in compile_program(view['code']))
+    if needs_chemistry:
         from .pymol_chemistry import component_metadata
         enriched=[]
         for row in catalog:

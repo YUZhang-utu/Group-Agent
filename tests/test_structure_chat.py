@@ -117,9 +117,11 @@ def test_catalog_ownership_and_confidence_chat(tmp_path,monkeypatch):
     assert requests[-1]['target']=='protein'
     from aidd_agent import pymol_agent
     planned=[]
-    monkeypatch.setattr(pymol_agent,'run_agent',lambda request,*args:planned.append(request) or dict(status='complete'))
+    monkeypatch.setattr(pymol_agent,'run_agent',lambda request,*args,**kwargs:planned.append(request) or dict(status='complete'))
     assert 'complete' in app.ask(sid,'/pymol_agent Show the ligand pocket with mixed colors','deepseek')
     assert planned==['Show the ligand pocket with mixed colors']
+    assert 'complete' in app.ask(sid,'pymol_agent show residues around ligand in 5 angstrom for v001','deepseek')
+    assert planned[-1]=='show residues around ligand in 5 angstrom for v001'
     with pytest.raises(ValueError,match='Open a completed task'):
         app.ask(app.new_session(),'/pymol_agent Show all ligands','deepseek')
     external=tmp_path/'outside.cif';external.write_text('fixture')

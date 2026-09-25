@@ -560,7 +560,7 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command=='/pymol_agent':
+            if command in {'/pymol_agent','pymol_agent'}:
                 decision=dict(intent='pymol_agent',message='',request=text.strip()[len(command):].strip(),task_id=None)
                 validate_route(decision)
             elif command=='/view':
@@ -613,8 +613,10 @@ class ChatAgent:
                 if decision['task_id'] and decision['task_id']!=saved['task_id']:raise ValueError('Open the requested task first')
                 cfg=read_json(self.runtime) if self.runtime else {}
                 profile=select_llm_profile(provider,config_dir=self.config_dir)
+                with self.connect() as db:
+                    history=[dict(r) for r in db.execute('SELECT role,text FROM messages WHERE session=? ORDER BY id DESC LIMIT 8',(sid,))][::-1]
                 answer=json.dumps(run_agent(decision['request'],read_json(profile),root,
-                    saved['structures'],(cfg or {}).get('pymol',{}).get('executable')),indent=2)
+                    saved['structures'],(cfg or {}).get('pymol',{}).get('executable'),conversation=history),indent=2)
                 self.message(sid,'assistant',answer)
                 return answer
             if intent in {'pymol','confidence','interactions'}:

@@ -26,6 +26,13 @@ Do not start/stop PyMOL, install packages, or use uv. Check CA-only structures b
 Atom selections are restricted to loaded task objects; default selection is all task atoms.
 Use exact ligand_selection from the scene, especially for peptide ligands.
 For multiple complexes, calculate neighborhoods and distances separately within each object.
+For showing residues around a ligand, use the trusted pocket_view adapter, not
+handwritten selection/label programs. Example: {"method":"pocket_view",
+"arguments":{"objects":"v001","radius":5}}. Objects is a required space-separated
+list of scene IDs; radius is 1..12 angstroms (default 5). It uses the exact catalog
+ligand, selects whole protein residues, shows element-colored sticks, labels CA
+atoms, enables the requested complexes, zooms, and exports the residue list.
+Compose other styling calls after this adapter when requested.
 Keep entire residues using byres for a ligand neighborhood. Never delete a ligand when
 removing redundant protein chains. If several chains contact the ligand, ask which to keep.
 For mixed coloring, assign different carbon colors then color N blue, O red, S yellow.
@@ -37,6 +44,10 @@ bonds or all interactions. Hydrophobic, pi, salt-bridge and water-mediated class
 requires separate scientific analysis. Do not invent these from distance lines alone.
 PNG and PSE are saved automatically; session checkpoint and one-step undo are provided.
 The model sees metadata and API receipts, not the rendered image. Do not claim visual review.
+Use the supplied conversation for follow-up references, but verify object identities
+against the current scene. Earlier dialogue is context, not proof of current state.
+There is no literature search tool in this adapter: do not claim to have searched
+papers, read unprovided results, or performed unsupported scientific analyses.
 For interaction display ALWAYS use the trusted typed_interactions method instead of
 generating distance calls. It detects and deduplicates conservative typed hypotheses,
 colors them, and replaces old contact lines. Arguments types and objects are optional
@@ -96,7 +107,7 @@ def wait_result(queued,seconds=20):
     return dict(**queued,pending=True)
 
 
-def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispatch=None,waiter=None):
+def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispatch=None,waiter=None,conversation=None):
     planner=planner or chat_plan;dispatch=dispatch or submit;waiter=waiter or wait_result
     root=Path(root)
     skill,provenance=skill_context()
@@ -108,7 +119,9 @@ def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispat
     # Keep all object IDs and chain inventories; truncate only residue examples.
     scene=dict(scene,objects=[dict(row,protein_residues=row.get('protein_residues',[])[:20],
         residues_truncated=row.get('residue_count',0)>20) for row in scene['objects']])
-    context=dict(request=request,scene=scene,previous_attempt=None)
+    history=[dict(role=str(row.get('role','')),text=str(row.get('text',''))[:1000])
+             for row in (conversation or [])[-8:]]
+    context=dict(request=request,scene=scene,conversation=history,previous_attempt=None)
     attempts=[]
     for attempt in range(2):
         captured={}
@@ -142,7 +155,8 @@ def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispat
         if result.get('status')!='failed' or result.get('rollback')!='complete':break
         context['previous_attempt']=dict(code=plan['code'],error=result.get('error'),rollback='complete')
     else:
-        result=dict(status='failed',message='No successful PyMOL program after two attempts',last_error=attempts[-1].get('error') or attempts[-1].get('result',{}).get('error'))
+        error=attempts[-1].get('error') or attempts[-1].get('result',{}).get('error') or 'No detailed error returned'
+        result=dict(status='failed',message='PyMOL execution failed after two attempts: '+error,last_error=error)
     answer=dict(status=result['status'],result=result,attempts=attempts,skill=provenance,
         validation='API execution and atom counts only; rendered image was not inspected by the LLM.',
         undo='Use /view {"operation":"undo"} to restore the last successful program checkpoint.')
