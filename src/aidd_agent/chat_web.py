@@ -36,6 +36,16 @@ def make_server(agent, port=8765, token=None):
                 name, mime = assets[path.path]
                 self.send(200,(Path(__file__).parent / "web" / name).read_bytes(),mime); return
             if not self.authorized(): self.send(401,{"error":"Open the local access link printed by the server."}); return
+            if path.path=='/api/agent/trace':
+                try:
+                    import re
+                    query=parse_qs(path.query);sid=query['session'][0];agent.session(sid)
+                    identifier=query['id'][0]
+                    if not re.fullmatch(r'[a-f0-9]{32}',identifier):raise ValueError('Invalid agent trace ID')
+                    trace=agent.root/'agents'/sid/(identifier+'.json')
+                    self.send(200,json.loads(trace.read_text(encoding='utf-8')))
+                except (ValueError,KeyError,OSError):self.send(400,{'error':'Agent trace unavailable'})
+                return
             if path.path=='/api/viewer/artifact':
                 try:
                     from .project_context import ensure_within

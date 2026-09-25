@@ -18,6 +18,7 @@ from .prompt_workflow import create_plan, initialize_context
 from .language_policy import contains_han
 
 WORKFLOWS = [
+    {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
     {"name":"Contact-first molecule budgets", "status":"Chat budget and budget_page adapters", "scope":"Unique-molecule ANN retrieval, same-pose contact-first template ranks, RRF fusion and paged original/posed MOL2 plus names. Target recall and enrichment require validation."},
     {"name":"Structure-guided chat", "status":"survey, recommend, adopt/design and guided full-library adapters",
      "scope":"Mapped crystal recurrence, literature fallback, evidence-grounded LLM advice and editable coordinate-backed designs; mandatory geometry and receptor exclusion precede Gaussian. Exploratory, not calibrated new-target affinity."},
@@ -392,7 +393,7 @@ def screening_feedback(summary):
 
 
 class ChatAgent:
-    def __init__(self, storage, runtime=None, config_dir=None, allow_compute=False, *, planner=create_plan, router=None, start=True):
+    def __init__(self, storage, runtime=None, config_dir=None, allow_compute=False, *, planner=create_plan, router=None, start=True, domain_planner=None):
         self.root = Path(storage).resolve() / "chat"
         self.root.mkdir(parents=True, exist_ok=True)
         self.db = self.root / "conversations.sqlite3"
@@ -401,6 +402,7 @@ class ChatAgent:
         self.config_dir = config_dir
         self.allow_compute = allow_compute
         self.planner, self.router = planner, router
+        self.domain_planner = domain_planner
         self.stop = threading.Event()
         self.lock = threading.RLock()
         self.process = None
@@ -510,8 +512,15 @@ class ChatAgent:
                               details=report, progress=tail))
         from .pymol_bridge import bridge_status
         viewer=bridge_status(self.root/'viewers'/sid) if sid else {}
+        agent_runs=[]
+        if sid:
+            for path in sorted((self.root/'agents'/sid).glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)[:5]:
+                trace=read_json(path) or {}
+                agent_runs.append(dict(id=trace.get('id'),status=trace.get('status'),request=trace.get('request'),
+                    steps=[dict(tool=row.get('step',{}).get('tool','answer'),purpose=row.get('step',{}).get('purpose',''),
+                                status=row.get('status','complete'),error=row.get('error'),evidence_id=row.get('evidence_id')) for row in trace.get('steps',[])]))
         return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,
-                    compute_enabled=self.allow_compute)
+                    compute_enabled=self.allow_compute,agent_runs=agent_runs)
 
     def review_action(self,sid,decision):
         from . import structure_review as review
@@ -560,6 +569,13 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command=='/agent' or (not command.startswith('/') and command!='pymol_agent' and self.router is None):
+                from .domain_agent import run
+                request=text.strip()[len(command):].strip() if command=='/agent' else text
+                if not request:raise ValueError('Provide a request after /agent')
+                answer=run(self,sid,request,provider,planner=self.domain_planner)
+                self.message(sid,'assistant',answer)
+                return answer
             if command in {'/pymol_agent','pymol_agent'}:
                 decision=dict(intent='pymol_agent',message='',request=text.strip()[len(command):].strip(),task_id=None)
                 validate_route(decision)
@@ -603,160 +619,165 @@ class ChatAgent:
                 decision = (self.router(prompt, profile) if self.router else chat_plan(prompt, read_json(profile),
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
-            intent = decision["intent"]
-            if intent=='pymol_agent':
-                from .pymol_agent import run_agent
-                root=self.root/'viewers'/sid
-                saved=read_json(root/'catalog.json')
-                if not saved:raise ValueError('Open a completed task with /pymol TASK_ID first')
-                self.task(sid,saved['task_id'])
-                if decision['task_id'] and decision['task_id']!=saved['task_id']:raise ValueError('Open the requested task first')
-                cfg=read_json(self.runtime) if self.runtime else {}
-                profile=select_llm_profile(provider,config_dir=self.config_dir)
-                with self.connect() as db:
-                    history=[dict(r) for r in db.execute('SELECT role,text FROM messages WHERE session=? ORDER BY id DESC LIMIT 8',(sid,))][::-1]
-                answer=json.dumps(run_agent(decision['request'],read_json(profile),root,
-                    saved['structures'],(cfg or {}).get('pymol',{}).get('executable'),conversation=history),indent=2)
-                self.message(sid,'assistant',answer)
-                return answer
-            if intent in {'pymol','confidence','interactions'}:
-                answer=self.review_action(sid,decision)
-                self.message(sid,'assistant',answer)
-                return answer
-            if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus'}:
-                expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
-                          'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'},
-                          'budget':{'consensus_design','consensus_recommend'},'budget_page':{'consensus_budget','budget_page'}}[intent]
-                if decision['task_id'] is None:
-                    candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
-                        any(s.get('action') in expected and s.get('status')=='complete' for s in
-                            (read_json(j['report']) or {}).get('steps',{}).values())]
-                    if not candidates:raise ValueError('Complete '+', '.join(sorted(expected))+' in this conversation first')
-                    job=candidates[-1]
-                else:job=self.task(sid,decision['task_id'])
-                if job['status']!='complete' or not job.get('plan'):raise ValueError('Choose a completed source task')
-                details=read_json(job['report']) or {}
-                if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
-                    raise ValueError('Wrong source task for '+intent)
-                previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
-                action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
-                        'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
-                        'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
-                params=dict(source_run=Path(job['plan']).parent.name)
-                if intent in {'budget','budget_page'}:params.update(decision['budget'])
-                if intent=='recommend':params['provider']=provider
-                if intent=='design':params['design']=decision['design']
-                if intent=='consensus':params.update(decision['reference'])
-                plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
-                          steps=[dict(id='guided',action=action,params=params)])
-                ctx=self.context
-                path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
-                jid=uuid.uuid4().hex[:16]
-                with self.connect() as db:
-                    db.execute('INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)',
-                        (jid,sid,plan['summary'],provider,'','queued',str(path),str(path.parent/'execution/report.json'),str(self.root/(jid+'.log')),time.time()))
-                answer=f"Task {jid} queued: {intent}. Source task: {job['id']}."
-                self.message(sid,'assistant',answer)
-                return answer
-            if intent in {"evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
-                if intent in {'benchmark','funnel','coarse'} and decision['task_id'] is None:
-                    candidates = [j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
-                        any(s.get('action')=='select_screening' and s.get('status')=='complete'
-                            for s in (read_json(j.get('report')) or {}).get('steps',{}).values())]
-                    if not candidates: raise ValueError('Create a selection preview in this conversation first')
-                    job = candidates[-1]
-                else:
-                    job = self.task(sid, decision["task_id"])
-                if job["status"] != "complete" or not job["plan"]:
-                    raise ValueError("Choose a completed source task from this conversation")
-                expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel","guided_funnel","consensus_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
-                details = read_json(job["report"]) or {}
-                if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
-                    raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
-                action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "coarse":"benchmark_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
-                params = dict(source_run=Path(job["plan"]).parent.name)
-                if intent == "select": params.update(decision["selection"])
-                if intent == 'select' and any(s.get('action') in {'guided_funnel','consensus_funnel'} for s in details.get('steps',{}).values()):
-                    action='guided_select'
-                if intent == "coarse": params["coarse_only"] = True
-                local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
-                    "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
-                    clarifications=[], steps=[dict(id="screening", action=action, params=params)])
-                ctx = self.context
-                plan = create_plan(Path(ctx["db"]), ctx["user_id"], ctx["project_id"], text, local_plan=local_plan)
-                jid = uuid.uuid4().hex[:16]
-                with self.connect() as db:
-                    db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                        (jid,sid,local_plan["summary"],provider,"","queued",str(plan),str(plan.parent / "execution/report.json"),str(self.root / (jid+".log")),time.time()))
-                answer = f"Task {jid} queued: {local_plan['summary']}. Source task: {job['id']}. No new search or docking job is launched."
-                if intent=='benchmark':answer=f"Task {jid} queued for a bounded hardware/equivalence pilot, not full-library screening. Source task: {job['id']}."
-                if intent=='funnel':answer=f"Task {jid} queued for a full-library necessary-condition funnel using the selected rule, with no Top-K or Top-N cap. Source task: {job['id']}."
-                if intent=='full_count':answer=f"Task {jid} queued for full-library pose and feature evaluation with no Top-K/Top-N membership limit. This can be a long batch job. Source task: {job['id']}."
-                if intent=='run_docking':answer=f"Task {jid} queued for preparation, reference redocking and gated candidate docking. Source task: {job['id']}."
-            elif intent == "run":
-                jid = uuid.uuid4().hex[:16]
-                log = str(self.root / (jid + ".log"))
-                # Preserve literal chemistry alongside the router's contextual rewrite.
-                request = decision['request']
-                if 'smiles' in (request+' '+text).lower():
-                    literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user')
-                    request += '\nOriginal user request (preserve literal SMILES):\n' + literal
-                with self.connect() as db:
-                    db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,log,created) VALUES(?,?,?,?,?,?,?,?)",
-                               (jid,sid,request,provider,str(profile),"queued",log,time.time()))
-                answer = f"Task {jid} queued. I will show its plan, progress and result paths here."
-            elif intent in {"status", "results", "resume", "cancel"}:
-                job = self.task(sid, decision["task_id"])
-                if intent == "cancel":
-                    if job["status"] not in {"queued", "planning", "running"}:
-                        raise ValueError("Task is not active; there is no computation to cancel")
-                    with self.connect() as db:
-                        db.execute("UPDATE jobs SET cancel=1 WHERE id=?", (job["id"],))
-                    answer = f"Cancellation requested for {job['id']}. Existing artifacts will be retained."
-                elif intent == "resume":
-                    if job["status"] not in {"failed","blocked","interrupted","cancelled","complete"}:
-                        raise ValueError("Task is already queued or active")
-                    with self.connect() as db:
-                        db.execute("UPDATE jobs SET status='queued',cancel=0,error=NULL WHERE id=?", (job["id"],))
-                    answer = f"Task {job['id']} queued for resume using its existing plan and receipts."
-                else:
-                    view = next(t for t in self.snapshot(sid)["tasks"] if t["id"] == job["id"])
-                    lines = [f"Task {job['id']}: {job['status']}."]
-                    if job["error"]: lines.append(job["error"])
-                    details = view["details"] or {}
-                    for name, step in details.get("steps", {}).items():
-                        lines.append(f"{name}: {step.get('status', 'unknown')}")
-                        if step.get("error"): lines.append(step["error"])
-                        if intent == "results":
-                            for key, value in step.get("result", {}).items():
-                                if key in {"model", "report", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
-                                    lines.append(f"{key}: {value}")
-                            result = step.get("result", {})
-                            confidence = result.get("confidence", {})
-                            for key in ("iptm", "ptm", "ranking_score", "fraction_disordered", "has_clash", "chain_pair_iptm", "chain_ids"):
-                                if key in confidence: lines.append(f"{key}: {confidence[key]}")
-                            nested = result.get("report")
-                            if nested and job["plan"]:
-                                from .project_context import ensure_within
-                                try:
-                                    nested_path = ensure_within(Path(nested).resolve(), Path(job["plan"]).parent)
-                                    child = read_json(nested_path) or {}
-                                    for query in child.get("queries", []):
-                                        if "query_id" in query:
-                                            lines.append(f"{query['query_id']}: execution {query.get('execution_seconds', 'unreported')} s; Gaussian {query.get('gaussian_seconds', 'unreported')} s; E031 {query.get('annotation_seconds', 'unreported')} s")
-                                except ValueError: lines.append("Nested report is outside this task; not opened.")
-                    if job["report"]: lines.append("Report: "+job["report"])
-                    if job["plan"]: lines.append("Plan: "+job["plan"])
-                    if job["log"]: lines.append("Log: "+job["log"])
-                    if not details: lines.append("No completed scientific report is available yet.")
-                    if intent == "results":
-                        summary = screening_summary(job)
-                        if summary: lines.append(screening_feedback(summary))
-                    answer = "\n".join(lines)
-            elif intent == "capabilities": answer = "\n\n".join(w["name"]+": "+w["status"]+". "+w["scope"] for w in WORKFLOWS)
-            else: answer = decision["message"]
-            self.message(sid, "assistant", answer)
+            return self.execute_decision(sid,text,provider,decision)
+
+    def execute_decision(self,sid,text,provider,decision,*,record=True):
+        validate_route(decision)
+        profile = select_llm_profile(provider, config_dir=self.config_dir)
+        intent = decision["intent"]
+        if intent=='pymol_agent':
+            from .pymol_agent import run_agent
+            root=self.root/'viewers'/sid
+            saved=read_json(root/'catalog.json')
+            if not saved:raise ValueError('Open a completed task with /pymol TASK_ID first')
+            self.task(sid,saved['task_id'])
+            if decision['task_id'] and decision['task_id']!=saved['task_id']:raise ValueError('Open the requested task first')
+            cfg=read_json(self.runtime) if self.runtime else {}
+            profile=select_llm_profile(provider,config_dir=self.config_dir)
+            with self.connect() as db:
+                history=[dict(r) for r in db.execute('SELECT role,text FROM messages WHERE session=? ORDER BY id DESC LIMIT 8',(sid,))][::-1]
+            answer=json.dumps(run_agent(decision['request'],read_json(profile),root,
+                saved['structures'],(cfg or {}).get('pymol',{}).get('executable'),conversation=history),indent=2)
+            if record: self.message(sid,'assistant',answer)
             return answer
+        if intent in {'pymol','confidence','interactions'}:
+            answer=self.review_action(sid,decision)
+            if record: self.message(sid,'assistant',answer)
+            return answer
+        if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus'}:
+            expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
+                      'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'},
+                      'budget':{'consensus_design','consensus_recommend'},'budget_page':{'consensus_budget','budget_page'}}[intent]
+            if decision['task_id'] is None:
+                candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
+                    any(s.get('action') in expected and s.get('status')=='complete' for s in
+                        (read_json(j['report']) or {}).get('steps',{}).values())]
+                if not candidates:raise ValueError('Complete '+', '.join(sorted(expected))+' in this conversation first')
+                job=candidates[-1]
+            else:job=self.task(sid,decision['task_id'])
+            if job['status']!='complete' or not job.get('plan'):raise ValueError('Choose a completed source task')
+            details=read_json(job['report']) or {}
+            if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
+                raise ValueError('Wrong source task for '+intent)
+            previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
+            action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
+                    'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
+                    'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
+            params=dict(source_run=Path(job['plan']).parent.name)
+            if intent in {'budget','budget_page'}:params.update(decision['budget'])
+            if intent=='recommend':params['provider']=provider
+            if intent=='design':params['design']=decision['design']
+            if intent=='consensus':params.update(decision['reference'])
+            plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
+                      steps=[dict(id='guided',action=action,params=params)])
+            ctx=self.context
+            path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
+            jid=uuid.uuid4().hex[:16]
+            with self.connect() as db:
+                db.execute('INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                    (jid,sid,plan['summary'],provider,'','queued',str(path),str(path.parent/'execution/report.json'),str(self.root/(jid+'.log')),time.time()))
+            answer=f"Task {jid} queued: {intent}. Source task: {job['id']}."
+            if record: self.message(sid,'assistant',answer)
+            return answer
+        if intent in {"evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking"}:
+            if intent in {'benchmark','funnel','coarse'} and decision['task_id'] is None:
+                candidates = [j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
+                    any(s.get('action')=='select_screening' and s.get('status')=='complete'
+                        for s in (read_json(j.get('report')) or {}).get('steps',{}).values())]
+                if not candidates: raise ValueError('Create a selection preview in this conversation first')
+                job = candidates[-1]
+            else:
+                job = self.task(sid, decision["task_id"])
+            if job["status"] != "complete" or not job["plan"]:
+                raise ValueError("Choose a completed source task from this conversation")
+            expected = {"evidence":{"search_3d"}, "classify":{"review_screening"}, "full_count":{"classify_screening"}, "funnel":{"select_screening"}, "coarse":{"select_screening"}, "benchmark":{"select_screening"}, "select":{"review_screening","classify_screening","full_library_screen","condition_funnel","guided_funnel","consensus_funnel"}, "export":{"select_screening"}, "prepare_docking":{"export_screening"}, "run_docking":{"prepare_docking"}}[intent]
+            details = read_json(job["report"]) or {}
+            if sum(s.get("action") in expected and s.get("status") == "complete" for s in details.get("steps", {}).values()) != 1:
+                raise ValueError("Choose a completed " + '/'.join(sorted(expected)) + " task")
+            action = {"evidence":"review_screening", "classify":"classify_screening", "full_count":"full_library_screen", "funnel":"condition_funnel", "coarse":"benchmark_funnel", "benchmark":"benchmark_funnel", "select":"select_screening", "export":"export_screening", "prepare_docking":"prepare_docking", "run_docking":"run_docking"}[intent]
+            params = dict(source_run=Path(job["plan"]).parent.name)
+            if intent == "select": params.update(decision["selection"])
+            if intent == 'select' and any(s.get('action') in {'guided_funnel','consensus_funnel'} for s in details.get('steps',{}).values()):
+                action='guided_select'
+            if intent == "coarse": params["coarse_only"] = True
+            local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
+                "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
+                clarifications=[], steps=[dict(id="screening", action=action, params=params)])
+            ctx = self.context
+            plan = create_plan(Path(ctx["db"]), ctx["user_id"], ctx["project_id"], text, local_plan=local_plan)
+            jid = uuid.uuid4().hex[:16]
+            with self.connect() as db:
+                db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (jid,sid,local_plan["summary"],provider,"","queued",str(plan),str(plan.parent / "execution/report.json"),str(self.root / (jid+".log")),time.time()))
+            answer = f"Task {jid} queued: {local_plan['summary']}. Source task: {job['id']}. No new search or docking job is launched."
+            if intent=='benchmark':answer=f"Task {jid} queued for a bounded hardware/equivalence pilot, not full-library screening. Source task: {job['id']}."
+            if intent=='funnel':answer=f"Task {jid} queued for a full-library necessary-condition funnel using the selected rule, with no Top-K or Top-N cap. Source task: {job['id']}."
+            if intent=='full_count':answer=f"Task {jid} queued for full-library pose and feature evaluation with no Top-K/Top-N membership limit. This can be a long batch job. Source task: {job['id']}."
+            if intent=='run_docking':answer=f"Task {jid} queued for preparation, reference redocking and gated candidate docking. Source task: {job['id']}."
+        elif intent == "run":
+            jid = uuid.uuid4().hex[:16]
+            log = str(self.root / (jid + ".log"))
+            # Preserve literal chemistry alongside the router's contextual rewrite.
+            request = decision['request']
+            if 'smiles' in (request+' '+text).lower():
+                literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user')
+                request += '\nOriginal user request (preserve literal SMILES):\n' + literal
+            with self.connect() as db:
+                db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,log,created) VALUES(?,?,?,?,?,?,?,?)",
+                           (jid,sid,request,provider,str(profile),"queued",log,time.time()))
+            answer = f"Task {jid} queued. I will show its plan, progress and result paths here."
+        elif intent in {"status", "results", "resume", "cancel"}:
+            job = self.task(sid, decision["task_id"])
+            if intent == "cancel":
+                if job["status"] not in {"queued", "planning", "running"}:
+                    raise ValueError("Task is not active; there is no computation to cancel")
+                with self.connect() as db:
+                    db.execute("UPDATE jobs SET cancel=1 WHERE id=?", (job["id"],))
+                answer = f"Cancellation requested for {job['id']}. Existing artifacts will be retained."
+            elif intent == "resume":
+                if job["status"] not in {"failed","blocked","interrupted","cancelled","complete"}:
+                    raise ValueError("Task is already queued or active")
+                with self.connect() as db:
+                    db.execute("UPDATE jobs SET status='queued',cancel=0,error=NULL WHERE id=?", (job["id"],))
+                answer = f"Task {job['id']} queued for resume using its existing plan and receipts."
+            else:
+                view = next(t for t in self.snapshot(sid)["tasks"] if t["id"] == job["id"])
+                lines = [f"Task {job['id']}: {job['status']}."]
+                if job["error"]: lines.append(job["error"])
+                details = view["details"] or {}
+                for name, step in details.get("steps", {}).items():
+                    lines.append(f"{name}: {step.get('status', 'unknown')}")
+                    if step.get("error"): lines.append(step["error"])
+                    if intent == "results":
+                        for key, value in step.get("result", {}).items():
+                            if key in {"model", "report", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
+                                lines.append(f"{key}: {value}")
+                        result = step.get("result", {})
+                        confidence = result.get("confidence", {})
+                        for key in ("iptm", "ptm", "ranking_score", "fraction_disordered", "has_clash", "chain_pair_iptm", "chain_ids"):
+                            if key in confidence: lines.append(f"{key}: {confidence[key]}")
+                        nested = result.get("report")
+                        if nested and job["plan"]:
+                            from .project_context import ensure_within
+                            try:
+                                nested_path = ensure_within(Path(nested).resolve(), Path(job["plan"]).parent)
+                                child = read_json(nested_path) or {}
+                                for query in child.get("queries", []):
+                                    if "query_id" in query:
+                                        lines.append(f"{query['query_id']}: execution {query.get('execution_seconds', 'unreported')} s; Gaussian {query.get('gaussian_seconds', 'unreported')} s; E031 {query.get('annotation_seconds', 'unreported')} s")
+                            except ValueError: lines.append("Nested report is outside this task; not opened.")
+                if job["report"]: lines.append("Report: "+job["report"])
+                if job["plan"]: lines.append("Plan: "+job["plan"])
+                if job["log"]: lines.append("Log: "+job["log"])
+                if not details: lines.append("No completed scientific report is available yet.")
+                if intent == "results":
+                    summary = screening_summary(job)
+                    if summary: lines.append(screening_feedback(summary))
+                answer = "\n".join(lines)
+        elif intent == "capabilities": answer = "\n\n".join(w["name"]+": "+w["status"]+". "+w["scope"] for w in WORKFLOWS)
+        else: answer = decision["message"]
+        if record: self.message(sid, "assistant", answer)
+        return answer
 
     def update(self, jid, **fields):
         with self.connect() as db:

@@ -2,6 +2,17 @@ project: aidd-macrocycle-agent
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E066-chat-structure-review
+domain_agent:
+  experiment: E072
+  status: implemented_fixture_validation_live_acceptance_pending
+  guide: to_human/E072_DOMAIN_AGENT.md
+  interface: ordinary_chat_or_explicit_agent_command
+  tools: owned_reports_registry_literature_abstracts_existing_workflows_pymol
+  library_connection: runtime.search.batch
+  trace: chat/agents/SESSION_ID/RUN_ID.json
+  max_planning_steps: 10
+  live_provider_quality_benchmark: not_run
+  automatic_agent_loop_resume: not_implemented
 skill_driven_pymol:
   experiment: E068
   status: implemented_live_provider_and_desktop_acceptance_pending

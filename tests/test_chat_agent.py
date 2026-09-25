@@ -152,6 +152,17 @@ def test_http_token_origin_and_assets(tmp_path):
         receipt.write_text(json.dumps({'artifacts': {'contacts_csv': str(tmp_path/'outside.csv')}}))
         with pytest.raises(HTTPError) as err:urlopen(Request(endpoint,headers={'Authorization':'Bearer fixture-token'}))
         assert err.value.code==400
+        trace_id='a'*32;trace_dir=app.root/'agents'/sid;trace_dir.mkdir(parents=True)
+        (trace_dir/(trace_id+'.json')).write_text(json.dumps(dict(id=trace_id,status='complete')))
+        endpoint=base+'/api/agent/trace?session='+sid+'&id='+trace_id
+        with pytest.raises(HTTPError) as err:urlopen(endpoint)
+        assert err.value.code==401
+        with urlopen(Request(endpoint,headers={'Authorization':'Bearer fixture-token'})) as r:
+            assert json.load(r)['id']==trace_id
+        other=post('/api/session',{})['session']
+        with pytest.raises(HTTPError) as err:
+            urlopen(Request(endpoint.replace(sid,other),headers={'Authorization':'Bearer fixture-token'}))
+        assert err.value.code==400
     finally:
         server.shutdown();server.server_close();app.close()
 
