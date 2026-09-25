@@ -113,6 +113,16 @@ Use pymol for opening or controlling desktop PyMOL. Add view with operation:
 open, cartoon, sticks, surface, hide_surface, polar_contacts, contacts, hide_contacts,
 zoom, color, label_residues, hide_labels, show, hide, snapshot, save_session, status, align.
 Also rotate (axis x/y/z, angle in degrees), background (color), transparency (opacity 0..1).
+Color supports scheme solid, element (chemical element colors), chain (different chain
+colors), rainbow (sequence-order gradient). Mixed ligand colors mean element unless
+the user specifies otherwise. Use pocket_view with radius 5 to show and label whole
+protein residues within 5 A of the ligand, with element-colored sticks and pocket zoom.
+Use chains to list protein chains and their proximity to the ligand. Use remove_chain
+ONLY with explicit objects and exact chain from the user; it edits the display copy.
+For ambiguous redundant-chain deletion use chains first; never assume chain B is redundant.
+Use interaction_overview for all available candidate contacts plus pocket residues;
+explicitly explain that validated pi/salt/halogen/water/metal interactions are not evaluated.
+Unsupported operations must return clarify with a concrete limitation, never a success claim.
 For open, collection is diverse (default proposed references) or all_admitted (all prepared
 same-pocket consensus complexes); do not claim an unaligned diversity collection is admitted.
 Optional view fields: objects (catalog IDs such as v001), target (all/protein/ligand/pocket/water),
@@ -559,6 +569,9 @@ class ChatAgent:
                 context["latest_message"] = text
                 catalog=read_json(self.root/'viewers'/sid/'catalog.json')
                 if catalog:context['viewer_catalog']=[{k:r[k] for k in ('id','label','kind')} for r in catalog['structures']]
+                if snapshot.get('viewer',{}).get('latest'):
+                    latest=snapshot['viewer']['latest']
+                    context['viewer_last_result']={k:latest[k] for k in ('operation','status','error','chains','scope') if k in latest}
                 prompt = json.dumps(context, ensure_ascii=False)
                 if len(prompt) > 20000: context["conversation"] = context["conversation"][-4:]; prompt = json.dumps(context, ensure_ascii=False)
                 while len(prompt) > 19000 and context["tasks"]:

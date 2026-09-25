@@ -9,6 +9,11 @@ chat_structure_review:
   acceptance_checklist: to_human/E066_WORKSTATION_CHECKLIST.md
   planned_workstation_test_date: '2026-09-25'
   workstation_acceptance_status: not_run
+  bridge_connection_user_report: successful_2026_09_25
+  pocket_controls_extension:
+    status: local_tests_passed_workstation_pending
+    focused_regression: 30_passed
+    guide: to_human/E067_PYMOL_POCKET_CONTROLS.md
   smiles: literal_user_input_strict_rdkit_no_silent_enumeration
   pymol: local_file_queue_allowlisted_operations
   af3_inference_on_workstation: not_run_this_turn

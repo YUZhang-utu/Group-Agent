@@ -131,6 +131,35 @@ def test_runtime_and_experimental_seed_route(tmp_path):
     with pytest.raises(ValueError):validate_route(route)
 
 
+def test_pocket_elements_chain_removal_and_contact_overview(tmp_path):
+    cmd=FakeCmd();cmd.loaded=['v001']
+    catalog=[dict(id='v001',label='fixture',ligand=dict(chain='B'))]
+    def run(view):
+        return execute_command(cmd,dict(id='7-abcdefabcdef',view=view),catalog,tmp_path)
+    result=run(dict(operation='pocket_view',radius=5))
+    assert result['residues']['v001'][0]['residue']=='23'
+    assert Path(result['artifacts']['residues_json']).exists()
+    assert any(c[0]=='show' and 'within 5' in str(c) for c in cmd.calls)
+    assert any(c[0]=='color' and 'elem O' in str(c) and 'red' in str(c) for c in cmd.calls)
+    assert run(dict(operation='chains'))['chains']['v001']==[dict(chain='A',near_ligand=True)]
+    result=run(dict(operation='interaction_overview'))
+    assert result['results']['nearby']['contact_count']==1
+    assert result['results']['polar']['contact_count']==1
+    assert len(result['artifacts'])==5
+    assert 'salt bridges' in result['not_evaluated']
+    result=run(dict(operation='remove_chain',objects=['v001'],chain='A'))
+    assert result['removed_atoms']=={'v001':1}
+    removed=[c for c in cmd.calls if c[0]=='remove']
+    assert 'polymer.protein' in str(removed) and 'chain A' in str(removed)
+
+
+@pytest.mark.parametrize('view',[
+    dict(operation='remove_chain',chain='A'),dict(operation='remove_chain',objects=['v001']),
+    dict(operation='color',scheme='exec'),dict(operation='pocket_view',radius=float('nan'))])
+def test_new_view_parameters_reject_ambiguity(view):
+    with pytest.raises(ValueError):validate_view(view)
+
+
 def test_consensus_catalog_and_filtered_ledger(tmp_path):
     structure=tmp_path/'structures/model.cif'
     structure.parent.mkdir();structure.write_text('fixture')

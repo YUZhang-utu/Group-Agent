@@ -13,7 +13,8 @@ import uuid
 
 OPERATIONS = {'open','cartoon','sticks','surface','hide_surface','polar_contacts',
               'contacts','hide_contacts','zoom','color','label_residues','hide_labels',
-              'show','hide','snapshot','save_session','status','align','rotate','background','transparency'}
+              'show','hide','snapshot','save_session','status','align','rotate','background','transparency',
+              'chains','remove_chain','pocket_view','interaction_overview'}
 TARGETS = {'all','protein','ligand','pocket','water'}
 COLORS = {'cyan','green','yellow','orange','magenta','white','gray','red','blue','marine','salmon'}
 
@@ -26,12 +27,19 @@ def write_json(path, value):
 
 
 def validate_view(value):
-    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity'}:
+    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity','scheme','radius'}:
         raise ValueError('Unsupported viewer fields')
     if value.get('operation') not in OPERATIONS:
         raise ValueError('Unsupported PyMOL operation')
     if value.get('target','all') not in TARGETS:
         raise ValueError('Unsupported viewer target')
+    if value.get('scheme','solid') not in {'solid','element','chain','rainbow'}:
+        raise ValueError('Unsupported color scheme')
+    radius=value.get('radius',5)
+    if type(radius) not in (int,float) or not math.isfinite(radius) or not 1<=radius<=12:
+        raise ValueError('Pocket radius must be 1..12 angstroms')
+    if value['operation']=='remove_chain' and (not value.get('objects') or not value.get('chain')):
+        raise ValueError('Specify objects and the exact protein chain to remove; use chains first')
     if value.get('collection','diverse') not in {'diverse','all_admitted'}:raise ValueError('Unknown structure collection')
     if value.get('axis','y') not in {'x','y','z'}:raise ValueError('Invalid rotation axis')
     for field,low,high,default in [('angle',-360,360,30),('opacity',0,1,.5)]:
@@ -66,10 +74,21 @@ def selection(obj, row, view):
         lig = '('+' and '.join(terms)+')'
     protein = f'({obj} and polymer.protein)'
     sel = {'all':obj,'protein':protein,'ligand':lig,'water':f'({obj} and solvent)',
-           'pocket':f'({protein} and byres ({protein} within 5 of {lig}))'}[target]
+           'pocket':f'({protein} and byres ({protein} within {view.get("radius",5)} of {lig}))'}[target]
     if view.get('chain'): sel = f'({sel} and chain {view["chain"]})'
     if view.get('residue'): sel = f'({sel} and resi {view["residue"]})'
     return sel
+
+
+def element_colors(cmd, sel, carbon='green'):
+    cmd.color(carbon,sel)
+    for element,color in [('N','blue'),('O','red'),('S','yellow'),('P','orange'),('H','white'),('F','cyan'),('Cl','green'),('Br','salmon'),('I','violet')]:
+        cmd.color(color,f'({sel}) and elem {element}')
+
+
+def residue_rows(cmd,sel):
+    return [dict(chain=c,residue=i,resname=n) for c,i,n in sorted({
+        (a.chain,a.resi,a.resn) for a in cmd.get_model(sel,state=1).atom})]
 
 
 def execute_command(cmd, message, catalog, root):
@@ -96,6 +115,7 @@ def execute_command(cmd, message, catalog, root):
             cmd.show('cartoon',selection(obj,row,dict(target='protein')))
             cmd.show('sticks',selection(obj,row,dict(target='ligand')))
             cmd.color(['cyan','green','orange','magenta','yellow'][list(rows).index(obj)%5],obj)
+            element_colors(cmd,selection(obj,row,dict(target='ligand')))
         cmd.zoom(' or '.join(ids))
         output['alignment'] = 'Recorded transforms applied where available; other structures remain in their original frame'
         return output
@@ -103,6 +123,35 @@ def execute_command(cmd, message, catalog, root):
         output['loaded_objects']=cmd.get_names('objects'); return output
     loaded = set(cmd.get_names('objects'))
     if set(ids)-loaded: raise ValueError('Open the selected structures before controlling them')
+    if op=='interaction_overview':
+        results={}
+        for name,operation in [('pocket','pocket_view'),('nearby','contacts'),('polar','polar_contacts')]:
+            child=dict(view,operation=operation)
+            child.pop('cutoff',None)
+            result=execute_command(cmd,dict(id=message['id']+'-'+name,view=child),catalog,root)
+            results[name]=result
+            output['artifacts'].update({name+'_'+k:v for k,v in result['artifacts'].items()})
+        output['results']=results
+        output['scope']='Pocket residues (default 5 A), heavy-atom proximity (4.5 A), polar candidates (3.6 A). Categories overlap; do not sum counts.'
+        output['not_evaluated']=['validated hydrogen bonds','salt bridges','pi stacking','cation-pi','halogen bonds','water bridges','metal coordination','interaction energies']
+        return output
+    if op=='chains':
+        output['chains']={}
+        for obj in ids:
+            protein=selection(obj,rows[obj],dict(target='protein'))
+            nearby={a['chain'] for a in residue_rows(cmd,selection(obj,rows[obj],dict(target='pocket',radius=view.get('radius',5))))}
+            output['chains'][obj]=[dict(chain=c,near_ligand=c in nearby) for c in sorted({a['chain'] for a in residue_rows(cmd,protein)})]
+        output['limitation']='Near-ligand geometry is not proof of biological importance or redundancy. Specify a chain explicitly before removal.'
+        return output
+    if op=='remove_chain':
+        selections={obj:selection(obj,rows[obj],dict(target='protein',chain=view['chain'])) for obj in ids}
+        if any(not cmd.count_atoms(s) for s in selections.values()):raise ValueError('Requested protein chain is absent in one or more objects')
+        output['removed_atoms']={obj:cmd.count_atoms(s) for obj,s in selections.items()}
+        for obj,sel in selections.items():
+            cmd.remove(sel)
+            cmd.delete(obj+'_contacts');cmd.delete(obj+'_polar_contacts')
+        output['scope']='Protein atoms removed from the displayed copy only; source files and ligand are preserved. Reopen the task to restore.'
+        return output
     if op == 'align':
         ref = view.get('reference')
         if ref not in rows or ref not in loaded: raise ValueError('Choose a loaded reference object ID')
@@ -116,12 +165,31 @@ def execute_command(cmd, message, catalog, root):
         if op in {'cartoon','sticks','surface'}: cmd.show(op,sel)
         elif op=='hide_surface': cmd.hide('surface',sel)
         elif op=='transparency':cmd.set('transparency',1-view.get('opacity',.5),sel)
-        elif op=='color': cmd.color(view.get('color','cyan'),sel)
+        elif op=='color':
+            scheme=view.get('scheme','solid')
+            if scheme=='element':element_colors(cmd,sel,view.get('color','green'))
+            elif scheme=='rainbow':cmd.spectrum('count','rainbow',sel)
+            elif scheme=='chain':
+                for i,c in enumerate(sorted({a['chain'] for a in residue_rows(cmd,sel)})):
+                    if not re.fullmatch(r'[A-Za-z0-9]{1,8}',c):raise ValueError('Unsupported chain identifier')
+                    cmd.color(['cyan','green','orange','magenta','yellow','salmon'][i%6],f'({sel}) and chain {c}')
+            else:cmd.color(view.get('color','cyan'),sel)
+        elif op=='pocket_view':
+            lig=selection(obj,row,dict(target='ligand'))
+            pocket=selection(obj,row,dict(target='pocket',radius=view.get('radius',5),**{k:view[k] for k in ('chain','residue') if k in view}))
+            if not cmd.count_atoms(lig):raise ValueError('No ligand atoms for '+obj)
+            cmd.hide('sticks',selection(obj,row,dict(target='protein')))
+            cmd.show('cartoon',selection(obj,row,dict(target='protein')))
+            cmd.show('sticks',pocket);cmd.show('sticks',lig)
+            element_colors(cmd,pocket,'cyan');element_colors(cmd,lig,'green')
+            cmd.label(f'({pocket}) and name CA','"%s%s/%s" % (resn,resi,chain)')
+            output.setdefault('residues',{})[obj]=residue_rows(cmd,pocket)
         elif op=='show': cmd.enable(obj)
         elif op=='hide': cmd.disable(obj)
         elif op=='label_residues': cmd.label(f'({sel} and name CA)','"%s%s/%s" % (resn,resi,chain)')
         elif op=='hide_labels': cmd.hide('labels',sel)
-        elif op=='hide_contacts': cmd.delete(obj+'_contacts')
+        elif op=='hide_contacts':
+            cmd.delete(obj+'_contacts');cmd.delete(obj+'_polar_contacts')
         elif op in {'polar_contacts','contacts'}:
             lig=selection(obj,row,dict(target='ligand'))
             protein=selection(obj,row,dict(target='protein',**{k:view[k] for k in ('chain','residue') if k in view}))
@@ -133,17 +201,25 @@ def execute_command(cmd, message, catalog, root):
             if mode:
                 left+=' and (donors or acceptors)'; right+=' and (donors or acceptors)'
             pairs=cmd.find_pairs(left,right,state1=1,state2=1,cutoff=cutoff,mode=mode,angle=45)
-            cmd.delete(obj+'_contacts')
+            contact_object=obj+('_polar_contacts' if mode else '_contacts')
+            cmd.delete(contact_object)
             for a,b in pairs:
                 sa=f'{a[0]} and index {a[1]}'; sb=f'{b[0]} and index {b[1]}'
                 distance=cmd.get_distance(sa,sb,state=1)
-                cmd.distance(obj+'_contacts',sa,sb)
+                cmd.distance(contact_object,sa,sb)
                 aa=cmd.get_model(sa,state=1).atom[0]; bb=cmd.get_model(sb,state=1).atom[0]
                 all_contacts.append(dict(object=obj,query_id=row['label'],ligand_atom=aa.name,
                     ligand_chain=aa.chain,ligand_residue=aa.resi,protein_atom=bb.name,
                     protein_chain=bb.chain,protein_residue=bb.resi,protein_resname=bb.resn,
                     distance_angstrom=distance,kind='pymol_polar_candidate' if mode else 'heavy_atom_proximity'))
             cmd.show('sticks',selection(obj,row,dict(target='pocket')))
+            if pairs:
+                cmd.set('dash_color','yellow' if mode else 'gray',contact_object)
+                cmd.hide('labels',contact_object)
+    if op=='pocket_view':
+        cmd.zoom(' or '.join(selection(obj,rows[obj],dict(target='ligand'))+' or '+selection(obj,rows[obj],dict(target='pocket',radius=view.get('radius',5))) for obj in ids))
+        path=root/(message['id']+'-residues.json');write_json(path,output.get('residues',{}))
+        output['artifacts']['residues_json']=str(path)
     if op=='zoom': cmd.zoom(' or '.join(selection(obj,rows[obj],view) for obj in ids))
     if op=='rotate':cmd.turn(view.get('axis','y'),view.get('angle',30))
     if op=='background':cmd.bg_color(view.get('color','white'))
@@ -188,6 +264,7 @@ def start_bridge(queue):
                         for obj in managed:
                             cmd.delete(obj)
                             cmd.delete(obj+'_contacts')
+                            cmd.delete(obj+'_polar_contacts')
                         managed={r['id'] for r in message['catalog']}
                     result=execute_command(cmd,message,message['catalog'],root)
                 except Exception as exc:

@@ -1798,3 +1798,18 @@ new code before testing. Verified remote feature/structure-guided-chat was still
 Prefer Git update over the earlier offline patch; never apply both. Preserve the
 existing Chat storage root to retain conversations and completed tasks. Workstation
 GUI, live routing, AF3 execution and speed acceptance remain not run here.
+
+## 2026-09-25: E067 respond to live PyMOL usability feedback
+
+User confirmed the bridge connection succeeded after initial startup timeout.
+This establishes connection only, not full E066 acceptance. User then reported
+missing redundant-chain removal, mixed coloring and all-contact/pocket display.
+Added explicit display-only protein chain deletion and chain proximity inventory,
+element/chain/rainbow coloring, default ligand element colors, labeled whole-residue
+pocket views, and an overview combining separately exported proximity/polar candidates.
+Unsupported validated interaction classes are listed as not evaluated. Ambiguous
+redundancy is never inferred from chain letters. Saved source structures are unchanged.
+
+Focused confirmatory regression: 30 tests passed; English guard and diff check passed.
+No real GUI execution of the new operations was performed here. Documented restart
+of both Chat and bridge PyMOL, prompts and direct commands in E067 guide.
