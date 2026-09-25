@@ -41,6 +41,8 @@ SETTINGS={'transparency','cartoon_transparency','stick_transparency','sphere_tra
 LABELS={'"%s%s/%s" % (resn,resi,chain)','resn','resi','name','chain','""'}
 REPRESENTATIONS={'everything','cartoon','sticks','lines','surface','spheres','ribbon','labels','dots','nonbonded','mesh'}
 _UNDO={}
+MAX_CALLS=512
+MAX_CODE_CHARS=64000
 
 
 def selection_text(value):
@@ -55,9 +57,9 @@ def selection_text(value):
 
 
 def compile_program(code):
-    if not isinstance(code,str) or not 1<=len(code)<=16000:raise ValueError('Program must contain 1..16000 characters')
+    if not isinstance(code,str) or not 1<=len(code)<=MAX_CODE_CHARS:raise ValueError(f'Program must contain 1..{MAX_CODE_CHARS} characters')
     tree=ast.parse(code)
-    if not 1<=len(tree.body)<=80:raise ValueError('Use 1..80 direct cmd calls')
+    if not 1<=len(tree.body)<=MAX_CALLS:raise ValueError(f'Use 1..{MAX_CALLS} direct cmd calls; received {len(tree.body)}. Combine shared styling across objects.')
     calls=[]
     for statement in tree.body:
         call=statement.value if isinstance(statement,ast.Expr) else None

@@ -6,13 +6,20 @@ import time
 
 from .prompt_plan import chat_plan
 from .pymol_bridge import submit, write_json
-from .pymol_program import compile_program, METHODS, SETTINGS, LABELS, REPRESENTATIONS
+from .pymol_program import compile_program, METHODS, SETTINGS, LABELS, REPRESENTATIONS, MAX_CALLS, MAX_CODE_CHARS
 
 SYSTEM = '''Control the already-open task structures in desktop PyMOL.
-Return JSON with exactly explanation and code (both strings). explanation must be English.
-code contains only direct cmd.method calls with literal arguments, no imports, variables,
-loops, functions, cmd.do, loading, saving, quitting, or arbitrary Python expressions.
-An empty code is allowed when clarification is needed or the request is unsupported.
+Return JSON with exactly explanation (English string) and calls (array).
+Each call has exactly method (string) and arguments (object of named literal arguments).
+Example: {"explanation":"Color protein.","calls":[{"method":"color",
+"arguments":{"color":"cyan","selection":"v001 and polymer.protein"}}]}.
+Do not generate Python source. All selections, object names and color names are JSON
+strings, including identifiers starting with digits. No imports, loops or expressions.
+Use an empty calls array when clarification is needed or the request is unsupported.
+At most 512 calls and 64000 compiled characters are allowed. Combine common styling
+across objects (protein cartoons and element colors); keep per-complex pocket/contact
+operations separate. Do not drop requested complexes to meet the budget; ask to split
+the request if necessary. The API schema lists parameter names and required counts.
 Use the provided scene: do not invent object IDs, chains, ligand identifiers or residues.
 The user's request and the bounded API contract override upstream headless setup recipes.
 Do not start/stop PyMOL, install packages, or use uv. Check CA-only structures before cartoons.
@@ -31,6 +38,8 @@ requires separate scientific analysis. Do not invent these from distance lines a
 PNG and PSE are saved automatically; session checkpoint and one-step undo are provided.
 The model sees metadata and API receipts, not the rendered image. Do not claim visual review.
 If a prior program failed and rollback succeeded, replace it with a complete corrected program.
+For invalid_plan, nothing executed: inspect previous_attempt.plan and its error,
+then return a complete corrected calls array, not just the repaired line.
 '''
 
 
@@ -46,10 +55,21 @@ def skill_context():
 
 
 def validate_plan(value):
-    if not isinstance(value,dict) or set(value)!={'explanation','code'}:
-        raise ValueError('PyMOL plan requires explanation and code')
+    if not isinstance(value,dict) or set(value) not in ({'explanation','code'},{'explanation','calls'}):
+        raise ValueError('PyMOL plan requires explanation and calls')
     if not isinstance(value['explanation'],str) or len(value['explanation'])>4000:
         raise ValueError('Invalid explanation')
+    if 'calls' in value:
+        calls=value['calls']
+        if not isinstance(calls,list) or len(calls)>MAX_CALLS:raise ValueError(f'Use at most {MAX_CALLS} calls; combine shared styling across objects')
+        lines=[]
+        for call in calls:
+            if not isinstance(call,dict) or set(call)!={'method','arguments'}:raise ValueError('Each call requires method and arguments')
+            method=call['method'];args=call['arguments']
+            if not isinstance(method,str) or method not in METHODS:raise ValueError('Unsupported method')
+            if not isinstance(args,dict) or any(k not in METHODS[method][0] for k in args):raise ValueError('Unsupported argument names')
+            lines.append('cmd.'+method+'('+', '.join(k+'='+repr(v) for k,v in args.items())+')')
+        value=dict(explanation=value['explanation'],code='\n'.join(lines))
     if not isinstance(value['code'],str):raise ValueError('Invalid code')
     if value['code'].strip():compile_program(value['code'])
     return value
@@ -79,15 +99,25 @@ def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispat
     context=dict(request=request,scene=scene,previous_attempt=None)
     attempts=[]
     for attempt in range(2):
+        captured={}
+        def capture_and_validate(value):
+            captured['plan']=value
+            return validate_plan(value)
         try:
             plan,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
                 system_prompt=SYSTEM+'\nUpstream skill and references:\n'+skill,
                 capabilities=dict(methods=METHODS,settings=sorted(SETTINGS),
-                    labels=sorted(LABELS),representations=sorted(REPRESENTATIONS)),
-                validator=validate_plan,max_prompt_chars=100000)
-            validate_plan(plan)
+                    labels=sorted(LABELS),representations=sorted(REPRESENTATIONS),
+                    max_calls=MAX_CALLS,max_compiled_characters=MAX_CODE_CHARS),
+                validator=capture_and_validate,max_prompt_chars=100000)
+            plan=capture_and_validate(plan)
         except (ValueError,SyntaxError) as exc:
-            attempts.append(dict(status='invalid_plan',error=str(exc)))
+            failed=dict(status='invalid_plan',error=str(exc))
+            if 'plan' in captured:
+                raw=json.dumps(captured['plan'],ensure_ascii=False)
+                failed['plan']=captured['plan'] if len(raw)<=70000 else dict(truncated_json=raw[:70000])
+            if isinstance(exc,SyntaxError):failed.update(line=exc.lineno,column=exc.offset,source_line=exc.text)
+            attempts.append(failed)
             context['previous_attempt']=attempts[-1]
             continue
         if not plan['code'].strip():
@@ -100,7 +130,7 @@ def run_agent(request,profile,root,catalog,executable=None,*,planner=None,dispat
         if result.get('status')!='failed' or result.get('rollback')!='complete':break
         context['previous_attempt']=dict(code=plan['code'],error=result.get('error'),rollback='complete')
     else:
-        result=dict(status='failed',message='No successful PyMOL program after two attempts')
+        result=dict(status='failed',message='No successful PyMOL program after two attempts',last_error=attempts[-1].get('error') or attempts[-1].get('result',{}).get('error'))
     answer=dict(status=result['status'],result=result,attempts=attempts,skill=provenance,
         validation='API execution and atom counts only; rendered image was not inspected by the LLM.',
         undo='Use /view {"operation":"undo"} to restore the last successful program checkpoint.')

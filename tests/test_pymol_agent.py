@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from aidd_agent.pymol_program import compile_program, run_program
-from aidd_agent.pymol_agent import run_agent, skill_context
+from aidd_agent.pymol_agent import run_agent, skill_context, validate_plan
 from aidd_agent.chat_agent import validate_route
 
 
@@ -89,3 +89,35 @@ def test_agent_repair_and_pending(tmp_path,pending):
 def test_agent_route():
     assert validate_route(dict(intent='pymol_agent',message='',task_id=None,request='show pocket'))['intent']=='pymol_agent'
     with pytest.raises(ValueError):validate_route(dict(intent='pymol_agent',message='',task_id=None,request=''))
+
+
+def test_structured_calls_quote_identifiers_and_large_scene():
+    plan=validate_plan(dict(explanation='Style multiple complexes.',calls=[dict(method='color',
+        arguments=dict(color='cyan',selection='v001 and resn 6ZT')) for _ in range(120)]))
+    calls=compile_program(plan['code'])
+    assert len(calls)==120 and calls[0][1]['selection']=='v001 and resn 6ZT'
+    with pytest.raises(ValueError):
+        validate_plan(dict(explanation='',calls=[dict(method='do',arguments=dict(command='quit'))]))
+    with pytest.raises(ValueError,match='512'):
+        validate_plan(dict(explanation='',calls=[{}]*513))
+
+
+def test_invalid_source_preserved_for_repair(tmp_path):
+    submitted=[];contexts=[]
+    bad='cmd.color("red", 6ZT)'
+    def dispatch(root,view,catalog,executable):
+        submitted.append(view)
+        return dict(status='queued',operation_id='123-abcdef012345',result='receipt')
+    def waiter(queued):
+        return dict(status='complete',scene=dict(objects=CATALOG))
+    def planner(prompt,profile,**kwargs):
+        contexts.append(json.loads(prompt))
+        raw=(dict(explanation='Invalid source.',code=bad) if len(contexts)==1 else
+            dict(explanation='Color ligand.',calls=[dict(method='color',arguments=dict(color='red',selection='v001'))]))
+        return kwargs['validator'](raw),{}
+    answer=run_agent('color ligand',{},tmp_path,CATALOG,planner=planner,dispatch=dispatch,waiter=waiter)
+    assert answer['status']=='complete'
+    previous=contexts[1]['previous_attempt']
+    assert previous['plan']['code']==bad and previous['line']==1
+    assert len(submitted)==2  # No program dispatched for the invalid plan.
+    assert json.loads((tmp_path/'123-abcdef012345-agent.json').read_text())['attempts'][0]['plan']['code']==bad

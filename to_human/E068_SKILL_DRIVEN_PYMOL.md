@@ -67,6 +67,13 @@ and pinned skill provenance. Provider credentials are not written there.
 
 ## Execution contract and limits
 
+The planner now returns structured JSON `calls` with named arguments. The host
+quotes literal values when compiling them into the bounded API representation;
+legacy `code` responses remain supported. The limit is 512 calls / 64000 compiled
+characters, with shared styling combined across structures where possible.
+Invalid plans are retained in the agent audit and passed back with validation errors
+and syntax line details for one repair. No invalid plan reaches the desktop queue.
+
 - The model receives object/ligand identifiers, chain inventories, bounded residue
   examples and API errors. Coordinates and screenshots are not sent to the model.
 - Programs are parsed and interpreted as literal calls to an allowed subset of

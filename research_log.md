@@ -1834,3 +1834,19 @@ Confirmatory local validation: full suite 537 passed, 4 skipped; focused tests
 passed. Wheel built and bundled reference hashes checked. Live provider planning
 and real desktop execution of this extension remain pending workstation acceptance.
 E068 guide records restart requirements, exact prompts and capability limits.
+
+## 2026-09-25: E068 live invalid-plan feedback and repair
+
+User reported two pre-execution failures: invalid decimal literal on line 40 and
+the 80-call limit. The original model source was not retained, so the specific
+bad token cannot be established from that report. Repair previously received only
+an error string, not the rejected plan. Protocol: preserve rejected plans for repair,
+prefer structured JSON calls with host-quoted literals, and allow bounded multi-object
+programs of up to 512 calls / 64000 characters while encouraging shared styling.
+
+Implemented the new planning contract with legacy source compatibility. Syntax
+errors include source line/column in the audit; validation still occurs before queue
+submission. Confirmatory focused regression: 39 passed, including digit-leading
+ligand identifiers, 120-call programs, rejected unsafe methods and invalid-source
+repair without dispatch. English guard and diff check passed. Real workstation
+retry remains pending; this fix does not establish live rendering success.
