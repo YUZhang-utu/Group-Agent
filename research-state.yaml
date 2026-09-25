@@ -11,12 +11,14 @@ skill_driven_pymol:
   execution: bounded_literal_api_interpreter_no_eval_exec
   image_review: user_only_not_llm_vision
   typed_interactions:
-    status: implemented_synthetic_tests_passed_workstation_pending
+    status: source_typing_fixed_real_MDM2_coordinate_replay_passed_desktop_pending
     guide: to_human/E069_TYPED_PYMOL_INTERACTIONS.md
-    default: polar_salt_pi_cation_pi_halogen_candidates
-    hydrophobic: opt_in_residue_pair_representatives
+    default: all_six_supported_candidate_types
+    hydrophobic: included_residue_pair_representatives
+    recheck: to_human/E070_PYMOL_RECHECK.md
+    real_coordinate_replay: 6Q9L_and_3JZK_each_1_pi_and_5_hydrophobic_representatives
     water_and_metal: not_implemented
-    full_regression: 547_passed_4_skipped
+    full_regression: 553_passed_3_skipped_before_final_render_regression
 chat_structure_review:
   status: implemented_local_validation_workstation_pending
   full_regression: 515_passed_4_skipped

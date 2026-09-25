@@ -291,6 +291,16 @@ def bridge_status(root):
 
 def submit(root, view, catalog, executable=None):
     validate_view(view);root=Path(root).resolve();root.mkdir(parents=True,exist_ok=True)
+    if view['operation'] in {'typed_interactions','interaction_overview','program'}:
+        from .pymol_chemistry import component_metadata
+        enriched=[]
+        for row in catalog:
+            metadata=dict(status='unavailable',reason='No source structure path')
+            if row.get('path'):
+                try:metadata=component_metadata(row['path'],row.get('sha256'))
+                except ImportError:metadata=dict(status='unavailable',reason='Install Gemmi in the Chat runtime')
+            enriched.append(dict(row,chemical_components=metadata))
+        catalog=enriched
     if not bridge_status(root)['connected']:
         if not executable: raise ValueError('Configure runtime.pymol.executable with the installed desktop PyMOL executable')
         launch=root/'startup.py'

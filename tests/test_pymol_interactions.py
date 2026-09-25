@@ -42,7 +42,7 @@ def test_hydrophobic_dedup_and_polar_carbon_exclusion():
     assert len(raw)==4 and len(reps)==1
     atoms[2]['elem']='O'
     assert not detect(atoms,[(1,2),(3,4)],{1,2},{3,4},set(),[])[0]
-    assert 'hydrophobic' not in DEFAULT_TYPES
+    assert 'hydrophobic' in DEFAULT_TYPES
 
 
 def test_cation_pi_requires_face_geometry():
@@ -133,3 +133,70 @@ def test_live_pymol_aromatic_model_when_available():
         pm.cmd.fragment('benzene','v001')
         model=pm.cmd.get_model('v001',state=1)
         assert len(aromatic_indices(model))==6
+
+
+def test_deposited_aromatic_flags_recover_kekule_rings_without_changing_coordinates():
+    from aidd_agent.pymol_chemistry import apply_components
+    atoms={i:dict(atom(p,resi=str(i//6)),name='C'+str(i%6)) for i,p in enumerate(ring()+ring(z=3.5))}
+    edges=[(i,(i//6)*6+(i+1)%6) for i in range(12)]
+    component=dict(atoms={f'C{i}':dict(element='C',aromatic=True) for i in range(6)},
+                   bonds=[[f'C{i}',f'C{(i+1)%6}'] for i in range(6)])
+    metadata=dict(status='available',components=dict(LIG=component))
+    assert not any(r['kind']=='pi_stacking' for r in detect(atoms,edges,set(range(6)),set(range(6,12)),set(),[])[0])
+    aromatic,info=apply_components(atoms,edges,metadata,set())
+    assert len(aromatic)==12 and info['component_typed_atoms']==12
+    assert any(r['kind']=='pi_stacking' for r in detect(atoms,edges,set(range(6)),set(range(6,12)),aromatic,[])[0])
+    # Removed bonds and element mismatches must not reconstruct the original ring.
+    aromatic,_=apply_components(atoms,edges[1:],metadata,set())
+    assert 0 not in aromatic and 1 not in aromatic
+    atoms[0]['elem']='N'
+    aromatic,_=apply_components(atoms,edges,metadata,set())
+    assert 0 not in aromatic
+
+
+def test_component_metadata_reads_deposited_flags_and_checks_hash(tmp_path):
+    pytest.importorskip('gemmi')
+    from aidd_agent.pymol_chemistry import component_metadata
+    path=tmp_path/'complex.cif'
+    path.write_text('''data_example
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.pdbx_aromatic_flag
+LIG C1 C Y
+LIG C2 C Y
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+LIG C1 C2
+''')
+    result=component_metadata(path)
+    assert result['components']['LIG']['atoms']['C1']['aromatic']
+    assert result['components']['LIG']['bonds']==[['C1','C2']]
+    with pytest.raises(ValueError,match='provenance'):component_metadata(path,'incorrect')
+
+
+def test_display_uses_source_typing_to_draw_cyan_pi_object(tmp_path):
+    class RingScene(Scene):
+        def get_model(self,sel,state=1):
+            atoms=[SimpleNamespace(index=i+1,name=f'C{i%6}',symbol='C',coord=p,
+                formal_charge=0,segi='',chain='A',resi=str(i//6),resn='LIG',alt='',q=1)
+                for i,p in enumerate(ring()+ring(z=3.5))]
+            bonds=[SimpleNamespace(index=[i,(i//6)*6+(i+1)%6],order=1+i%2) for i in range(12)]
+            if 'acceptors' in sel:return SimpleNamespace(atom=[],bond=[])
+            if 'polymer' in sel:return SimpleNamespace(atom=atoms[6:],bond=[])
+            if 'organic' in sel:return SimpleNamespace(atom=atoms[:6],bond=[])
+            return SimpleNamespace(atom=atoms,bond=bonds)
+        def find_pairs(self,*args,**kwargs):return []
+    metadata=dict(status='available',components=dict(LIG=dict(
+        atoms={f'C{i}':dict(element='C',aromatic=True) for i in range(6)},
+        bonds=[[f'C{i}',f'C{(i+1)%6}'] for i in range(6)])))
+    cmd=RingScene()
+    result=display(cmd,dict(id='replay',view=dict(operation='typed_interactions')),
+                   [dict(id='v001',chemical_components=metadata)],tmp_path)
+    assert result['displayed_counts']['v001']==dict(pi_stacking=1)
+    assert result['chemistry']['v001']['ligand_rings']==1
+    assert ('set',('dash_color','cyan','v001_ix_pi_stacking'),{}) in cmd.calls
+    assert result['type_counts']['v001']['hydrophobic']['requested']

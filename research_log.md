@@ -1893,3 +1893,11 @@ optional real PyMOL aromatic-model test; it is skipped locally because PyMOL is 
 installed in this environment. English and whitespace checks passed. User should
 restart both processes and run the direct typed_interactions operation to test the
 detector independently of model planning. No live GUI success claimed.
+
+### 2026-09-25 E070: recheck typed interactions using real MDM2 coordinates
+- User confirmed the internal GUI toggle restored panel clicking, but typed interaction display still failed expectations. Kept this separate from GUI input handling.
+- Found a chemistry coverage gap: aromatic detection used only ChemPy order-4 bonds. Added host-side deposited mmCIF component flags mapped to live residue/atom names, elements and existing bonds, with source SHA256 verification. Missing or edited atoms/bonds cannot be silently recreated.
+- Included deduplicated hydrophobic contacts by default; retained whole nearby residues for ring geometry. Added all-type accepted/displayed/requested counts, chemical coverage and missing-charge warnings to receipts.
+- Exploratory real-coordinate replay: 6Q9L-HTZ and 3JZK-YIN each yielded one pi candidate and five hydrophobic residue representatives. Raw reports: data/e070-6Q9L/report.json and data/e070-3JZK/report.json. No relaxed geometry thresholds or invented charges.
+- Full regression: 553 passed, 3 skipped; subsequent interaction-focused regression including the source-typing-to-cyan-object path: 13 passed, 1 skipped. English guard passed. Real PyMOL test remains skipped because no compatible local runtime was available; the offline replay does not establish live rendering or LLM routing.
+- Added scripts/check_pymol_interactions.py for real PyMOL repeated detection/object/color verification and optional offline replay; handoff to_human/E070_PYMOL_RECHECK.md. Salt/cation-pi remain limited by loaded charge metadata; water and metal interactions remain unsupported.

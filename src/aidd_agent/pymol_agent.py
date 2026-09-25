@@ -41,12 +41,12 @@ For interaction display ALWAYS use the trusted typed_interactions method instead
 generating distance calls. It detects and deduplicates conservative typed hypotheses,
 colors them, and replaces old contact lines. Arguments types and objects are optional
 space-separated strings. Types: polar_contact salt_bridge pi_stacking cation_pi
-halogen_bond hydrophobic. Default excludes hydrophobic and processes enabled complexes
+halogen_bond hydrophobic. Default includes deduplicated hydrophobic contacts and processes enabled complexes
 only. Explicit objects can select loaded complexes. Example call:
 {"method":"typed_interactions","arguments":{"types":"polar_contact pi_stacking"}}.
 It is a host adapter, not a native PyMOL API method. Never substitute all-pairs distances
 when a type has zero results. Missing charges/aromaticity can prevent assignments.
-Water bridges and metal coordination are not evaluated. Hydrophobic is opt-in.
+Water bridges and metal coordination are not evaluated. Each type is deduplicated by residue pair.
 Use typed_interactions as the LAST call after any representation/styling requests;
 do not create distance objects after it. Its fixed per-type colors replace generic lines.
 If a prior program failed and rollback succeeded, replace it with a complete corrected program.

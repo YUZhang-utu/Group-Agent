@@ -7,7 +7,7 @@ import numpy as np
 
 COLORS=dict(polar_contact='yellow',salt_bridge='magenta',pi_stacking='cyan',
             cation_pi='orange',hydrophobic='gray70',halogen_bond='green')
-DEFAULT_TYPES=['polar_contact','salt_bridge','pi_stacking','cation_pi','halogen_bond']
+DEFAULT_TYPES=list(COLORS)
 RULES=dict(polar_max_A=3.5,salt_max_A=4.0,pi_max_A=5.5,pi_angle_deviation_deg=30,
            pi_offset_max_A=2.0,cation_pi_max_A=5.0,cation_pi_face_angle_max_deg=30,
            hydrophobic_max_A=4.0,halogen_max_A=3.5,halogen_donor_min_deg=150,
@@ -150,7 +150,7 @@ def display(cmd,message,catalog,root,checkpoint=True):
         def indices(sel):return {a.index for a in cmd.get_model(sel,state=1).atom}
         lig=selection(obj,row,dict(target='ligand'))
         pro=f'({obj} and polymer.protein) and not ({lig})'
-        ligand=indices(lig);protein=indices(f'({pro}) within 7 of ({lig})')
+        ligand=indices(lig);protein=indices(f'byres (({pro}) within 7 of ({lig}))')
         if not ligand or not protein:raise ValueError('No ligand or nearby protein atoms for '+obj)
         model=cmd.get_model(obj,state=1);acceptors=indices(obj+' and acceptors')
         atoms={a.index:dict(coord=list(a.coord),elem=a.symbol,charge=getattr(a,'formal_charge',0),
@@ -165,9 +165,13 @@ def display(cmd,message,catalog,root,checkpoint=True):
             for a,b in cmd.find_pairs(left,right,state1=1,state2=1,cutoff=3.5,mode=1,angle=45):
                 if a[0]!=obj or b[0]!=obj:continue
                 polar.append((b[1],a[1]) if reverse else (a[1],b[1]))
-        raw,reps=detect(atoms,edges,ligand,protein,aromatic_indices(model),polar)
+        from .pymol_chemistry import apply_components
+        aromatic,typing=apply_components(atoms,edges,row.get('chemical_components',{}),aromatic_indices(model))
+        raw,reps=detect(atoms,edges,ligand,protein,aromatic,polar)
         results[obj]=dict(accepted=raw,representatives=reps,
-            chemistry=dict(aromatic_atom_count=len(aromatic_indices(model)),aromatic_basis='loaded ChemPy aromatic bond order 4; no aromaticity inference',
+            chemistry=dict(**typing,aromatic_atom_count=len(aromatic),aromatic_basis='loaded aromatic bonds plus deposited mmCIF component flags matched to live atom names/elements/bonds',
+                           ligand_rings=len(aromatic_rings(atoms,edges,aromatic & ligand)),
+                           protein_rings=len(aromatic_rings(atoms,edges,aromatic & protein)),
                            ligand_formal_charge_atoms=sum(atoms[i]['charge']!=0 for i in ligand),
                            protein_formal_charge_atoms=sum(atoms[i]['charge']!=0 for i in protein)),
             atom_metadata={str(i):{k:v for k,v in a.items() if k!='coord'} for i,a in atoms.items() if i in ligand|protein})
@@ -197,10 +201,25 @@ def display(cmd,message,catalog,root,checkpoint=True):
                 cmd.distance(name,*endpoints,cutoff=8,mode=0,state=1)
                 cmd.set('dash_color',COLORS[r['kind']],name);cmd.hide('labels',name)
             if points_created:cmd.hide('everything',points)
+        warnings={}
+        for obj,v in results.items():
+            chemistry=v['chemistry'];notes=[]
+            if chemistry['component_status']!='available':
+                notes.append('Deposited aromatic typing unavailable: '+chemistry['component_reason'])
+            if not chemistry['ligand_formal_charge_atoms'] or not chemistry['protein_formal_charge_atoms']:
+                notes.append('One or both partners have no nonzero loaded formal charges. Zero salt-bridge count does not establish absence; protonation is not assigned.')
+            if not chemistry['ligand_rings'] or not chemistry['protein_rings']:
+                notes.append('No complete typed aromatic ring on one or both partners; pi stacking cannot be assigned for that partner.')
+            warnings[obj]=notes
         report=dict(status='complete',operation='typed_interactions',objects=ids,legend={k:COLORS[k] for k in types},
+            chemistry_warnings=warnings,
             displayed_counts={o:dict(Counter(r['kind'] for r in v['representatives'] if r['kind'] in types)) for o,v in results.items()},
+            chemistry={o:v['chemistry'] for o,v in results.items()},
+            type_counts={o:{k:dict(accepted=sum(r['kind']==k for r in v['accepted']),
+                                  displayed=sum(r['kind']==k for r in v['representatives']) if k in types else 0,
+                                  requested=k in types) for k in COLORS} for o,v in results.items()},
             results=results,rules=RULES,scope='Conservative geometric hypotheses using live state 1 and PyMOL chemical typing. Not PLIP or confirmed physical interactions.',
-            display_policy='One nearest representative per type and ligand/protein residue pair; hydrophobic contacts opt-in. Alternate locations blank/A only.',
+            display_policy='One nearest representative per type and ligand/protein residue pair. Alternate locations blank/A only.',
             limitations=['Missing formal charges suppress salt/cation-pi assignments; no protonation inference.',
                 'Missing aromatic bond typing suppresses ring assignments.',
                 'Water bridges and metal coordination not evaluated; separate chemistry is required.'])

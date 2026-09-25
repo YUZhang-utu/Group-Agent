@@ -16,7 +16,7 @@ instead of drawing all heavy-atom proximity pairs.
 Natural language or `/pymol_agent` can use the same trusted detector:
 
 ```text
-/pymol_agent Show conservative typed protein-ligand interactions in the currently enabled complexes, using different colors. Do not draw generic proximity lines or hydrophobic contacts.
+/pymol_agent Recalculate typed protein-ligand interactions in the currently enabled complexes, including deduplicated hydrophobic contacts. Color each type differently, and report detected and displayed counts plus missing chemical information. Do not draw generic proximity lines.
 ```
 
 To select a specific structure and types:
@@ -41,7 +41,7 @@ these displays. Undo uses `/view {"operation":"undo"}`.
 | Pi stacking candidate | Cyan | Bonded aromatic 5/6-member rings, planarity check, centroid distance 3.0-5.5 A, parallel or perpendicular normals within 30 degrees, projected offset <=2 A |
 | Cation-pi candidate | Orange | Explicit positive formal charge, aromatic ring, distance 2.5-5 A and direction within 30 degrees of ring normal |
 | Halogen-bond candidate | Green | Carbon-bound Cl/Br/I and typed N/O/S acceptor with one heavy neighbor, 2.5-3.5 A, donor angle >=150 degrees and acceptor angle 90-150 degrees |
-| Hydrophobic contact | Gray | Nonpolar carbon atoms with known C/H-only bonded neighbors, 3.0-4.0 A; opt-in |
+| Hydrophobic contact | Gray | Nonpolar carbon atoms with known C/H-only bonded neighbors, 3.0-4.0 A; included and deduplicated by default |
 
 This is a conservative geometric hypothesis detector, not a PLIP implementation
 or a prediction of interaction energy. The design uses chemistry and angular checks
@@ -56,8 +56,11 @@ metal coordination and validated hydrogen-bond assignments remain unsupported he
 Only blank/A alternate locations with positive occupancy are admitted. This fixed
 policy and state-1 scope may omit interactions in other conformers/alternate locations.
 
-Aromatic atom identity is read from explicit ChemPy aromatic bonds (order 4),
-not an `aromatic` PyMOL selection keyword. After the live compatibility fix,
+Aromatic atom identity uses explicit ChemPy aromatic bonds (order 4), supplemented
+by deposited mmCIF component flags prepared on the Chat host using Gemmi. Mapping
+requires matching residue/atom names, elements and existing heavy-atom bonds;
+coordinates remain those of the live viewer. Source SHA256 is checked. An
+`aromatic` PyMOL selection keyword is not used. After the live compatibility fix,
 zero-hit results do not address nonexistent helper objects. Exceptions include the
 object, stage and failing API call even when PyMOL supplies only a blank error.
 Optional workstation API smoke test (requires pytest in that environment):
@@ -81,4 +84,5 @@ the JSON for all accepted geometry, atom identifiers, type evidence, chemistry
 coverage and deduplicated representatives; CSV marks which accepted rows were drawn.
 PNG/PSE and a pre-edit checkpoint are also saved. Local synthetic tests cover rejecting
 wrong ring/halogen geometry, formal-charge absence, deduplication, enabled-object
-scope and zero-hit behavior. Real workstation chemistry/rendering acceptance is pending.
+scope and zero-hit behavior. Real-coordinate MDM2 replay and the remaining desktop
+acceptance steps are documented in [E070](E070_PYMOL_RECHECK.md).

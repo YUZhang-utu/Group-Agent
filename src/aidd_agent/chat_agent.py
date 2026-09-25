@@ -186,7 +186,7 @@ using conversation context; task_id is null for the currently open viewer.
 The skill-backed agent reads the live scene and composes bounded PyMOL API calls.
 For typed interaction visualization, use pymol with view operation typed_interactions;
 optional types is a list from polar_contact,salt_bridge,pi_stacking,cation_pi,
-halogen_bond,hydrophobic. Omit types for the conservative default (no hydrophobic).
+halogen_bond,hydrophobic. Omit types for the deduplicated default (including hydrophobic).
 Do not route requests for differentiated interactions to contacts or polar_contacts.
 Use pymol with operation open to first open a different task, and operation undo to
 restore the previous successful agent program. Do not claim an operation has executed.
