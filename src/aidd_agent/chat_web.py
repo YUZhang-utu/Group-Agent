@@ -46,7 +46,7 @@ def make_server(agent, port=8765, token=None):
                     root=agent.root/'viewers'/sid
                     receipt=json.loads((root/(identifier+'.result.json')).read_text(encoding='utf-8'))
                     file=ensure_within(Path(receipt['artifacts'][key]),root)
-                    mime={'.png':'image/png','.pse':'application/octet-stream','.json':'application/json','.csv':'text/csv'}[file.suffix]
+                    mime={'.png':'image/png','.pse':'application/octet-stream','.json':'application/json','.csv':'text/csv','.py':'text/plain'}[file.suffix]
                     if mime=='application/json':self.send(200,json.loads(file.read_text(encoding='utf-8')))
                     else:self.send(200,file.read_bytes(),mime)
                 except (ValueError,KeyError,OSError):self.send(400,{'error':'Viewer artifact unavailable'})

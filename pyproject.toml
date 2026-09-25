@@ -28,4 +28,4 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-aidd_agent = ["web/*.html", "web/*.css", "web/*.js"]
+aidd_agent = ["web/*.html", "web/*.css", "web/*.js", "skill_data/pymol/*", "skill_data/pymol/references/*.md"]

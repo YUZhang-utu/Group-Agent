@@ -1,4 +1,4 @@
-"""Local, file-queued PyMOL commands. No model-provided Python or selections."""
+"""Local file queue with validated display operations and bounded API programs."""
 import csv
 import hashlib
 import json
@@ -14,7 +14,7 @@ import uuid
 OPERATIONS = {'open','cartoon','sticks','surface','hide_surface','polar_contacts',
               'contacts','hide_contacts','zoom','color','label_residues','hide_labels',
               'show','hide','snapshot','save_session','status','align','rotate','background','transparency',
-              'chains','remove_chain','pocket_view','interaction_overview'}
+              'chains','remove_chain','pocket_view','interaction_overview','program','scene','undo'}
 TARGETS = {'all','protein','ligand','pocket','water'}
 COLORS = {'cyan','green','yellow','orange','magenta','white','gray','red','blue','marine','salmon'}
 
@@ -27,10 +27,15 @@ def write_json(path, value):
 
 
 def validate_view(value):
-    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity','scheme','radius'}:
+    if not isinstance(value, dict) or set(value)-{'operation','objects','target','color','cutoff','chain','residue','reference','collection','axis','angle','opacity','scheme','radius','code'}:
         raise ValueError('Unsupported viewer fields')
     if value.get('operation') not in OPERATIONS:
         raise ValueError('Unsupported PyMOL operation')
+    if value['operation']=='program':
+        from .pymol_program import compile_program
+        if set(value)!={'operation','code'}:raise ValueError('Program requires operation and code only')
+        compile_program(value['code'])
+    elif 'code' in value:raise ValueError('Code requires program operation')
     if value.get('target','all') not in TARGETS:
         raise ValueError('Unsupported viewer target')
     if value.get('scheme','solid') not in {'solid','element','chain','rainbow'}:
@@ -94,11 +99,16 @@ def residue_rows(cmd,sel):
 def execute_command(cmd, message, catalog, root):
     """Run against PyMOL's cmd API; called only by the desktop bridge."""
     view = validate_view(message['view']); op = view['operation']
+    if op in {'program','scene','undo'}:
+        from .pymol_program import run_program
+        return run_program(cmd,message,catalog,root)
     rows = {r['id']:r for r in catalog}
     ids = view.get('objects') or list(rows)
     if set(ids)-rows.keys(): raise ValueError('Unknown viewer object')
     output = dict(status='complete',operation=op,objects=ids,artifacts={})
     if op == 'open':
+        from .pymol_program import _UNDO
+        _UNDO.pop(str(Path(root).resolve()),None)
         for obj in ids:
             row = rows[obj]; path = Path(row['path']).resolve()
             if hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:

@@ -1813,3 +1813,24 @@ redundancy is never inferred from chain letters. Saved source structures are unc
 Focused confirmatory regression: 30 tests passed; English guard and diff check passed.
 No real GUI execution of the new operations was performed here. Documented restart
 of both Chat and bridge PyMOL, prompts and direct commands in E067 guide.
+
+## 2026-09-25: E068 skill-backed composable PyMOL controls
+
+User requested integration of Google DeepMind's PyMOL science skill into existing
+Chat. Protocol: retain the desktop bridge, pin upstream guidance and license,
+observe task-object metadata, plan bounded literal API calls through the selected
+provider, validate selections and calls, execute with session checkpoint, inspect
+receipts and allow one repair after successful rollback. No eval/exec, source-file
+mutation, unrestricted Python or model vision. Scientific interaction classes beyond
+polar candidates remain separate from display operations.
+
+Implemented direct /pymol_agent and natural-language routing, scene inventories,
+program execution receipts, automatic PNG/PSE and one-step undo. Bundled unmodified
+upstream commit 68832757cbbf941c620b71df5756cf6e5cc287b0 with hashes and Apache license.
+Notified user to review their PyMOL license; recorded notice in workspace .licenses.
+
+Confirmatory local validation: full suite 537 passed, 4 skipped; focused tests
+37 passed after final routing/selection adjustments. English guard and diff checks
+passed. Wheel built and bundled reference hashes checked. Live provider planning
+and real desktop execution of this extension remain pending workstation acceptance.
+E068 guide records restart requirements, exact prompts and capability limits.

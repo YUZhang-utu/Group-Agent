@@ -50,6 +50,13 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+For composable skill-backed desktop controls, use
+[E068](../../../to_human/E068_SKILL_DRIVEN_PYMOL.md). The pinned upstream PyMOL skill
+is packaged with the planner. The existing desktop session replaces upstream
+headless setup; bounded literal API programs, live scene metadata, receipts and
+one-step undo are supported. Do not claim unrestricted Python or visual inspection
+by the LLM. Restart both Chat and its PyMOL bridge after updating.
+
 Use [E066](../../../to_human/E066_CHAT_STRUCTURE_REVIEW.md) for literal SMILES AF3
 inputs, recorded confidence explanations, owned structure/contact inspection and
 allowlisted desktop PyMOL controls. A queued viewer operation is not successful

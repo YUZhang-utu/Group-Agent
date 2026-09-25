@@ -23,7 +23,7 @@ WORKFLOWS = [
      "scope":"Mapped crystal recurrence, literature fallback, evidence-grounded LLM advice and editable coordinate-backed designs; mandatory geometry and receptor exclusion precede Gaussian. Exploratory, not calibrated new-target affinity."},
     {"name": "Protein and structure evidence", "status": "available", "scope": "Verified UniProt proteins and PDB retrieval; receptor selection still needs review."},
     {"name": "AF3 prediction", "status": "available", "scope": "Verified single protein with supplied CCD or SMILES ligands; installed native or Apptainer profile. Confidence explanations via /confidence; live SMILES workstation validation pending."},
-    {"name": "PyMOL structure review", "status": "desktop bridge; workstation validation pending", "scope": "Open owned PDB, diverse references, aligned consensus and AF3 models; structured display, polar contacts, snapshots and sessions. Configure runtime.pymol.executable."},
+    {"name": "PyMOL structure review", "status": "skill-backed LLM programs and desktop bridge; live acceptance pending", "scope": "Open owned PDB, diverse references, aligned consensus and AF3 models; compose display API calls from natural language, inspect scene metadata, retry once after rollback, save PNG/PSE and undo. Configure runtime.pymol.executable. /pymol_agent REQUEST uses the selected provider."},
     {"name": "3D screening", "status": "WEE1 templates; exhaustive coarse retrieval by default", "scope": "All conformer descriptors compared before budgeted Gaussian refinement. Approximate mode requires explicit selection. New exhaustive runs are not claimed equivalent to old ANN candidate sets."},
     {"name": "Uncapped library condition counts", "status": "full_count adapter; workstation validation pending", "scope": "Evaluate every conformer pose against classified features without descriptor Top-K or Gaussian Top-N. Long batch job, not all possible orientations or torsions. Reuse completed classification as query definition."},
     {"name": "Necessary-condition funnel", "status": "rule-based adapter; workstation speedup pending", "scope": "Use an explicit selection rule across all library conformers; reject only impossible feature type/assignment/pair geometry, then refine every survivor without Top-K. Per-feature counts are conditional on that rule."},
@@ -177,7 +177,23 @@ All these intents use an empty request. On consensus_funnel use select to choose
 '''
 
 
+ROUTER += '''
+When viewer_catalog exists, use intent pymol_agent for natural-language desktop
+PyMOL display requests, especially multi-step changes, custom coloring, chain cleanup,
+selections, alignment or pocket visualization. Return exactly intent, message, task_id,
+request. request must preserve the user's full display requirements and resolve references
+using conversation context; task_id is null for the currently open viewer.
+The skill-backed agent reads the live scene and composes bounded PyMOL API calls.
+Use pymol with operation open to first open a different task, and operation undo to
+restore the previous successful agent program. Do not claim an operation has executed.
+'''
+
+
 def validate_route(value):
+    if isinstance(value,dict) and value.get('intent')=='pymol_agent':
+        if set(value)!={'intent','message','task_id','request'}:raise ValueError('Invalid PyMOL agent routing fields')
+        validate_route(dict(value,intent='run'))
+        return value
     if isinstance(value,dict) and value.get('intent') in {'pymol','confidence','interactions'}:
         intent=value['intent'];extra={'pymol':{'view'},'confidence':set(),'interactions':{'review'}}[intent]
         if set(value)!={'intent','message','task_id','request'}|extra:raise ValueError('Invalid review routing fields')
@@ -540,7 +556,10 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command=='/view':
+            if command=='/pymol_agent':
+                decision=dict(intent='pymol_agent',message='',request=text.strip()[len(command):].strip(),task_id=None)
+                validate_route(decision)
+            elif command=='/view':
                 from .prompt_plan import strict_json
                 decision=dict(intent='pymol',message='',request='',task_id=None,view=strict_json(text.strip()[5:].strip()))
                 validate_route(decision)
@@ -581,6 +600,19 @@ class ChatAgent:
                     system_prompt=ROUTER, capabilities=dict(actions=CAPABILITIES, workflows=WORKFLOWS), validator=validate_route)[0])
                 validate_route(decision)
             intent = decision["intent"]
+            if intent=='pymol_agent':
+                from .pymol_agent import run_agent
+                root=self.root/'viewers'/sid
+                saved=read_json(root/'catalog.json')
+                if not saved:raise ValueError('Open a completed task with /pymol TASK_ID first')
+                self.task(sid,saved['task_id'])
+                if decision['task_id'] and decision['task_id']!=saved['task_id']:raise ValueError('Open the requested task first')
+                cfg=read_json(self.runtime) if self.runtime else {}
+                profile=select_llm_profile(provider,config_dir=self.config_dir)
+                answer=json.dumps(run_agent(decision['request'],read_json(profile),root,
+                    saved['structures'],(cfg or {}).get('pymol',{}).get('executable')),indent=2)
+                self.message(sid,'assistant',answer)
+                return answer
             if intent in {'pymol','confidence','interactions'}:
                 answer=self.review_action(sid,decision)
                 self.message(sid,'assistant',answer)

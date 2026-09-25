@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/google-deepmind/science-skills",
+  "commit": "68832757cbbf941c620b71df5756cf6e5cc287b0",
+  "files": {
+    "SKILL.md": "72bf6ae780d21e4789eb3b536f1da40c707d7ac59188022a8bec8e94c00e6275",
+    "references/PYMOL_REFERENCE.md": "ab688a10ea34cd33dc7e9b5d9fa4d6b4d522f17170d34321929a1e57483dc4aa",
+    "references/RECIPES.md": "ca66731a16ef7fdb6f9d1e0ebe4392789bfabfae6dd425223d31fd6f0bc967b3",
+    "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  }
+}

@@ -115,6 +115,13 @@ def test_catalog_ownership_and_confidence_chat(tmp_path,monkeypatch):
     app.ask(sid,'/pymol '+job['id'],'deepseek')
     app.ask(sid,'/view {"operation":"surface","target":"protein"}','deepseek')
     assert requests[-1]['target']=='protein'
+    from aidd_agent import pymol_agent
+    planned=[]
+    monkeypatch.setattr(pymol_agent,'run_agent',lambda request,*args:planned.append(request) or dict(status='complete'))
+    assert 'complete' in app.ask(sid,'/pymol_agent Show the ligand pocket with mixed colors','deepseek')
+    assert planned==['Show the ligand pocket with mixed colors']
+    with pytest.raises(ValueError,match='Open a completed task'):
+        app.ask(app.new_session(),'/pymol_agent Show all ligands','deepseek')
     external=tmp_path/'outside.cif';external.write_text('fixture')
     dump(report,dict(steps=dict(fold=dict(action='af3_run',status='complete',result=dict(model=str(external))))))
     with pytest.raises(ValueError):structures(app.task(sid,job['id']),project)
