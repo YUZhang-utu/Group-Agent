@@ -20,7 +20,7 @@ def add(app,sid,jid,action,child,source=None,run_id=None):
 
 def test_chain_preserves_sources_and_actual_diversity_evidence(tmp_path):
     app=ChatAgent(tmp_path,start=False);sid=app.new_session()
-    root=add(app,sid,'div','structure_diversity',dict(status='complete',target='P49137',
+    root=add(app,sid,'div','structure_diversity',dict(status='complete',target='Q00987',
         proposed_references=[dict(query_id='6Q9L:HTZ:A:201')],selection=dict(fingerprint='Morgan')))
     (root/'ligand-similarity.csv').write_text('query_id,6Q9L:HTZ:A:201\n6Q9L:HTZ:A:201,1\n')
     add(app,sid,'con','structure_consensus',dict(status='complete',readiness='proposal_ready'),'div')

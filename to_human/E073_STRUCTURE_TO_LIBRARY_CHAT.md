@@ -43,7 +43,7 @@ Start by locating work already done:
 
 For a new target, substitute the actual accession and reference PDB:
 
-> For human MDM2, UniProt P49137, use reference PDB 6Q9L to collect experimental ligand-bound structures and compare ligand diversity. Report the quality and site exclusions, similarity matrix, coverage and proposed diverse references. Do not search the molecule library yet.
+> For human MDM2, UniProt Q00987, use reference PDB 6Q9L to collect experimental ligand-bound structures and compare ligand diversity. Report the quality and site exclusions, similarity matrix, coverage and proposed diverse references. Do not search the molecule library yet.
 
 Review existing selection:
 

@@ -1928,3 +1928,7 @@ detector independently of model planning. No live GUI success claimed.
 - Fixed source lineage reading to unwrap the actual sealed plan envelope; earlier E073 fixtures used a simplified plan representation. Updated fixtures and added a real validated-dispatch/plan-seal integration test.
 - Protocol: experiments/E074-structure-chain.md. User guide: to_human/E074_AUTOMATIC_STRUCTURE_CHAIN.md. No real PDB or library job was launched.
 - Full regression: 572 passed, three skipped. Subsequent added real-dispatch fixture initially failed because its source run ID was abbreviated; corrected it to the required PROMPT ID format. Final focused regression: 26 passed, including the actual sealed-plan dispatch. Provider routing and workstation lifecycle remain unvalidated locally.
+
+### 2026-09-25: correct MDM2 accession in authored examples
+- The workstation agent correctly refused a conflicting target request copied from my example. Human MDM2 is Q00987; I incorrectly supplied P49137 (MAPKAPK2). Corrected the E073 prompt and its context fixture. Existing scientific artifacts were not rewritten and identity validation was not weakened.
+- Sources: https://www.uniprot.org/uniprotkb/Q00987/entry and https://www.uniprot.org/uniprotkb/P49137/history. The user-provided receipt states no task or chain was dispatched. A corrected request can start a new 6Q9L branch; this local correction does not itself submit a workstation task.
