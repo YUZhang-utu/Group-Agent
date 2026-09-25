@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'structure_chain': 'Persist explicitly authorized automatic continuation from an existing diversity/consensus/recommendation/design task. operation start requires task_id, goal recommendation or budget, optional reference {reference_query,target_chain,maximum_templates}, budget settings. Other operations: status, pause/resume/cancel with chain_id. Controls continuation, not the current scientific task. No automatic recovery of uncertain dispatch.',
     'structure_workflow': 'Inspect PDB/diversity/consensus/library stages, source branches, real reference proposals and next supported intents. Arguments: optional task_id. Read-only; call before continuing this workflow.',
     'tasks': 'List current-session task IDs, state and report availability. Arguments: {}.',
     'task_report': 'Read an owned task report or one child step report. Arguments: task_id, optional step_id, optional pointer (JSON pointer), offset (default 0), limit (1..100, default 20). Returns child step IDs and discoverable artifacts.',
@@ -104,12 +105,16 @@ class DomainTools:
         from .project_context import ensure_within
         if not isinstance(args,dict):raise ValueError('Tool arguments must be an object')
         allowed={
+            'structure_chain':{'operation','task_id','goal','reference','budget','chain_id'},
             'structure_workflow':{'task_id'},
             'tasks':set(),'task_report':{'task_id','step_id','pointer','offset','limit'},
             'read_artifact':{'artifact_id','pointer','offset','limit'},'viewer_read':{'artifact_id','pointer','offset','limit'},
             'library_status':set(),'molecule_lookup':{'molecule_id','source_name','limit'},
             'literature_search':{'query','limit'},'viewer_status':set(),'workflow':{'decision'}}
         if name not in allowed or set(args)-allowed[name]:raise ValueError('Unknown tool or arguments')
+        if name=='structure_chain':
+            from .structure_chains import control
+            return control(self.app,self.sid,self.provider,self.request,args)
         if name=='structure_workflow':
             from .structure_workflow_context import inspect
             return inspect(self,args)

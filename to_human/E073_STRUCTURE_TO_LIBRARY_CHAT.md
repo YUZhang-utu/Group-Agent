@@ -1,5 +1,9 @@
 # PDB to consensus to molecule-library screening
 
+Update: E074 adds opt-in persistent automatic continuation. See
+[the automatic chain guide](E074_AUTOMATIC_STRUCTURE_CHAIN.md). The stepwise
+interface below remains available; the E073 scheduler limitation describes that release.
+
 The domain agent now has a read-only `structure_workflow` tool that identifies
 current-session stages, actual source-run links, proposed reference IDs, reference
 ambiguities, similarity artifacts and supported next actions. Existing executors

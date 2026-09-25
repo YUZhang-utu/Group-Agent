@@ -20,6 +20,7 @@ def inspect(tools, args):
         try:
             if job.get('plan'):
                 path=ensure_within(Path(job['plan']),tools.project);plan=tools.json_file(path)
+                plan=plan.get('plan',plan)
                 row['run_id']=path.parent.name
                 row['source_run_ids']=list(dict.fromkeys(s['params']['source_run']
                     for s in plan.get('steps',[]) if s.get('params',{}).get('source_run')))
@@ -34,7 +35,7 @@ def inspect(tools, args):
                     child_path=step.get('result',{}).get('report')
                     child=tools.json_file(ensure_within(Path(child_path),tools.project)) if child_path else {}
                     stage['evidence']={k:child[k] for k in (
-                        'target','reference_site_pdb','readiness','selection','quality_site_unique_ligands',
+                        'status','target','reference_site_pdb','readiness','selection','quality_site_unique_ligands',
                         'coverage_curve','template_selection','proposed_template_ids','ranked_molecules',
                         'exported_molecules','start_rank','end_rank','shortfall','review_required',
                         'limitations','outputs') if k in child}

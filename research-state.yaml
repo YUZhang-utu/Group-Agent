@@ -7,7 +7,9 @@ domain_agent:
     experiment: E073
     status: source_aware_navigation_implemented_live_acceptance_pending
     guide: to_human/E073_STRUCTURE_TO_LIBRARY_CHAT.md
-    unattended_chain_scheduler: not_implemented
+    unattended_chain_scheduler: E074_persistent_explicit_goal_coordinator
+    scheduler_guide: to_human/E074_AUTOMATIC_STRUCTURE_CHAIN.md
+    scheduler_acceptance: local_fixtures_passed_workstation_pending
   experiment: E072
   status: implemented_fixture_validation_live_acceptance_pending
   guide: to_human/E072_DOMAIN_AGENT.md

@@ -6,10 +6,10 @@ from aidd_agent.domain_tools import DomainTools
 from aidd_agent.prompt_workflow import project_root
 
 
-def add(app,sid,jid,action,child,source=None):
-    ctx=app.context;root=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])/jid
+def add(app,sid,jid,action,child,source=None,run_id=None):
+    ctx=app.context;root=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])/(run_id or jid)
     root.mkdir();plan=root/'plan.json';report=root/'report.json';detail=root/'detail.json'
-    plan.write_text(json.dumps(dict(steps=[dict(action=action,params=dict(source_run=source) if source else {})])))
+    plan.write_text(json.dumps(dict(plan=dict(steps=[dict(action=action,params=dict(source_run=source) if source else {})]))))
     detail.write_text(json.dumps(child))
     report.write_text(json.dumps(dict(steps=dict(stage=dict(action=action,status='complete',result=dict(report=str(detail)))))))
     with app.connect() as db:

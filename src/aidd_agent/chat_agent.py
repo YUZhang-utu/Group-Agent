@@ -18,6 +18,7 @@ from .prompt_workflow import create_plan, initialize_context
 from .language_policy import contains_han
 
 WORKFLOWS = [
+    {"name":"Automatic structure workflow chains", "status":"Persistent coordinator; workstation acceptance pending", "scope":"Explicitly requested continuation from an existing task through consensus, recommendation and optional budget delivery. Pause/resume future stages, preserve source IDs, block failed or uncertain dispatch. Current scientific tasks remain separately controlled."},
     {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
     {"name":"Contact-first molecule budgets", "status":"Chat budget and budget_page adapters", "scope":"Unique-molecule ANN retrieval, same-pose contact-first template ranks, RRF fusion and paged original/posed MOL2 plus names. Target recall and enrichment require validation."},
     {"name":"Structure-guided chat", "status":"survey, recommend, adopt/design and guided full-library adapters",
@@ -414,6 +415,8 @@ class ChatAgent:
             CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,session TEXT,request TEXT,provider TEXT,
             profile TEXT,status TEXT,plan TEXT,report TEXT,log TEXT,error TEXT,cancel INTEGER DEFAULT 0,created REAL);""")
             db.execute("UPDATE jobs SET status='interrupted',error='Server stopped during execution; explicitly resume this task.' WHERE status IN ('planning','running')")
+        from .structure_chains import initialize
+        initialize(self)
         if start:
             self.worker = threading.Thread(target=self.work, daemon=True)
             self.worker.start()
@@ -520,8 +523,9 @@ class ChatAgent:
                 agent_runs.append(dict(id=trace.get('id'),status=trace.get('status'),request=trace.get('request'),
                     steps=[dict(tool=row.get('step',{}).get('tool','answer'),purpose=row.get('step',{}).get('purpose',''),
                                 status=row.get('status','complete'),error=row.get('error'),evidence_id=row.get('evidence_id')) for row in trace.get('steps',[])]))
+        from .structure_chains import rows
         return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,
-                    compute_enabled=self.allow_compute,agent_runs=agent_runs)
+                    compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
 
     def review_action(self,sid,decision):
         from . import structure_review as review
@@ -786,6 +790,8 @@ class ChatAgent:
 
     def work(self):
         while not self.stop.wait(.25):
+            from .structure_chains import tick
+            tick(self)
             with self.connect() as db:
                 job = db.execute("SELECT * FROM jobs WHERE status='queued' ORDER BY created LIMIT 1").fetchone()
             if job:

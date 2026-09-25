@@ -1921,3 +1921,10 @@ detector independently of model planning. No live GUI success claimed.
 - Integrated stage guidance into the tool-feedback loop and removed stale router text claiming multi-reference execution was unavailable. Kept budget retrieval distinct from exhaustive pose scoring and the older threshold funnel; no scientific algorithm or threshold changed.
 - Recorded the stage protocol and complete English prompt sequence in experiments/E073-structure-workflow-context.md and to_human/E073_STRUCTURE_TO_LIBRARY_CHAT.md.
 - Confirmatory local regression: 21 domain/Chat/navigation tests passed. No external PDB retrieval or full-library computation ran. This provides source-aware conversational continuation, not an unattended asynchronous chain scheduler or validated live-model routing.
+
+### 2026-09-25 E074: persistent automatic structure workflow chains
+- Added explicit recommendation/budget-goal continuation from an owned source task. The existing worker advances completed dependencies through validated executors; stored chain IDs, current task, history, errors and UI cards survive restarts.
+- Added pause/resume/cancel for continuation without implicitly cancelling/resuming the scientific task. Failed dependencies block. A dispatch interrupted before its receipt is persisted becomes uncertain and cannot retry automatically. Compute-disabled servers reject budget chains.
+- Fixed source lineage reading to unwrap the actual sealed plan envelope; earlier E073 fixtures used a simplified plan representation. Updated fixtures and added a real validated-dispatch/plan-seal integration test.
+- Protocol: experiments/E074-structure-chain.md. User guide: to_human/E074_AUTOMATIC_STRUCTURE_CHAIN.md. No real PDB or library job was launched.
+- Full regression: 572 passed, three skipped. Subsequent added real-dispatch fixture initially failed because its source run ID was abbreviated; corrected it to the required PROMPT ID format. Final focused regression: 26 passed, including the actual sealed-plan dispatch. Provider routing and workstation lifecycle remain unvalidated locally.
