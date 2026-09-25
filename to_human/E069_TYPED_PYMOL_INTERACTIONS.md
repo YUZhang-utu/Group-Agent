@@ -56,6 +56,16 @@ metal coordination and validated hydrogen-bond assignments remain unsupported he
 Only blank/A alternate locations with positive occupancy are admitted. This fixed
 policy and state-1 scope may omit interactions in other conformers/alternate locations.
 
+Aromatic atom identity is read from explicit ChemPy aromatic bonds (order 4),
+not an `aromatic` PyMOL selection keyword. After the live compatibility fix,
+zero-hit results do not address nonexistent helper objects. Exceptions include the
+object, stage and failing API call even when PyMOL supplies only a blank error.
+Optional workstation API smoke test (requires pytest in that environment):
+
+```bash
+python -m pytest tests/test_pymol_interactions.py -q
+```
+
 To prevent clutter, the display keeps the shortest representative for each interaction
 type and ligand/protein residue pair. Atom pairs represented as pi stacking are not
 also drawn as hydrophobic contacts; explicit salt pairs are not duplicated as polar

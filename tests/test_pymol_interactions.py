@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from aidd_agent.pymol_interactions import detect, display, DEFAULT_TYPES
+from aidd_agent.pymol_interactions import detect, display, DEFAULT_TYPES, aromatic_indices
 from aidd_agent.pymol_program import compile_program
 from aidd_agent.pymol_bridge import validate_view, execute_command
 
@@ -62,7 +62,7 @@ class Scene:
         def a(i,element,xyz):return SimpleNamespace(index=i,symbol=element,coord=xyz,formal_charge=0,
             name=element+str(i),segi='',chain='A',resi=str(i),resn='LIG' if i==1 else 'ASN',alt='',q=1)
         atoms=[a(1,'N',[0,0,0]),a(2,'O',[3,0,0])]
-        if 'aromatic' in sel:atoms=[]
+        if 'aromatic' in sel:raise RuntimeError(' Error: invalid selection name aromatic')
         elif 'polymer' in sel:atoms=atoms[1:]
         elif 'organic' in sel:atoms=atoms[:1]
         return SimpleNamespace(atom=atoms,bond=[])
@@ -109,3 +109,27 @@ def test_zero_typed_hits_does_not_fall_back_to_distance(tmp_path):
                    [dict(id='v001',label='one')],tmp_path)
     assert result['displayed_counts']=={'v001':{}}
     assert not any(n=='distance' for n,*_ in cmd.calls)
+    assert not any(n=='hide' and args[-1]=='v001_ix_points' for n,args,kwargs in cmd.calls)
+
+
+def test_aromatic_bond_indices_are_object_indices_not_positions():
+    model=SimpleNamespace(atom=[SimpleNamespace(index=i) for i in (5,12,99)],
+                          bond=[SimpleNamespace(index=[0,1],order=4),SimpleNamespace(index=[1,2],order=1)])
+    assert aromatic_indices(model)=={5,12}
+
+
+def test_empty_pymol_error_keeps_stage_and_selection(tmp_path):
+    class Broken(Scene):
+        def get_model(self,sel,state=1):raise RuntimeError(' Error: ')
+    with pytest.raises(RuntimeError,match='detect interactions for v001: cmd.get_model') as error:
+        display(Broken(),dict(id='1-abcdefabcdef',view=dict(operation='typed_interactions')),
+                [dict(id='v001',label='one')],tmp_path)
+    assert 'organic' in str(error.value)
+
+
+def test_live_pymol_aromatic_model_when_available():
+    pymol2=pytest.importorskip('pymol2',reason='Real PyMOL runtime is only available on the workstation')
+    with pymol2.PyMOL() as pm:
+        pm.cmd.fragment('benzene','v001')
+        model=pm.cmd.get_model('v001',state=1)
+        assert len(aromatic_indices(model))==6

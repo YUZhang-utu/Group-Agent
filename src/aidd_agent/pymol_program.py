@@ -151,8 +151,10 @@ def run_program(cmd,message,catalog,root):
     cmd.save(str(checkpoint))
     codepath=Path(str(prefix)+'.py');codepath.write_text(view['code'],encoding='utf-8')
     output=dict(status='complete',operation='program',calls=[],artifacts=dict(code=str(codepath),checkpoint=str(checkpoint)))
+    stage='start program'
     try:
         for method,raw in calls:
+            stage=f'call {len(output["calls"])+1}: cmd.{method}({raw!r})'
             if method=='typed_interactions':
                 from .pymol_interactions import display
                 child=dict(operation=method,**{k:v.split() for k,v in raw.items()})
@@ -175,15 +177,18 @@ def run_program(cmd,message,catalog,root):
             result=getattr(cmd,method)(**values)
             output['calls'].append(dict(method=method,arguments=raw,selected_atoms=selected,result=result))
         png=Path(str(prefix)+'.png');pse=Path(str(prefix)+'.pse')
+        stage='save program image'
         cmd.png(str(png),width=1400,height=1000,dpi=150,ray=0,quiet=1)
+        stage='save program session'
         cmd.save(str(pse))
         output['artifacts'].update(snapshot=str(png),save_session=str(pse))
+        stage='read final scene'
         output['scene']=scene(cmd,catalog)
         _UNDO[key]=before
     except Exception as exc:
         try:
             cmd.set_session(before);rollback='complete'
         except Exception as rollback_exc:rollback='failed: '+str(rollback_exc)
-        output.update(status='failed',error=str(exc),rollback=rollback)
+        output.update(status='failed',error=f'{stage}: {type(exc).__name__}: {exc}',failed_stage=stage,rollback=rollback)
     write_json(Path(str(prefix)+'-execution.json'),output)
     return output

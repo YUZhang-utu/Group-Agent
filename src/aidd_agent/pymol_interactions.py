@@ -14,6 +14,24 @@ RULES=dict(polar_max_A=3.5,salt_max_A=4.0,pi_max_A=5.5,pi_angle_deviation_deg=30
            halogen_acceptor_min_deg=90,halogen_acceptor_max_deg=150)
 
 
+class CheckedCommands:
+    """Keep useful context when a PyMOL CmdException has an empty message."""
+    def __init__(self,cmd):self.cmd=cmd;self.stage='read scene'
+    def __getattr__(self,name):
+        function=getattr(self.cmd,name)
+        def checked(*args,**kwargs):
+            try:return function(*args,**kwargs)
+            except Exception as exc:
+                raise RuntimeError(f'{self.stage}: cmd.{name} args={args!r} kwargs={kwargs!r}: {type(exc).__name__}: {exc}') from exc
+        return checked
+
+
+def aromatic_indices(model):
+    # PyMOL has no portable `aromatic` selection keyword. ChemPy marks aromatic
+    # bonds with order 4; absent typing must remain unassigned, not guessed.
+    return {model.atom[i].index for bond in model.bond if getattr(bond,'order',None)==4 for i in bond.index}
+
+
 def residue(a):return (a.get('segi',''),a['chain'],a['resi'],a['resn'])
 def distance(a,b):return float(np.linalg.norm(np.asarray(a)-np.asarray(b)))
 def angle(a,b):
@@ -118,6 +136,7 @@ def detect(atoms,edges,ligand,protein,aromatic,polar_pairs):
 def display(cmd,message,catalog,root,checkpoint=True):
     from .pymol_bridge import selection,write_json
     from .pymol_program import _UNDO
+    cmd=CheckedCommands(cmd)
     root=Path(root);view=message['view'];types=view.get('types',DEFAULT_TYPES)
     enabled=set(cmd.get_names('objects',enabled_only=1))
     ids=view.get('objects') or [r['id'] for r in catalog if r['id'] in enabled]
@@ -127,6 +146,7 @@ def display(cmd,message,catalog,root,checkpoint=True):
     results={}
     # Complete all detection before touching display state.
     for obj,row in selected.items():
+        cmd.stage='detect interactions for '+obj
         def indices(sel):return {a.index for a in cmd.get_model(sel,state=1).atom}
         lig=selection(obj,row,dict(target='ligand'))
         pro=f'({obj} and polymer.protein) and not ({lig})'
@@ -145,33 +165,38 @@ def display(cmd,message,catalog,root,checkpoint=True):
             for a,b in cmd.find_pairs(left,right,state1=1,state2=1,cutoff=3.5,mode=1,angle=45):
                 if a[0]!=obj or b[0]!=obj:continue
                 polar.append((b[1],a[1]) if reverse else (a[1],b[1]))
-        raw,reps=detect(atoms,edges,ligand,protein,indices(obj+' and aromatic'),polar)
+        raw,reps=detect(atoms,edges,ligand,protein,aromatic_indices(model),polar)
         results[obj]=dict(accepted=raw,representatives=reps,
-            chemistry=dict(ligand_formal_charge_atoms=sum(atoms[i]['charge']!=0 for i in ligand),
+            chemistry=dict(aromatic_atom_count=len(aromatic_indices(model)),aromatic_basis='loaded ChemPy aromatic bond order 4; no aromaticity inference',
+                           ligand_formal_charge_atoms=sum(atoms[i]['charge']!=0 for i in ligand),
                            protein_formal_charge_atoms=sum(atoms[i]['charge']!=0 for i in protein)),
             atom_metadata={str(i):{k:v for k,v in a.items() if k!='coord'} for i,a in atoms.items() if i in ligand|protein})
     before=cmd.get_session();artifacts={};prefix=root/message['id']
     if checkpoint:
         cmd.save(str(prefix)+'-before.pse');artifacts['checkpoint']=str(prefix)+'-before.pse'
     try:
+        cmd.stage='replace previous interaction displays'
         # Replace previous proximity displays, including generated AI distance objects.
         for name in cmd.get_names('objects'):
             if name.startswith('ai_') and cmd.get_type(name)=='object:measurement':cmd.disable(name)
             if any(name.startswith(r['id']+'_ix_') or name in (r['id']+'_contacts',r['id']+'_polar_contacts') for r in catalog):cmd.disable(name)
         for obj in ids:
+            cmd.stage='draw interactions for '+obj
             for kind in COLORS:cmd.delete(obj+'_ix_'+kind)
             points=obj+'_ix_points';cmd.delete(points)
+            points_created=False
             for n,r in enumerate(results[obj]['representatives']):
                 if r['kind'] not in types:continue
                 endpoints=[]
                 for side in ('ligand','protein'):
                     name=f'p{n}_{side}'
                     cmd.pseudoatom(points,name=name,pos=r[side+'_point'],state=1)
+                    points_created=True
                     endpoints.append(f'{points} and name {name}')
                 name=obj+'_ix_'+r['kind']
                 cmd.distance(name,*endpoints,cutoff=8,mode=0,state=1)
                 cmd.set('dash_color',COLORS[r['kind']],name);cmd.hide('labels',name)
-            cmd.hide('everything',points)
+            if points_created:cmd.hide('everything',points)
         report=dict(status='complete',operation='typed_interactions',objects=ids,legend={k:COLORS[k] for k in types},
             displayed_counts={o:dict(Counter(r['kind'] for r in v['representatives'] if r['kind'] in types)) for o,v in results.items()},
             results=results,rules=RULES,scope='Conservative geometric hypotheses using live state 1 and PyMOL chemical typing. Not PLIP or confirmed physical interactions.',
@@ -187,10 +212,13 @@ def display(cmd,message,catalog,root,checkpoint=True):
                 for r in v['accepted']:writer.writerow([obj,r['kind'],r['ligand_residue'],r['protein_residue'],r['ligand_atoms'],r['protein_atoms'],r['distance_A'],r in v['representatives'] and r['kind'] in types])
         artifacts['interactions_csv']=str(table)
         if checkpoint:
+            cmd.stage='save interaction image and session'
             cmd.png(str(prefix)+'.png',width=1400,height=1000,ray=0,quiet=1);cmd.save(str(prefix)+'.pse')
             artifacts.update(snapshot=str(prefix)+'.png',save_session=str(prefix)+'.pse')
             _UNDO[str(root.resolve())]=before
         return {k:v for k,v in report.items() if k!='results'}|dict(artifacts=artifacts)
-    except Exception:
-        cmd.set_session(before)
+    except Exception as exc:
+        cmd.stage='restore interaction checkpoint'
+        try:cmd.set_session(before)
+        except Exception as rollback_exc:raise RuntimeError(f'{exc}; rollback also failed: {rollback_exc}') from exc
         raise

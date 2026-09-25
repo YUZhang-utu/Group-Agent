@@ -1876,3 +1876,20 @@ provider/PyMOL acceptance remains pending. See E069 for prompts and limitations.
 Full confirmatory regression after integration: 547 passed, 4 skipped (59.05 s).
 English-content guard and diff whitespace checks passed. No production scientific
 job was rerun and no real GUI interaction classification was claimed as validated.
+
+## 2026-09-25: E069 live CmdException compatibility correction
+
+User reported a repeated blank PyMOL error. Inspection against upstream Selector.cpp
+identified an invalid `aromatic` selection keyword in the adapter. Replaced it with
+explicit ChemPy aromatic bond-order metadata; no inferred aromaticity is substituted.
+Also stopped hiding a nonexistent pseudoatom object on zero-hit results. Added
+stage, method and arguments to PyMOL exception messages and program failure receipts.
+The terse user receipt cannot prove which call failed on that workstation, but both
+code defects were corrected. Earlier permissive fake commands failed to catch them.
+
+Confirmatory focused checks: 49 passed, 1 skipped. The fake scene now rejects the
+unsupported selector; tests cover zero-hit display and empty-error context. Added an
+optional real PyMOL aromatic-model test; it is skipped locally because PyMOL is not
+installed in this environment. English and whitespace checks passed. User should
+restart both processes and run the direct typed_interactions operation to test the
+detector independently of model planning. No live GUI success claimed.
