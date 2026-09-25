@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'structure_workflow': 'Inspect PDB/diversity/consensus/library stages, source branches, real reference proposals and next supported intents. Arguments: optional task_id. Read-only; call before continuing this workflow.',
     'tasks': 'List current-session task IDs, state and report availability. Arguments: {}.',
     'task_report': 'Read an owned task report or one child step report. Arguments: task_id, optional step_id, optional pointer (JSON pointer), offset (default 0), limit (1..100, default 20). Returns child step IDs and discoverable artifacts.',
     'read_artifact': 'Read a discovered JSON or CSV result by artifact_id; optional pointer, offset, limit. No arbitrary paths. Large arrays are paginated.',
@@ -103,11 +104,15 @@ class DomainTools:
         from .project_context import ensure_within
         if not isinstance(args,dict):raise ValueError('Tool arguments must be an object')
         allowed={
+            'structure_workflow':{'task_id'},
             'tasks':set(),'task_report':{'task_id','step_id','pointer','offset','limit'},
             'read_artifact':{'artifact_id','pointer','offset','limit'},'viewer_read':{'artifact_id','pointer','offset','limit'},
             'library_status':set(),'molecule_lookup':{'molecule_id','source_name','limit'},
             'literature_search':{'query','limit'},'viewer_status':set(),'workflow':{'decision'}}
         if name not in allowed or set(args)-allowed[name]:raise ValueError('Unknown tool or arguments')
+        if name=='structure_workflow':
+            from .structure_workflow_context import inspect
+            return inspect(self,args)
         if name=='tasks':
             jobs=self.app.jobs(self.sid)
             return dict(tasks=[{k:j[k] for k in ('id','status','request','report','error')} for j in jobs[-100:]],total=len(jobs),truncated=len(jobs)>100)

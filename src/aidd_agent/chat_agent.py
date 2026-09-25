@@ -40,7 +40,8 @@ intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classif
 For a pre-search protein/ligand PDB survey use run requesting protein verification and structure_survey.
 For a resolution census and diverse ligand reference comparison use run requesting
 structure_diversity, preserving the user's reference PDB. Do not claim polymer sequence
-similarity is chemical similarity or that multi-reference library execution is available.
+similarity is chemical similarity. Multi-reference library execution uses the
+separate consensus and budget adapters after coordinate-backed preparation.
 Use recommend on a completed structure_survey task for grounded advice. Use adopt when the user
 explicitly accepts that proposal or delegates to it. Silence never means adoption.
 Use design to edit an anchor_recommend task: include an additional design object with only

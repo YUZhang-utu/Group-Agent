@@ -3,6 +3,11 @@ objective: Build a local-first, resumable AIDD workflow beginning with batch MOL
 stage: ligand_comparison_and_similarity_search
 current_experiment: E066-chat-structure-review
 domain_agent:
+  structure_chain:
+    experiment: E073
+    status: source_aware_navigation_implemented_live_acceptance_pending
+    guide: to_human/E073_STRUCTURE_TO_LIBRARY_CHAT.md
+    unattended_chain_scheduler: not_implemented
   experiment: E072
   status: implemented_fixture_validation_live_acceptance_pending
   guide: to_human/E072_DOMAIN_AGENT.md
