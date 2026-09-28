@@ -69,7 +69,7 @@ def pocket_grid(seed, p):
     return grid
 
 
-def atom_features(atoms):
+def atom_features(atoms, with_elements=False):
     """Conservative residue templates; no inferred His/cysteine protonation."""
     features = {name: [] for name in CHANNELS}
     residues = {}
@@ -91,7 +91,8 @@ def atom_features(atoms):
         if norm > 1e-8: direction /= norm
         for label in labels:
             # Outward heavy-atom proxy, not a reconstructed hydrogen/lone pair.
-            features[label].append(point + (1.5*direction if label in {'donor','acceptor'} else 0))
+            center = point + (1.5*direction if label in {'donor','acceptor'} else 0)
+            features[label].append((center, atom['type_symbol']) if with_elements else center)
     return features
 
 
@@ -105,8 +106,15 @@ def describe(grid, atoms, p):
         occupied |= cKDTree(xyz[elements == element]).query(grid)[0] < RADII[element]+p['probe_radius']
     cavity = ~occupied
     fields = np.zeros((len(CHANNELS), len(grid)), bool)
-    for index, points in enumerate(atom_features(atoms).values()):
-        if points: fields[index] = (cKDTree(points).query(grid)[0] <= p['feature_radius']) & cavity
+    for index, (channel, features) in enumerate(atom_features(atoms, with_elements=True).items()):
+        for element in sorted({element for _, element in features}):
+            points = [point for point, symbol in features if symbol == element]
+            # Nondirectional contact fields start at the accessible atomic surface.
+            # An atom-centred 2 A ball was wholly buried inside the exclusion.
+            radius = p['feature_radius']
+            if channel not in {'donor', 'acceptor'}:
+                radius += RADII[element] + p['probe_radius']
+            fields[index] |= (cKDTree(points).query(grid)[0] <= radius) & cavity
     return cavity, fields
 
 
@@ -115,9 +123,24 @@ def iou(a, b):
     return np.count_nonzero(a & b)/union if union else 1.0
 
 
+def local_diagnostics(masks, grid, subpocket_centers, p):
+    n = len(masks)
+    raw = np.zeros((n,n)); legacy = raw.copy(); smooth = raw.copy(); changed = raw.copy()
+    regions = [np.linalg.norm(grid-np.asarray(c), axis=1) <= 4 for c in subpocket_centers]
+    for i in range(n):
+        for j in range(i):
+            values = [(1-iou(masks[i]&r, masks[j]&r),
+                       np.count_nonzero((masks[i]^masks[j])&r)*p['spacing']**3) for r in regions]
+            raw[i,j] = raw[j,i] = max((d for d,v in values), default=0)
+            legacy[i,j] = legacy[j,i] = max((d for d,v in values if v >= p['local_change_volume']), default=0)
+            smooth[i,j] = smooth[j,i] = max((d*v/(v+p['local_change_volume']) for d,v in values), default=0)
+            changed[i,j] = changed[j,i] = max((v for d,v in values), default=0)
+    return dict(raw=raw, legacy=legacy, smooth=smooth, maximum_changed_volume=changed)
+
+
 def compare(masks, fields, grid, subpocket_centers, p):
     n = len(masks); overlap = np.eye(n); chemical = np.zeros((n,n)); local = np.zeros((n,n))
-    regions = [np.linalg.norm(grid-np.asarray(c), axis=1) <= 4 for c in subpocket_centers]
+    local = local_diagnostics(masks, grid, subpocket_centers, p)['smooth']
     for i in range(n):
         for j in range(i):
             overlap[i,j] = overlap[j,i] = iou(masks[i], masks[j])
@@ -126,9 +149,6 @@ def compare(masks, fields, grid, subpocket_centers, p):
             active = [k for k in range(len(CHANNELS)) if np.any((fields[i,k] | fields[j,k]) & common)]
             value = np.mean([1-iou(fields[i,k] & common, fields[j,k] & common) for k in active]) if active else 0
             chemical[i,j] = chemical[j,i] = value
-            differences = [1-iou(masks[i]&r, masks[j]&r) for r in regions
-                           if np.count_nonzero((masks[i]^masks[j])&r)*p['spacing']**3 >= p['local_change_volume']]
-            local[i,j] = local[j,i] = max(differences, default=0)
     shape_distance = np.maximum(1-overlap, .5*local)
     distance = (1-p['chemical_weight'])*shape_distance + p['chemical_weight']*chemical
     np.fill_diagonal(distance, 0)
@@ -190,10 +210,11 @@ def quality(atoms, residues, relevant=None):
     return issues
 
 
-def build(source, output, reference_query=None, target_chain=None, settings=None):
+def build(source, output, reference_query=None, target_chain=None, settings=None, excluded_entries=None):
     source = Path(source).resolve(); root = source.parent; out = Path(output).resolve()
     if (out/'report.json').exists(): raise FileExistsError('Use a fresh pocket output')
     out.mkdir(parents=True, exist_ok=True); p = policy(settings)
+    excluded_entries = {str(k).upper(): str(v) for k,v in (excluded_entries or {}).items()}
     survey = json.loads(source.read_text()); protein = json.loads((root/'protein.json').read_text())
     instances = json.loads((root/'ligand-instances.json').read_text()); cache = {}
     def get(code):
@@ -208,7 +229,8 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
             if target_chain and chain != target_chain: continue
             if len(contact_residues(atoms, lig)) >= 3 and assembly_compatible(structure, chain, lig):
                 options.append((row, chain))
-    report = dict(kind='pocket_states', status='complete', policy=p, target=protein,
+    report = dict(kind='pocket_states', status='complete', descriptor_version=2,
+                  excluded_entries=excluded_entries, policy=p, target=protein,
                   diversity_report=str(source), sources=fingerprint([source,root/'protein.json',root/'ligand-instances.json']),
                   limitations=['PDB support is not equilibrium occupancy; rare clusters are retained',
                     'Reference-ligand-expanded local region, not exhaustive cavity or access-path detection',
@@ -236,6 +258,9 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
     for file in sorted((root/'structures').glob('*.cif')):
         code = file.stem.upper()
         report['sources'].update(fingerprint([file]))
+        if code in excluded_entries:
+            held.append(dict(id=code, scope='entire_entry', reasons=['explicit_entry_exclusion'],
+                             detail=excluded_entries[code])); continue
         try: s = get(code)
         except (ValueError,KeyError,OSError) as exc:
             held.append(dict(id=code,reasons=['structure_read_failed'],detail=str(exc)[:300]));continue
@@ -280,6 +305,8 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
             rows.append(dict(id=sid,pdb_id=code,target_chain=c,transform=matrix.tolist(),core_rmsd=rmsd,
                              structure_path=str(file.resolve()),
                              alignment_residues=core,queries=queries,resolution=min([q['resolution'] for q in queries],default=None),
+                             feature_source_counts={k:len(v) for k,v in atom_features(aligned).items()},
+                             field_volumes={k:float(feature[i].sum()*p['spacing']**3) for i,k in enumerate(CHANNELS)},
                              cavity_volume=float(mask.sum()*p['spacing']**3)))
             masks.append(mask); fields.append(feature)
             print(f'Pocket states: prepared {sid}; {len(rows)} structures', flush=True)
@@ -288,6 +315,7 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
         _atomic_json(out/'report.json',report); return report
     masks=np.array(masks); fields=np.array(fields)
     distance, overlap, chemical, local = compare(masks,fields,grid,[rm[r] for r in sorted(pocket_residues) if r in rm],p)
+    diagnostics = local_diagnostics(masks,grid,[rm[r] for r in sorted(pocket_residues) if r in rm],p)
     groups = clusters(distance,rows,p['cluster_distance'])
     for group in groups:
         members=[i for i,r in enumerate(rows) if r['id'] in group['members']]
@@ -299,7 +327,8 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
             group['review_flags'].append('inspect_within_cluster_chemical_differences')
     artifacts=out/'pocket-grids.npz'
     np.savez_compressed(artifacts,grid=grid,masks=masks,chemical_fields=fields,
-                        distance=distance,overlap=overlap,chemical_distance=chemical,local_difference=local)
+                        distance=distance,overlap=overlap,chemical_distance=chemical,local_difference=local,
+                        **{'local_'+k:v for k,v in diagnostics.items()})
     report.update(readiness='needs_user_adoption',reference=dict(query_id=reference['query_id'],target_chain=chain,id=reference_id),
                   pocket_residues=sorted(pocket_residues),quality_atom_scope={str(k):sorted(v) for k,v in relevant.items()},
                   structures=rows,clusters=groups,held_for_review=held,
@@ -342,6 +371,8 @@ a.onchange=b.onchange=axis.onchange=draw;draw();</script>'''
 
 def adopt(source, output, cluster_ids=None):
     source=Path(source).resolve(); report=json.loads(source.read_text()); check_hashes(report['sources'])
+    if report.get('descriptor_version', 1) < 2:
+        raise ValueError('Recompute pocket fields: descriptor v1 has buried chemical channels and censored local differences')
     if report.get('readiness')!='needs_user_adoption': raise ValueError('Review a completed pocket-state report first')
     allowed={c['id'] for c in report['clusters']}; selected=list(cluster_ids) if cluster_ids is not None else sorted(allowed)
     if not selected or len(set(selected))!=len(selected) or not set(selected)<=allowed: raise ValueError('Invalid pocket-state selection')
@@ -386,13 +417,15 @@ def main():
     build_parser=sub.add_parser('build'); build_parser.add_argument('--source',type=Path,required=True)
     build_parser.add_argument('--output',type=Path,required=True); build_parser.add_argument('--reference-query')
     build_parser.add_argument('--target-chain'); build_parser.add_argument('--cluster-distance',type=float,default=.40)
+    build_parser.add_argument('--exclude-entry', action='append', default=[], help='Exclude every chain of this PDB entry')
     adoption=sub.add_parser('adopt'); adoption.add_argument('--source',type=Path,required=True)
     adoption.add_argument('--output',type=Path,required=True); adoption.add_argument('--cluster-ids',nargs='+')
     consensus=sub.add_parser('consensus'); consensus.add_argument('--source',type=Path,required=True)
     consensus.add_argument('--output',type=Path,required=True); consensus.add_argument('--pocket-state-id')
     args=parser.parse_args()
     if args.command=='build':
-        result=build(args.source,args.output,args.reference_query,args.target_chain,dict(cluster_distance=args.cluster_distance))
+        result=build(args.source,args.output,args.reference_query,args.target_chain,dict(cluster_distance=args.cluster_distance),
+                     {code:'Explicit CLI entry exclusion' for code in args.exclude_entry})
     elif args.command=='adopt': result=adopt(args.source,args.output,args.cluster_ids)
     else:
         from .guided_workflow import execute

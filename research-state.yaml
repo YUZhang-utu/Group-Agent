@@ -1,19 +1,24 @@
 project: aidd-macrocycle-agent
 pdb_pocket_project_prerequisite:
-  status: implemented_local_tests_and_MDM2_exploratory_validation
+  status: E085_field_bug_fixed_partitions_unvalidated
   guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
   scope: experimental_PDB_only
   precedes: state_specific_interaction_consensus
   requires: explicit_user_adoption_of_pocket_representatives
   runtime_enforcement: new_diversity_requires_adopted_state_consensus
   implementation_guide: to_human/E084_PDB_POCKET_STATES.md
-  clustering: average_linkage_distance_0_40_chemical_weight_0_15
+  clustering: weighted_average_linkage_exploratory_sensitivity_required
   mdm2_exploratory_receipt: to_human/E084_MDM2_VALIDATION.json
-  mdm2_admitted_chains: 68
-  mdm2_distinct_pdbs: 60
-  mdm2_default_clusters: 6
-  mdm2_user_adoption: pending_geometry_review_C5_7BJ0
-  mdm2_analysis_export: to_human/E084_MDM2_ANALYSIS_REVIEW.zip
+  mdm2_admitted_chains: 67
+  mdm2_distinct_pdbs: 59
+  mdm2_default_clusters: unvalidated_parameter_dependent
+  mdm2_user_adoption: pending_corrected_descriptor_and_cutoff_review
+  mdm2_analysis_export: to_human/E085_POCKET_REVIEW_FINAL.zip
+  E084_distance_status: superseded_four_chemical_channels_buried_by_exclusion
+  E085_report: to_human/E085_POCKET_DISTANCE_AUDIT.md
+  E085_excluded_entries: [7BJ0]
+  E085_C1: 43_legacy_zero_12_nonzero_not_two_separated_physical_states
+  E085_C6: retained_independent_state_status_unstable
   mdm2_geometry_finding: trimmed_core_passed_but_7BJ0_pocket_CA_RMSD_23_767_A
 audit_summary_recovery:
   experiment: E083

@@ -35,7 +35,8 @@ def test_material_occlusion_and_chemistry_are_measured():
     a=np.ones(len(grid),bool); b=grid[:,0]<0
     f=np.zeros((2,6,len(grid)),bool)
     distance,overlap,_,local=ps.compare(np.array([a,b]),f,grid,[[0,0,0]],p)
-    assert overlap[0,1]<.5 and local[0,1]>.5
+    assert overlap[0,1]<.5 and local[0,1]>0
+    assert ps.local_diagnostics(np.array([a,b]),grid,[[0,0,0]],p)['raw'][0,1]>.5
     rows=[dict(id='A',pdb_id='1AAA'),dict(id='B',pdb_id='2AAA')]
     groups=ps.clusters(distance,rows,p['cluster_distance'])
     assert len(groups)==2 and all(g['small_support'] for g in groups)
@@ -71,12 +72,45 @@ def test_missing_atoms_are_not_interpreted_as_open_pocket():
     assert not ps.quality(atoms[:-1],{1},{1:{'N','CA','C','O'}})
 
 
+@pytest.mark.parametrize('residue,name,element,channels', [
+    ('PHE','CZ','C',('hydrophobic','aromatic')),
+    ('LYS','NZ','N',('positive','donor')),
+    ('ASP','OD1','O',('negative','acceptor'))])
+def test_real_atom_fields_reach_accessible_space(residue,name,element,channels):
+    atoms=[atom([0,0,0],name,residue,element=element),
+           atom([-1.3,0,0],'CA',residue)]
+    grid=np.array([[1.,0,0],[2.5,0,0],[8.,0,0]])
+    cavity,fields=ps.describe(grid,atoms,ps.policy())
+    assert cavity.tolist()==[False,True,True]
+    for channel in channels:
+        assert fields[ps.CHANNELS.index(channel)].tolist()==[False,True,False]
+
+
+def test_local_subthreshold_difference_is_not_censored():
+    grid=np.array([[i,0,0] for i in range(4)])
+    masks=np.array([[True]*4,[False,True,True,True]])
+    d=ps.local_diagnostics(masks,grid,[[0,0,0]],ps.policy())
+    assert d['legacy'][0,1]==0
+    assert d['raw'][0,1]==.25
+    assert 0<d['smooth'][0,1]<d['raw'][0,1]
+    assert d['maximum_changed_volume'][0,1]==1
+    assert np.diag(d['smooth']).tolist()==[0,0]
+
+
+def test_invalid_legacy_fields_cannot_be_adopted(tmp_path):
+    path=tmp_path/'report.json'
+    raw=tmp_path/'source.txt';raw.write_text('fixture')
+    path.write_text(json.dumps(dict(kind='pocket_states',readiness='needs_user_adoption',sources=ps.fingerprint([raw]))))
+    with pytest.raises(ValueError,match='descriptor v1'):
+        ps.adopt(path,tmp_path/'adoption')
+
+
 def test_adoption_provenance_and_state_restricted_consensus(tmp_path):
     raw=tmp_path/'structure.cif';raw.write_text('experimental fixture')
     ids=['pocket-000000000001','pocket-000000000002']
     rows=[dict(id=code+':A',pdb_id=code,target_chain='A',transform=np.eye(4).tolist(),
                queries=[dict(query_id=code+':LIG:B:1')]) for code in ('1AAA','2AAA')]
-    report=dict(kind='pocket_states',readiness='needs_user_adoption',sources=ps.fingerprint([raw]),
+    report=dict(kind='pocket_states',descriptor_version=2,readiness='needs_user_adoption',sources=ps.fingerprint([raw]),
                 diversity_report='diversity.json',policy=ps.policy(),limitations=[],structures=rows,
                 clusters=[dict(id=sid,members=[row['id']],representative=row['id']) for sid,row in zip(ids,rows)])
     path=tmp_path/'report.json';path.write_text(json.dumps(report))

@@ -2208,3 +2208,23 @@ assignment but explicitly marks C5 for geometry review, not consensus/docking us
 This finding supersedes any interpretation of six clusters as accepted biological
 states. C1 also has representative-coverage/chemical flags, and C6 is borderline
 against C1 (weighted average distance about 0.415 versus cutoff 0.40).
+
+## 2026-09-28 E085: pocket distance audit and corrected fields
+
+User identified four universally zero channels and suspicious local censoring.
+Confirmed authentic 22IZ through original Q00987 search cache, CIF entry ID and
+RCSB. Found atom-centred 2 A chemical support wholly buried by VDW-plus-probe
+exclusion. Repaired nondirectional accessible-surface shells; retained raw,
+legacy and continuous-support local metrics. Excluded all 7BJ0 chains at entry
+scope. Original E084 outputs preserved but distance interpretation superseded.
+67 retained chains have identical cavity masks to E084; all have nonzero
+hydrophobic/aromatic support. Every channel support margin checked directly.
+C1 legacy 43/12 strata have weak between-stratum separation; 42 zero values
+were censoring, not identity. Exported local reclustering at nine cutoffs.
+C6 retained, independent-state status unstable. 72 sensitivity settings show
+large descriptor/threshold dependence; no physical state count adopted.
+628 tests passed/3 skipped before final adoption guard; 19 final focused tests
+passed; English guard passed 719 files. Descriptor v1 new adoption blocked.
+Artifacts: to_human/E085_POCKET_REVIEW_FINAL.zip and E085_VALIDATION.json.
+Outcome exploratory: fixes confirmed; target-independent calibration and
+cross-docking remain unperformed. No consensus, PLANTS or affinity run.
