@@ -16,8 +16,10 @@ from .llm_profiles import select_llm_profile
 from .prompt_plan import CAPABILITIES, chat_plan
 from .prompt_workflow import create_plan, initialize_context
 from .language_policy import contains_han
+from .target_pocket_policy import TARGET_POCKET_POLICY
 
 WORKFLOWS = [
+    {"name": "PDB pocket-state prerequisite", "status": "Planning contract recorded; clustering and persisted approval gate not implemented", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
     {"name":"Automatic structure workflow chains", "status":"Persistent coordinator; workstation acceptance pending", "scope":"Explicitly requested continuation from an existing task through consensus, recommendation and optional budget delivery. Pause/resume future stages, preserve source IDs, block failed or uncertain dispatch. Current scientific tasks remain separately controlled."},
     {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
     {"name":"Contact-first molecule budgets", "status":"Chat budget and budget_page adapters", "scope":"Unique-molecule ANN retrieval, same-pose contact-first template ranks, RRF fusion and paged original/posed MOL2 plus names. Target recall and enrichment require validation."},
@@ -110,6 +112,8 @@ To inspect existing evidence or preview counts use results, avoiding duplicate r
 JSON example: {"intent":"status","message":"Checking task status.","task_id":null,"request":""}.
 """
 
+
+ROUTER += TARGET_POCKET_POLICY
 
 ROUTER += '''
 Use pymol for opening or controlling desktop PyMOL. Add view with operation:

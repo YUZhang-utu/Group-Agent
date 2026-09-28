@@ -1,4 +1,11 @@
 project: aidd-macrocycle-agent
+pdb_pocket_project_prerequisite:
+  status: planning_contract_recorded_execution_pending
+  guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
+  scope: experimental_PDB_only
+  precedes: state_specific_interaction_consensus
+  requires: explicit_user_adoption_of_pocket_representatives
+  runtime_enforcement: not_implemented
 audit_summary_recovery:
   experiment: E083
   status: local_tests_passed_workstation_recovery_pending

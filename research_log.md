@@ -2145,3 +2145,17 @@ chemistry and typed variants, each at capacity 20000. The direct Python entry
 retains its original typed default with a single capacity 20000. No workstation
 jobs were launched by the earlier interpretation. Mandatory validation is retained
 for each variant; explicit capacity overrides remain available.
+
+## 2026-09-28: PDB pocket-state prerequisite in project planning
+
+User confirms experimental PDB pocket shape/chemical-state review as a prerequisite
+when initiating a target-based project, before consensus interactions. Recorded
+contract in to_human/PDB_POCKET_PROJECT_PREREQUISITE.md and shared planner/router
+policy. New-project guidance distinguishes this missing capability from existing
+ligand-diversity selection. State-specific consensus must precede any cross-state
+shared/alternative contact synthesis; user adoption remains explicit.
+
+This delivery is planning guidance, not a clustering implementation or an
+executor-enforced gate. No PDB pocket clustering experiment ran. Existing explicit
+legacy analyses remain available without claiming pocket-state review. Local
+prompt/chat regression: 33 passed; English guard passed. Cofolding is deferred.

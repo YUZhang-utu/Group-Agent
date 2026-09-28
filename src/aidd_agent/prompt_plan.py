@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from .workflow_skills import WORKFLOW_SKILLS
 from .language_policy import contains_han
+from .target_pocket_policy import TARGET_POCKET_POLICY
 
 ACTION_FIELDS = {
     "protein_fetch": ({"accession"}, {"organism_id"}),
@@ -92,6 +93,9 @@ All actions with source_run, including classification and docking, are reserved 
 coordinator's separate evidence/selection/export turns. Never generate those actions in
 a model-created plan. Tell the user to review a completed search through the chat coordinator.
 """
+
+
+SYSTEM_PROMPT += TARGET_POCKET_POLICY
 
 
 def strict_json(text):
