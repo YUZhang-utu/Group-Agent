@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full source audit, all block variants/capacities, and mandatory validation gates.
+# Full source audit, all descriptor variants at capacity 20000, and validation gates.
 set -euo pipefail
 if [[ $# -ne 1 && $# -ne 3 ]]; then
   echo 'Usage: bash scripts/run_e081_checked_library.sh NEW_RUN_ROOT [REGISTRY_SQLITE LIBRARY_ID]' >&2

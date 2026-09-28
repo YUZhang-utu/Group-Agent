@@ -16,10 +16,11 @@ registry_args=()
 if [[ $# -eq 4 ]]; then
   registry_args=(--registry "$3" --library-id "$4")
 fi
+# Compare descriptor variants at one capacity with mandatory validation per variant.
 for variant in backbone chemistry typed; do
   "$PYTHON" -m aidd_agent.verified_macrocycle_blocks \
     --audit "$AUDIT" --output "$OUTPUT/$variant" --variant "$variant" \
-    --capacities 10000 20000 30000 "${registry_args[@]}"
+    --capacities 20000 "${registry_args[@]}"
   "$PYTHON" -m aidd_agent.conformer_block_validate \
     --build "$OUTPUT/$variant" --output "$OUTPUT/validation-$variant" --source-samples 200
 done

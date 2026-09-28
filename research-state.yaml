@@ -62,6 +62,8 @@ chat_structure_review:
   live_provider_and_gui_acceptance: pending
   experimental_seed_backend: explicit_chat_opt_in
 macrocycle_blocks:
+  wrapper_variants: [backbone, chemistry, typed]
+  default_capacities: [20000]
   status: verified_source_blocks_local_validation_workstation_pending
   design: to_human/MACROCYCLE_BLOCK_DESIGN.md
   offline_replay: implemented_not_live_block_assignment

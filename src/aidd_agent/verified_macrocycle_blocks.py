@@ -30,7 +30,7 @@ def registry_identity(db, library, record):
     return matches[0]
 
 
-def run(audit, output, variant='typed', capacities=(10000, 20000, 30000),
+def run(audit, output, variant='typed', capacities=(20000,),
         registry=None, library=None, sample_sizes=(100, 500)):
     if variant not in VARIANTS or not capacities or len(set(capacities)) != len(capacities):
         raise ValueError('Invalid variant or repeated/empty capacities')
@@ -155,7 +155,7 @@ def main():
     parser.add_argument('--audit', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--variant', choices=VARIANTS, default='typed')
-    parser.add_argument('--capacities', type=int, nargs='+', default=[10000, 20000, 30000])
+    parser.add_argument('--capacities', type=int, nargs='+', default=[20000])
     parser.add_argument('--registry', type=Path)
     parser.add_argument('--library-id')
     args = parser.parse_args()

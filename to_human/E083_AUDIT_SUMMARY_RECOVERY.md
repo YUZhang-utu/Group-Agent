@@ -90,7 +90,12 @@ python -m aidd_agent.macrocycle_preflight --audit "$AUDIT" \
 bash scripts/run_e080_macrocycle_blocks.sh "$AUDIT" /absolute/new/blocks-recovered
 ```
 
+The wrapper builds all three descriptor variants (backbone, chemistry, typed),
+each with a single 20000-conformer capacity and its mandatory validation gate.
+Earlier three-capacity instructions describe the superseded comparison setup.
+Explicit CLI options still allow other capacities for future comparisons.
+
 Append REGISTRY_SQLITE and LIBRARY_ID to the final command if the original job
-used a verified production registry. Each variant still runs mandatory E081 raw
+used a verified production registry. The selected variant still runs mandatory E081 raw
 source/assignment validation. A review_required result must be inspected; do not
 bypass it. Recovery does not establish correct clustering or biological utility.

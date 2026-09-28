@@ -2127,3 +2127,21 @@ checks: 34 focused tests passed, including SQL histogram equivalence, legacy fai
 report recovery, retry, source/count refusal, unchanged database hash and recovered
 readiness integration. English guard passed. No workstation recovery or block
 construction executed here; no clustering or biological performance claim.
+
+## 2026-09-28: use a single initial block baseline
+
+User requests one method rather than the three-variant/three-capacity matrix.
+Selected backbone descriptors with maximum capacity 20000 as the initial
+operational baseline, not a validated optimal capacity. Updated Python defaults
+and E080/E081 wrappers; explicit alternatives remain available. Hard strata and
+mandatory independent block validation remain unchanged. Workstation execution
+and performance/recall acceptance remain pending.
+
+### User clarification: one capacity, retain all descriptor methods
+
+The user clarified that only the capacity sweep should be removed. Superseding
+the immediately preceding interpretation, the E080/E081 wrapper retains backbone,
+chemistry and typed variants, each at capacity 20000. The direct Python entry
+retains its original typed default with a single capacity 20000. No workstation
+jobs were launched by the earlier interpretation. Mandatory validation is retained
+for each variant; explicit capacity overrides remain available.
