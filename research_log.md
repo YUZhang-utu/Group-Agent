@@ -2081,3 +2081,12 @@ all 24 conformers were checked at every capacity and independently recomputed.
 Published receipts are prepared in to_human/E081_LOCAL_VALIDATION.json. No full
 workstation scan or retrieval-quality claim. Guide: E081_GITHUB_FULL_LIBRARY_RUN.md.
 The requested source upload is the next action after this validated checkpoint.
+
+### E081 publication receipt
+
+Committed the 39-file E075-E081 implementation as b5d341b and successfully pushed
+it to origin/feature/structure-guided-chat on GitHub. The ordinary push advanced
+9f473d8 to b5d341b without force. Code, tests, validation receipts and workstation
+instructions are delivered. Unrelated build output, the E066 patch and the
+historical local E080 ZIP remain outside this release. Full workstation execution
+is still pending; use scripts/run_e081_checked_library.sh with a fresh run root.

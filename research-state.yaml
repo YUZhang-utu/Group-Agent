@@ -830,7 +830,7 @@ macrocycle_resume_checkpoint:
   handoff: to_human/20260926_MACROCYCLE_HANDOFF.md
   latest_stage: E081_validation_and_github_release
   next_action: workstation_full_audit_blocks_and_mandatory_validation
-  changes_committed_or_pushed: false
+  changes_committed_or_pushed: true
   full_workstation_audit_started: false
   full_library_clustering_started: false
 
@@ -867,7 +867,8 @@ macrocycle_verified_blocks_e080:
   live_search_integration: not_implemented
 
 macrocycle_validation_e081:
-  status: validated_ready_for_github_publication
+  status: published_workstation_acceptance_pending
+  code_commit: b5d341b
   guide: to_human/E081_GITHUB_FULL_LIBRARY_RUN.md
   protocol: experiments/E081-block-validation-release.md
   github_branch: feature/structure-guided-chat
