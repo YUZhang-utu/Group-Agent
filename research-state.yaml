@@ -55,7 +55,7 @@ chat_structure_review:
   live_provider_and_gui_acceptance: pending
   experimental_seed_backend: explicit_chat_opt_in
 macrocycle_blocks:
-  status: design_only_production_clustering_deferred
+  status: verified_source_blocks_local_validation_workstation_pending
   design: to_human/MACROCYCLE_BLOCK_DESIGN.md
   offline_replay: implemented_not_live_block_assignment
 seed_budget_audit:
@@ -776,3 +776,107 @@ pilot_remediation:
   assignment_backend: optional_numba_identical_loop
   production_thresholds_changed: false
   larger_library_run: deferred_until_review
+
+macrocycle_blocks_e075:
+  status: offline_baseline_implemented_real_prefix_tested
+  guide: to_human/E075_MACROCYCLE_BLOCKS.md
+  protocol: experiments/E075-macrocycle-blocks.md
+  real_prefix_conformers: 2000
+  assigned: 1750
+  unresolved_ring_mapping: 250
+  focused_tests_passed: 8
+  full_library_clustering: not_run
+  chat_dispatch: not_implemented
+  building_block_name_to_atoms: not_verified
+  screening_changed: false
+
+macrocycle_csv_e076:
+  status: bounded_source_identity_audit_complete
+  csv_rows: 100000
+  sampled_conformers: 2000
+  uniquely_joined_molecule_names: 668
+  identity_matches: 2000
+  protocol: experiments/E076-csv-identity-audit.md
+  building_block_label_mapping: pending
+  main_ring_ambiguities: unresolved
+
+macrocycle_full_audit_e077:
+  status: complete_for_two_supplied_shards
+  guide: to_human/E077_FULL_SOURCE_AUDIT.md
+  protocol: experiments/E077-full-source-audit.md
+  unique_molecules: 100000
+  conformers: 299999
+  chemistry_and_residue_mapping_passed: 299999
+  incomplete_conformer_sets: 1
+  boundary_omega_conformers: 16171
+  ambiguous_cyclic_alignment_conformers: 18
+  names_with_definite_cis_trans_changes: 16653
+  tests_passed: 28
+  workstation_full_library_audit: pending
+  production_block_clustering: not_run
+
+macrocycle_optional_csv_e078:
+  status: implemented_mixed_real_fixture_verified
+  discovery: recursive_mol2_optional_adjacent_same_stem_csv
+  missing_csv_policy: mol2_only_with_explicit_provenance
+  conflicting_csv_policy: review_no_silent_fallback
+  tests_passed: 30
+  mixed_fixture_conformers: 24
+  mol2_only_fixture_passed: 12
+  workstation_full_library: not_run
+
+macrocycle_resume_checkpoint:
+  date: '2026-09-28'
+  handoff: to_human/20260926_MACROCYCLE_HANDOFF.md
+  latest_stage: E081_validation_and_github_release
+  next_action: workstation_full_audit_blocks_and_mandatory_validation
+  changes_committed_or_pushed: false
+  full_workstation_audit_started: false
+  full_library_clustering_started: false
+
+macrocycle_preparation_e079:
+  protocol: experiments/E079-audit-block-preparation.md
+  guide: to_human/E079_AUDIT_BLOCK_PREPARATION.md
+  status: local_fixture_verified_workstation_source_root_confirmed
+  workstation_source_dir: /mnt/local/hand/yuzhang/aidd/mc_data
+  csv_placement: user_confirmed_same_directory_and_stem
+  workstation_script: scripts/run_e079_macrocycle_prepare.sh
+  focused_tests_passed: 34
+  readiness_candidates: 24
+  readiness_boundary_flags: 3
+  capacity_comparison: lower_bounds_only_no_clustering
+  production_registry_join: pending
+  verified_peptide_descriptor_integration: pending
+
+macrocycle_verified_blocks_e080:
+  status: implemented_local_fixture_verified_workstation_pending
+  guide: to_human/E080_VERIFIED_CONFORMER_BLOCKS.md
+  protocol: experiments/E080-verified-conformer-blocks.md
+  variants: [backbone, chemistry, typed]
+  capacities: [10000, 20000, 30000]
+  storage: disk_backed_sqlite_capacity_median_trees
+  focused_tests_passed: 46
+  real_fixture_conformers: 24
+  real_fixture_molecules: 8
+  registry_join: exact_read_only_implemented_live_pending
+  incremental_assignment: frozen_proposals_with_radius_and_capacity_gates
+  molecule_samples_per_block: [100, 500]
+  replay: conformer_cost_matched_bounded_complete_panel
+  full_workstation_clustering: not_run
+  real_screening_recall: not_measured
+  live_search_integration: not_implemented
+
+macrocycle_validation_e081:
+  status: validated_ready_for_github_publication
+  guide: to_human/E081_GITHUB_FULL_LIBRARY_RUN.md
+  protocol: experiments/E081-block-validation-release.md
+  github_branch: feature/structure-guided-chat
+  runner: scripts/run_e081_checked_library.sh
+  membership_validation: exhaustive_all_capacities
+  independent_source_geometry: deterministic_sample_default_200
+  unresolved_review_policy: stop_with_exit_code_2
+  focused_tests_passed: 56
+  full_regression_passed: 613
+  full_regression_skipped: 3
+  local_receipts: to_human/E081_LOCAL_VALIDATION.json
+  scientific_clustering_quality: requires_held_out_score_reference

@@ -1932,3 +1932,152 @@ detector independently of model planning. No live GUI success claimed.
 ### 2026-09-25: correct MDM2 accession in authored examples
 - The workstation agent correctly refused a conflicting target request copied from my example. Human MDM2 is Q00987; I incorrectly supplied P49137 (MAPKAPK2). Corrected the E073 prompt and its context fixture. Existing scientific artifacts were not rewritten and identity validation was not weakened.
 - Sources: https://www.uniprot.org/uniprotkb/Q00987/entry and https://www.uniprot.org/uniprotkb/P49137/history. The user-provided receipt states no task or chain was dispatched. A corrected request can start a new 6Q9L branch; this local correction does not itself submit a workstation task.
+
+## 2026-09-25 E075: macrocycle blocking baseline
+
+Implemented offline paired-catalog conformer sampling and bounded MOL2 source
+inspection. Preserve source identities and atom-index provenance; use conservative
+ring/amide-state strata and capacity-bounded sin/cos torsion median splits.
+Real source-prefix probe: 2000 records, 1750 assigned, 250 unresolved fused/bridged
+ring maps; seven blocks at diagnostic capacity 1000. Assigned records have 18 ring
+atoms and six graph-derived peptide units. This is exploratory extraction evidence,
+not a random-library estimate or screening performance validation.
+Focused regression: 8 passed. English-content guard and diff whitespace check passed.
+Guide: to_human/E075_MACROCYCLE_BLOCKS.md. Local raw output:
+data/e075-source-final-2000/. Production search and registry unchanged.
+Pending: verified building-block mapping, ambiguous ring recovery, typed side-chain
+geometry, scalable fitting, incremental assignment and chat dispatch.
+
+## 2026-09-25 E076: supplied CSV identity audit
+
+Read supplied split_0001.csv and split_0002.csv (50000 rows each). Implemented
+bounded exact-name joining with duplicate detection and strict chemical/stereo
+comparison, retaining original source provenance and one valid atom correspondence.
+All 2000 prefix conformers / 668 molecule names matched uniquely and chemically.
+This includes E075 unresolved ring records; ring selection remains pending.
+11 focused tests passed. Source data, registry and production screening unchanged.
+See experiments/E076-csv-identity-audit.md and data/e076-csv-audit/report.json.
+
+## 2026-09-25 E076 naming clarification and structural spot-check
+
+User confirms CSV Name is the molecular identity, with terminal _confN added for
+MOL2 conformers; lowercase d denotes D amino acids and nme/NMe N-methylation.
+Verified four CSV examples and the first strict MOL2 record using backbone
+N-CA-C(=O) matches, alpha-carbon CIP labels and explicit N-methyl neighbors.
+For c--A-W-Lnme-A-dLnme-dVNMe-c_conf1, backbone N atom IDs 20,34,43
+carry methyl carbon IDs 21,35,44 respectively and have zero N hydrogens.
+Backbone N IDs 1,6,29 retain one hydrogen. Alpha CIP sequence S,S,S,S,R,R
+agrees with the named A,W,Lnme,A,dLnme,dVNMe units in this example.
+Wnme/dWnme and VNMe/dVNMe paired CSV examples show S/R changes at the
+corresponding alpha carbon. These example-specific labels are not a general
+D=R or L=S parser rule. Some names omit hyphens (AdFnme, dLnmedFnme), so a
+building-block tokenizer must not rely solely on hyphen splitting.
+Script: scripts/audit_macrocycle_name_examples.py.
+Evidence: data/e076-name-chemistry-check.json. Source files unchanged.
+
+## 2026-09-25 E077: full two-shard source audit completed
+
+Audited every row of both supplied CSVs and every record of both supplied MOL2s.
+100000 unique molecules; 299999 conformers; all pass strict whole-graph/stereo
+identity and graph-verified cyclic peptide residue labels. All main rings have
+18 atoms. New peptide mapping handles proline side rings; old prefix ambiguities
+are not chemistry failures. Runtime 420.83 s with four workers.
+One molecule lacks conf3: c--A-Wnme-PdFnme-dW-dLnme-c. No duplicate CSV names,
+conformer names or missing CSV-to-MOL2 molecules. No duplicate isomeric-SMILES
+structure groups among CSV names. 16653 uniquely aligned molecule names show
+cis/trans changes between stored conformers; 16171 conformers have boundary
+omega, and 18 conformers have equivalent cyclic residue rotations. Preserve
+identities and model these conditions explicitly before block clustering.
+28 focused tests passed. First interrupted audit had an analysis-fragment H-cap
+bug; marked superseded, corrected with explicit caps and regression tests.
+Final evidence: data/e077-full-audit-v2/report.json and additional_checks.json.
+Guide: to_human/E077_FULL_SOURCE_AUDIT.md. No production data changed. Unseen
+workstation library shards still require full-manifest audit; no full-library
+clustering or recall claim has been made.
+
+## E078 optional CSV source discovery
+
+Implemented recursive MOL2 discovery with optional adjacent same-stem CSVs.
+Directory mode permits MOL2-only validation and records verification provenance;
+explicit lists remain strict unless allow-missing-csv is selected. Available CSV
+conflicts cannot fall back to MOL2-only acceptance. Unknown name mappings can
+retain graph-derived peptide geometry with explicit alignment limitations.
+Added same-name chemical inconsistency checks and frozen discovery manifests.
+30 focused tests passed; real mixed fixture: 24 conformers passed, 12 CSV-backed
+and 12 MOL2-only. Evidence data/e078-mixed-audit/report.json. Full workstation
+library not launched; no source files or production registry modified.
+
+## 2026-09-26 continuity checkpoint
+
+User requested a durable progress record. Created
+ to_human/20260926_MACROCYCLE_HANDOFF.md with decisions, E075-E078 implementations,
+full two-shard evidence, the superseded run warning, optional CSV policy, test
+commands and remaining production work. Latest state is E078, not the historical
+E076 unresolved mapping snapshot. Full workstation library sources are pending;
+no workstation full audit or full clustering has started. Working-tree changes
+remain uncommitted/unpushed; verify delivery before instructing a workstation pull.
+Next: establish complete source manifest, deliver code, audit all supplied library
+shards, then integrate peptide mappings into conformer descriptors and blocks.
+
+## 2026-09-28 E079: inventory and block admission preparation
+
+Resumed the 20260926 handoff. Added source inventory with hashes, missing companion
+and unpaired CSV reporting. Added completed-audit readiness manifests with output
+hash verification and disk-backed cross-record duplicate/chemistry checks. Keep
+all original source identities and preserve geometry/alignment flags. No registry
+identity is invented and capacity counts are lower bounds, not fitted blocks.
+Protocol: experiments/E079-audit-block-preparation.md. Confirmatory checks:
+34 focused tests passed. Exploratory reuse of E078 retained 24 candidates and
+three boundary-omega flags; inventory found two MOL2s and one companion CSV.
+Evidence: data/e079-mixed-readiness and data/e079-mixed-inventory. No repeated
+two-shard audit, production registry mutation, workstation execution or clustering.
+Full source directory is still needed from the user. Changes remain uncommitted.
+Guide: to_human/E079_AUDIT_BLOCK_PREPARATION.md. Next: deliver reviewed code,
+inventory and audit the full workstation sources, then join verified peptide maps
+to registry/artifact atom order and benchmark actual conformer descriptors.
+
+### E079 source location confirmed
+
+User supplied /mnt/local/hand/yuzhang/aidd/mc_data as the complete workstation
+source root, with same-directory, same-stem CSV and MOL2. Added a fixed-source
+workstation runner with a fresh external output root and inventory-to-audit
+path/hash equality gate before readiness. This supersedes the pending-location
+note above. No workstation scan has been executed and code delivery is pending.
+
+## 2026-09-28 E080: verified conformer block implementation
+
+Implemented directed peptide descriptors with source atom maps, three representation
+variants and proper local side-chain frames. Added disk-backed capacity median trees,
+frozen prototypes/radii and incremental proposals, explicit optional production
+registry joins, unique-molecule block samples and cost-matched overlapping-molecule
+replay. Each source record must match the completed audit. Preserve review cases.
+Fixed graph-only readiness handling for null name-rotation counts.
+
+46 focused confirmatory tests passed. Exploratory real E078 reuse extracted all
+24 conformers/8 molecules in each variant, no review records. Capacity 4 formed
+10 blocks; each requested capacity formed 9 small hard-stratum blocks. Final code
+hashed evidence is data/e080-final-backbone, data/e080-final-chemistry and
+data/e080-final-typed; earlier data/e080-typed-mixed is intermediate evidence.
+No E077 rerun, live workstation execution, production mutation or recall claim.
+Protocol: experiments/E080-verified-conformer-blocks.md. Guide:
+to_human/E080_VERIFIED_CONFORMER_BLOCKS.md. Remaining: deliver reviewed changes,
+audit confirmed full source root, fit all variants/capacities, join actual registry,
+then evaluate against a completed matching score reference on held-out panels.
+
+## 2026-09-28 E081: mandatory validation and GitHub release preparation
+
+User requested GitHub publication and checks against incorrect block assignments.
+Confirmed origin Group-Agent and branch feature/structure-guided-chat at the
+existing 9f473d8 baseline. Added exhaustive descriptor/membership/provenance,
+coverage, capacity, hard-stratum, frozen-routing and leaf-statistic validation.
+Added bounded raw-source descriptor reproduction and independent plane-normal
+omega checks, with human-readable source inspection records and coverage counts.
+The workstation wrapper stops on failed checks or unresolved review records.
+
+56 focused tests passed, including semantic corruption after refreshing hashes.
+Full repository regression: 613 passed, 3 skipped in 57.07 seconds. Three existing
+real E080 mixed-source builds passed into fresh E081 validation directories;
+all 24 conformers were checked at every capacity and independently recomputed.
+Published receipts are prepared in to_human/E081_LOCAL_VALIDATION.json. No full
+workstation scan or retrieval-quality claim. Guide: E081_GITHUB_FULL_LIBRARY_RUN.md.
+The requested source upload is the next action after this validated checkpoint.

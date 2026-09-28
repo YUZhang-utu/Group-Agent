@@ -1,0 +1,191 @@
+{
+  "scope": "Local mixed fixture only; not the full workstation library",
+  "focused_tests_passed": 56,
+  "full_regression_passed": 613,
+  "full_regression_skipped": 3,
+  "variants": {
+    "backbone": {
+      "status": "complete",
+      "structural_gate": "passed",
+      "release_gate": "passed_for_offline_use",
+      "scientific_quality": "not_established_by_integrity_checks",
+      "errors": [],
+      "input_report_sha256": "2306a413f6050cc53456091c694518615f69bb4dd30fa6ecfd1033e9b9a277b4",
+      "source_conformers": 24,
+      "described_conformers": 24,
+      "review_conformers": 0,
+      "descriptor_flags": {
+        "boundary_omega": 3
+      },
+      "verification_sources": {
+        "csv_and_mol2": 12,
+        "mol2_only": 12
+      },
+      "source_samples_checked": 24,
+      "source_sample_scope": "Deterministic bounded inspection, not full raw-source recomputation",
+      "models": [
+        {
+          "capacity": 4,
+          "conformers_checked": 24,
+          "blocks_checked": 10,
+          "max_block_radius": 3.1161037792909765,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 10
+        },
+        {
+          "capacity": 10000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1324801170483982,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 20000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1324801170483982,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 30000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1324801170483982,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        }
+      ],
+      "source_inspection_sha256": "eab200f77ceea5c96c131d18c91776207c2d9e552e820b1e9a0ecf154c49f73c",
+      "limitations": [
+        "No claim of optimal clusters, energy basins, activity or screening recall",
+        "Do not reject unsampled blocks before held-out reference-score evaluation",
+        "Source-only IDs still require explicit registry joining for production"
+      ],
+      "validator_sha256": "7d0f8e76afd730a05560c8a2ebeb19e962dddfac962623b9b5c2a838ee566216"
+    },
+    "chemistry": {
+      "status": "complete",
+      "structural_gate": "passed",
+      "release_gate": "passed_for_offline_use",
+      "scientific_quality": "not_established_by_integrity_checks",
+      "errors": [],
+      "input_report_sha256": "b13eeea92f0899f93a91a765d27b1414755537aa4c3dc27a0ba2d54c0f93fe44",
+      "source_conformers": 24,
+      "described_conformers": 24,
+      "review_conformers": 0,
+      "descriptor_flags": {
+        "boundary_omega": 3
+      },
+      "verification_sources": {
+        "csv_and_mol2": 12,
+        "mol2_only": 12
+      },
+      "source_samples_checked": 24,
+      "source_sample_scope": "Deterministic bounded inspection, not full raw-source recomputation",
+      "models": [
+        {
+          "capacity": 4,
+          "conformers_checked": 24,
+          "blocks_checked": 10,
+          "max_block_radius": 3.122215201313245,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 10
+        },
+        {
+          "capacity": 10000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1385596511303633,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 20000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1385596511303633,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 30000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.1385596511303633,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        }
+      ],
+      "source_inspection_sha256": "eab200f77ceea5c96c131d18c91776207c2d9e552e820b1e9a0ecf154c49f73c",
+      "limitations": [
+        "No claim of optimal clusters, energy basins, activity or screening recall",
+        "Do not reject unsampled blocks before held-out reference-score evaluation",
+        "Source-only IDs still require explicit registry joining for production"
+      ],
+      "validator_sha256": "7d0f8e76afd730a05560c8a2ebeb19e962dddfac962623b9b5c2a838ee566216"
+    },
+    "typed": {
+      "status": "complete",
+      "structural_gate": "passed",
+      "release_gate": "passed_for_offline_use",
+      "scientific_quality": "not_established_by_integrity_checks",
+      "errors": [],
+      "input_report_sha256": "7a1996446131b58c9560ab2565297e624f51f4bc75eab7a560ffef3b0994be7e",
+      "source_conformers": 24,
+      "described_conformers": 24,
+      "review_conformers": 0,
+      "descriptor_flags": {
+        "boundary_omega": 3
+      },
+      "verification_sources": {
+        "csv_and_mol2": 12,
+        "mol2_only": 12
+      },
+      "source_samples_checked": 24,
+      "source_sample_scope": "Deterministic bounded inspection, not full raw-source recomputation",
+      "models": [
+        {
+          "capacity": 4,
+          "conformers_checked": 24,
+          "blocks_checked": 10,
+          "max_block_radius": 3.372375202691372,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 10
+        },
+        {
+          "capacity": 10000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.533606020001871,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 20000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.533606020001871,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        },
+        {
+          "capacity": 30000,
+          "conformers_checked": 24,
+          "blocks_checked": 9,
+          "max_block_radius": 3.533606020001871,
+          "structural_gate": "passed",
+          "raw_source_sampled_blocks": 9
+        }
+      ],
+      "source_inspection_sha256": "eab200f77ceea5c96c131d18c91776207c2d9e552e820b1e9a0ecf154c49f73c",
+      "limitations": [
+        "No claim of optimal clusters, energy basins, activity or screening recall",
+        "Do not reject unsampled blocks before held-out reference-score evaluation",
+        "Source-only IDs still require explicit registry joining for production"
+      ],
+      "validator_sha256": "7d0f8e76afd730a05560c8a2ebeb19e962dddfac962623b9b5c2a838ee566216"
+    }
+  }
+}

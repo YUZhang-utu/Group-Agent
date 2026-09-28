@@ -1,8 +1,17 @@
-# Deferred macrocycle block design
+# Macrocycle block design and implementation status
 
-Status: design proposal. Production clustering and incremental assignment are not
-implemented. Chat/AF3/PyMOL acceptance and the seed audit have priority.
-Existing offline block replay utilities evaluate supplied block labels only.
+Status update, 2026-09-28: E080 implements audit-backed source descriptors,
+disk-backed frozen capacity trees, optional exact registry joins, incremental
+proposals, molecule-aware block samples and bounded retrospective replay. See
+E080_VERIFIED_CONFORMER_BLOCKS.md. Local real-fixture checks passed; full-workstation
+execution, registry acceptance and recall comparisons remain pending.
+
+Historical baseline: E075 implements an offline backbone-only conformer partition pilot;
+E076 adds CSV identity checks; E077 implements full supplied-source auditing and
+graph-verified cyclic peptide mappings. See E077_FULL_SOURCE_AUDIT.md for execution
+and limitations. Production-scale clustering and incremental assignment remain
+unimplemented in E075. The E080 entry points are separate from that historical
+pilot and the original molecule-only replay utility.
 
 ## Identity and records
 
