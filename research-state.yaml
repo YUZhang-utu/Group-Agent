@@ -1,4 +1,11 @@
 project: aidd-macrocycle-agent
+audit_summary_recovery:
+  experiment: E083
+  status: local_tests_passed_workstation_recovery_pending
+  guide: to_human/E083_AUDIT_SUMMARY_RECOVERY.md
+  focused_regression: 34_passed
+  workstation_failure: sqlite_full_during_ring_size_summary
+  storage_root_cause: unconfirmed_free_space_available_quota_query_denied
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
 current_experiment: E066-chat-structure-review

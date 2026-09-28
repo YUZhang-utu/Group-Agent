@@ -111,3 +111,97 @@ def test_mol2_only_geometry_and_no_csv_conflict_fallback(monkeypatch):
     assert mol_one((record, {'duplicate': True}, True))['reason'] == 'duplicate_csv_name'
     bad = dict(status='ok', plain='wrong', iso='wrong')
     assert mol_one((record, bad, True))['reason'] == 'chemical_graph_mismatch'
+
+
+def test_summary_histograms_match_sql_without_global_sort():
+    import io
+    import sqlite3
+    from aidd_agent.macrocycle_full_audit import summarize
+    db = sqlite3.connect(':memory:')
+    db.executescript('''CREATE TABLE molecule(name TEXT, occurrences INTEGER, payload TEXT);
+        CREATE TABLE conformer(name TEXT, conf_index INTEGER, conf_name TEXT,
+            status TEXT, reason TEXT, payload TEXT);
+        CREATE INDEX conf_name ON conformer(name);''')
+    for i in range(15):
+        payload = dict(ring_size=9 if i % 2 else 12, omega_states=['trans', 'cis'],
+                       verification_source='mol2_only', name_rotations=1,
+                       name_mapping='verified_against_mol2', mol2_canonical_smiles='C')
+        db.execute('INSERT INTO conformer VALUES(?,?,?,?,?,?)',
+                   (str(i // 3), i % 3 + 1, str(i), 'ok', None, json.dumps(payload)))
+    expected = {}
+    for field, key in [('ring_size_histogram', 'ring_size'),
+                       ('omega_pattern_histogram', 'omega_states'),
+                       ('verification_source_counts', 'verification_source')]:
+        expected[field] = dict(db.execute(
+            f"SELECT json_extract(payload,'$.{key}'),count(*) FROM conformer GROUP BY 1"))
+    statements = []
+    db.set_trace_callback(statements.append)
+    report = {}
+    summarize(db, report, io.StringIO())
+    assert all(report[key] == value for key, value in expected.items())
+    assert not any('GROUP BY 1' in query for query in statements)
+    db.close()
+
+
+def test_failed_summary_recovery_and_guards(tmp_path, monkeypatch):
+    import sqlite3
+    import aidd_agent.macrocycle_full_audit as module
+    source = tmp_path / 'source.mol2'
+    source.write_text('@<TRIPOS>MOLECULE\nc--G-G-G-c_conf1\n1 0 0 0 0\nSMALL\nNO_CHARGES\n@<TRIPOS>ATOM\n1 C1 0 0 0 C.3 1 UNK 0\n@<TRIPOS>BOND\n')
+    output = tmp_path / 'audit'
+    real = module.summarize
+
+    def fail(db, report, issues):
+        real(db, report, issues)
+        raise sqlite3.OperationalError('database or disk is full')
+
+    monkeypatch.setattr(module, 'summarize', fail)
+    with pytest.raises(sqlite3.OperationalError):
+        module.run([], [source], output, workers=1)
+    original = (output / 'report.json').read_text()
+    db_hash = module.sha(output / 'audit.sqlite')
+    monkeypatch.setattr(module, 'summarize', real)
+    saved = source.read_bytes()
+    source.write_bytes(saved + b'\n')
+    with pytest.raises(ValueError, match='hash changed'):
+        module.recover_summary(output)
+    source.write_bytes(saved)
+    modified = json.loads(original)
+    modified.pop('failed_stage', None)
+    modified.pop('unique_csv_names', None)
+    (output / 'report.json').write_text(json.dumps(modified))
+    with pytest.raises(ValueError, match='No evidence ingestion reached summary'):
+        module.recover_summary(output)
+    modified = json.loads(original)
+    modified['mol2_sources'][0]['records'] += 1
+    (output / 'report.json').write_text(json.dumps(modified))
+    with pytest.raises(ValueError, match='coverage mismatch'):
+        module.recover_summary(output)
+    modified['mol2_sources'] = []
+    (output / 'report.json').write_text(json.dumps(modified))
+    with pytest.raises(ValueError, match='Incomplete source manifest'):
+        module.recover_summary(output)
+    # Legacy reports have no failed_stage, and progress can add a zero ok counter.
+    legacy = json.loads(original)
+    legacy.pop('failed_stage', None)
+    legacy['conformer_counts']['ok'] = 0
+    original = json.dumps(legacy)
+    (output / 'report.json').write_text(original)
+    # A failed recovery can be retried without duplicating derived issues.
+    monkeypatch.setattr(module, 'summarize', fail)
+    with pytest.raises(sqlite3.OperationalError):
+        module.recover_summary(output)
+    assert (output / 'report.json').read_text() == original
+    monkeypatch.setattr(module, 'summarize', real)
+    report = module.recover_summary(output)
+    assert report['status'] == 'complete'
+    assert module.sha(output / 'audit.sqlite') == db_hash
+    assert report['code_hashes'] == json.loads(original)['code_hashes']
+    issues = [json.loads(line) for line in (output / 'issues.jsonl').read_text().splitlines()]
+    assert sum(row['kind'] == 'non_123_suffix_group' for row in issues) == 1
+    assert Path(report['summary_recovery']['backup'], 'report.json').read_text() == original
+    from aidd_agent.macrocycle_preflight import block_readiness
+    ready = block_readiness(output, tmp_path / 'readiness')
+    assert ready['status'] == 'preparation_complete'
+    with pytest.raises(ValueError, match='requires a failed audit'):
+        module.recover_summary(output)

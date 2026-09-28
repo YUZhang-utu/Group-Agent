@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 import sqlite3
 import time
+import shutil
+import uuid
 
 import numpy as np
 from rdkit import Chem, rdBase
@@ -130,6 +132,30 @@ def discover(source):
     return csv_paths, mol2
 
 
+def summarize(db, report, issues):
+    """Rebuild derived statistics without sorting global JSON histograms."""
+    report['unique_csv_names'] = db.execute('SELECT count(*) FROM molecule').fetchone()[0]
+    report['duplicate_csv_names'] = db.execute('SELECT count(*) FROM molecule WHERE occurrences>1').fetchone()[0]
+    report['csv_names_without_mol2'] = db.execute('SELECT count(*) FROM molecule m WHERE NOT EXISTS(SELECT 1 FROM conformer c WHERE c.name=m.name)').fetchone()[0]
+    report['conformer_count_histogram'] = dict(db.execute('SELECT n,count(*) FROM (SELECT count(*) n FROM conformer GROUP BY name) GROUP BY n').fetchall())
+    report['duplicate_conformer_name_groups'] = db.execute('SELECT count(*) FROM (SELECT conf_name FROM conformer GROUP BY conf_name HAVING count(*)>1)').fetchone()[0]
+    report['non_123_suffix_groups'] = db.execute('SELECT count(*) FROM (SELECT name FROM conformer GROUP BY name HAVING count(*)!=3 OR count(DISTINCT conf_index)!=3 OR min(conf_index)!=1 OR max(conf_index)!=3)').fetchone()[0]
+    for name, count in db.execute('SELECT name,count(*) FROM conformer GROUP BY name HAVING count(*)!=3 OR count(DISTINCT conf_index)!=3 OR min(conf_index)!=1 OR max(conf_index)!=3'):
+        issues.write(json.dumps(dict(kind='non_123_suffix_group', name=name, records=count)) + '\n')
+    report['ring_size_histogram'] = dict(Counter(row[0] for row in db.execute("SELECT json_extract(payload,'$.ring_size') FROM conformer WHERE status='ok'")))
+    report['ambiguous_name_rotation_conformers'] = db.execute("SELECT count(*) FROM conformer WHERE status='ok' AND json_extract(payload,'$.name_rotations')>1").fetchone()[0]
+    report['names_with_multiple_omega_patterns'] = db.execute("SELECT count(*) FROM (SELECT name FROM conformer WHERE status='ok' AND json_extract(payload,'$.name_mapping')='verified_against_mol2' GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.omega_states'))>1)").fetchone()[0]
+    report['omega_pattern_histogram'] = dict(Counter(row[0] for row in db.execute("SELECT json_extract(payload,'$.omega_states') FROM conformer WHERE status='ok'")))
+    for (name,) in db.execute('SELECT name FROM molecule m WHERE NOT EXISTS(SELECT 1 FROM conformer c WHERE c.name=m.name)'):
+        issues.write(json.dumps(dict(kind='csv_name_without_mol2', name=name)) + '\n')
+    report['verification_source_counts'] = dict(Counter(row[0] for row in db.execute("SELECT json_extract(payload,'$.verification_source') FROM conformer")))
+    report['mol2_only_passed'] = db.execute("SELECT count(*) FROM conformer WHERE status='ok' AND json_extract(payload,'$.verification_source')='mol2_only'").fetchone()[0]
+    report['unverified_name_mapping_conformers'] = db.execute("SELECT count(*) FROM conformer WHERE json_extract(payload,'$.name_mapping')='unverified'").fetchone()[0]
+    report['same_name_multiple_mol2_chemistries'] = db.execute("SELECT count(*) FROM (SELECT name FROM conformer GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.mol2_canonical_smiles'))>1)").fetchone()[0]
+    for (name,) in db.execute("SELECT name FROM conformer GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.mol2_canonical_smiles'))>1"):
+        issues.write(json.dumps(dict(kind='same_name_multiple_mol2_chemistries', name=name)) + '\n')
+
+
 def run(csv_paths, mol2_paths, output, workers=4, allow_missing_csv=False):
     if not 1 <= workers <= 32:
         raise ValueError('workers must be 1..32')
@@ -208,38 +234,106 @@ def run(csv_paths, mol2_paths, output, workers=4, allow_missing_csv=False):
                 if i % 10000 == 0:
                     db.commit(); checkpoint('mol2'); print(f'MOL2 records {i}; issues {i-counts["ok"]}', flush=True)
             db.commit()
-            report['unique_csv_names'] = db.execute('SELECT count(*) FROM molecule').fetchone()[0]
-            report['duplicate_csv_names'] = db.execute('SELECT count(*) FROM molecule WHERE occurrences>1').fetchone()[0]
-            report['csv_names_without_mol2'] = db.execute('SELECT count(*) FROM molecule m WHERE NOT EXISTS(SELECT 1 FROM conformer c WHERE c.name=m.name)').fetchone()[0]
-            report['conformer_count_histogram'] = dict(db.execute('SELECT n,count(*) FROM (SELECT count(*) n FROM conformer GROUP BY name) GROUP BY n').fetchall())
-            report['duplicate_conformer_name_groups'] = db.execute('SELECT count(*) FROM (SELECT conf_name FROM conformer GROUP BY conf_name HAVING count(*)>1)').fetchone()[0]
-            report['non_123_suffix_groups'] = db.execute('SELECT count(*) FROM (SELECT name FROM conformer GROUP BY name HAVING count(*)!=3 OR count(DISTINCT conf_index)!=3 OR min(conf_index)!=1 OR max(conf_index)!=3)').fetchone()[0]
-            for name, count in db.execute('SELECT name,count(*) FROM conformer GROUP BY name HAVING count(*)!=3 OR count(DISTINCT conf_index)!=3 OR min(conf_index)!=1 OR max(conf_index)!=3'):
-                issues.write(json.dumps(dict(kind='non_123_suffix_group', name=name, records=count)) + '\n')
-            report['ring_size_histogram'] = dict(db.execute("SELECT json_extract(payload,'$.ring_size'),count(*) FROM conformer WHERE status='ok' GROUP BY 1").fetchall())
-            report['ambiguous_name_rotation_conformers'] = db.execute("SELECT count(*) FROM conformer WHERE status='ok' AND json_extract(payload,'$.name_rotations')>1").fetchone()[0]
-            report['names_with_multiple_omega_patterns'] = db.execute("SELECT count(*) FROM (SELECT name FROM conformer WHERE status='ok' AND json_extract(payload,'$.name_mapping')='verified_against_mol2' GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.omega_states'))>1)").fetchone()[0]
-            report['omega_pattern_histogram'] = dict(db.execute("SELECT json_extract(payload,'$.omega_states'),count(*) FROM conformer WHERE status='ok' GROUP BY 1").fetchall())
-            for (name,) in db.execute('SELECT name FROM molecule m WHERE NOT EXISTS(SELECT 1 FROM conformer c WHERE c.name=m.name)'):
-                issues.write(json.dumps(dict(kind='csv_name_without_mol2', name=name)) + '\n')
+            checkpoint('summary')
+            summarize(db, report, issues)
             report['omega_counts'] = dict(omega_counts)
-            report['verification_source_counts'] = dict(db.execute("SELECT json_extract(payload,'$.verification_source'),count(*) FROM conformer GROUP BY 1").fetchall())
-            report['mol2_only_passed'] = db.execute("SELECT count(*) FROM conformer WHERE status='ok' AND json_extract(payload,'$.verification_source')='mol2_only'").fetchone()[0]
-            report['unverified_name_mapping_conformers'] = db.execute("SELECT count(*) FROM conformer WHERE json_extract(payload,'$.name_mapping')='unverified'").fetchone()[0]
-            report['same_name_multiple_mol2_chemistries'] = db.execute("SELECT count(*) FROM (SELECT name FROM conformer GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.mol2_canonical_smiles'))>1)").fetchone()[0]
-            for (name,) in db.execute("SELECT name FROM conformer GROUP BY name HAVING count(DISTINCT json_extract(payload,'$.mol2_canonical_smiles'))>1"):
-                issues.write(json.dumps(dict(kind='same_name_multiple_mol2_chemistries', name=name)) + '\n')
         report.update(status='complete',
             limitations=['No production registry changes or full-library coverage beyond supplied files',
                 'Name rotation may be ambiguous for repeated identical residues',
                 'Geometric omega bins are exploratory, not energy barriers; block clustering not run'])
         checkpoint('complete')
     except BaseException as exc:
-        db.commit(); report.update(status='failed', error=str(exc)); checkpoint('failed'); raise
+        # A full filesystem can also prevent the failure receipt from being saved.
+        # Never mask the original scientific/storage exception with that failure.
+        try:
+            db.commit()
+        except sqlite3.Error:
+            pass
+        report.update(status='failed', error=str(exc), failed_stage=report.get('stage'))
+        try:
+            checkpoint('failed')
+        except OSError:
+            pass
+        raise
     finally:
         db.close()
     report['output_hashes'] = {p.name:sha(p) for p in (output / 'audit.sqlite', output / 'issues.jsonl')}
     checkpoint('complete')
+    return report
+
+
+def recover_summary(output):
+    """Finalize committed ingestion only; never resume partial chemistry work."""
+    output = Path(output).resolve()
+    original = json.loads((output / 'report.json').read_text(encoding='utf-8'))
+    if original.get('status') != 'failed':
+        raise ValueError('Recovery requires a failed audit; do not alter completed audits')
+    if original.get('failed_stage') != 'summary' and 'unique_csv_names' not in original:
+        raise ValueError('No evidence ingestion reached summary; recovery refused')
+    manifest = original['input_manifest']
+    for kind, key in [('csv', 'csv_sources'), ('mol2', 'mol2_sources')]:
+        sources = original[key]
+        if (len(sources) != len(manifest[kind]) or
+                {row['path'] for row in sources} != set(manifest[kind])):
+            raise ValueError('Incomplete source manifest; summary recovery refused')
+        for row in sources:
+            if sha(Path(row['path'])) != row['sha256']:
+                raise ValueError('Source hash changed; summary recovery refused')
+    if not original['mol2_sources']:
+        raise ValueError('No completed MOL2 sources')
+    db_path = output / 'audit.sqlite'
+    report = dict(original)
+    started = time.monotonic()
+    # Read-only mode preserves the large committed database in place.
+    db = sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)
+    try:
+        if db.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
+            raise ValueError('Database integrity check failed')
+        csv_total = db.execute('SELECT coalesce(sum(occurrences),0) FROM molecule').fetchone()[0]
+        if csv_total != sum(row['rows'] for row in original['csv_sources']):
+            raise ValueError('CSV row coverage mismatch')
+        paths = Counter(); counts = Counter(); omega = Counter()
+        for status, reason, payload in db.execute('SELECT status,reason,payload FROM conformer'):
+            row = json.loads(payload)
+            paths[row['path']] += 1
+            counts[reason or status] += 1
+            omega.update(row.get('omega_states', []))
+        expected = {row['path']: row['records'] for row in original['mol2_sources']}
+        if dict(paths) != {key: value for key, value in expected.items() if value}:
+            raise ValueError('MOL2 record coverage mismatch; partial ingestion cannot be recovered')
+        if counts != Counter(original['conformer_counts']):
+            raise ValueError('Committed conformer counts differ from failed report')
+        # Retain immutable evidence before publishing any repaired artifacts.
+        backup = output / ('before-summary-recovery-' + uuid.uuid4().hex)
+        backup.mkdir()
+        shutil.copy2(output / 'report.json', backup / 'report.json')
+        shutil.copy2(output / 'issues.jsonl', backup / 'issues.jsonl')
+        temp_issues = backup / 'rebuilt-issues.jsonl'
+        derived = {'non_123_suffix_group', 'csv_name_without_mol2',
+                   'same_name_multiple_mol2_chemistries'}
+        with temp_issues.open('w', encoding='utf-8') as issues:
+            with (output / 'issues.jsonl').open(encoding='utf-8') as old:
+                for line in old:
+                    if json.loads(line)['kind'] not in derived:
+                        issues.write(line)
+            summarize(db, report, issues)
+        report.update(status='complete', stage='complete', omega_counts=dict(omega),
+                      limitations=['Summary recovered from committed audit; no chemistry rerun',
+                                   'Block construction and workstation validation remain separate'])
+        report.pop('error', None)
+        report['summary_recovery'] = dict(
+            backup=str(backup), previous_error=original.get('error'),
+            source_hashes_reverified=True, database_quick_check='ok',
+            code_sha256=sha(Path(__file__)), wall_seconds=time.monotonic() - started)
+        report['output_hashes'] = {'audit.sqlite': sha(db_path), 'issues.jsonl': sha(temp_issues)}
+        temp_report = backup / 'rebuilt-report.json'
+        temp_report.write_text(json.dumps(report, indent=2), encoding='utf-8')
+        # If interrupted between replacements the failed report remains retryable;
+        # derived issue records are removed and rebuilt on each attempt.
+        temp_issues.replace(output / 'issues.jsonl')
+        temp_report.replace(output / 'report.json')
+    finally:
+        db.close()
     return report
 
 
@@ -251,7 +345,14 @@ def main():
     parser.add_argument('--allow-missing-csv', action='store_true')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--recover-summary', action='store_true',
+                        help='Verify and finalize an existing failed audit without rerunning chemistry')
     args = parser.parse_args()
+    if args.recover_summary:
+        if args.source_dir or args.csv or args.mol2 or args.allow_missing_csv:
+            parser.error('Recovery takes only the existing --output audit directory')
+        print(json.dumps(recover_summary(args.output), indent=2))
+        return
     if args.source_dir:
         if args.csv or args.mol2:
             parser.error('Use --source-dir or explicit file lists, not both')

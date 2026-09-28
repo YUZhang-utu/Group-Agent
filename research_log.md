@@ -2106,3 +2106,24 @@ MDM2 structural/ensemble work and PLANTS scoring sources; recorded notes in pape
 and literature/e082-mdm2-ensemble-sources.md. No new docking, inference or scientific
 performance experiment ran. Execution settings and N-E callable interface remain
 implementation inputs, while existing full-library blocking is unchanged.
+
+## 2026-09-28 E083: audit summary recovery
+
+User reports SQLITE_FULL in the ring-size histogram after ingestion commit.
+Current /tmp and repository NFS byte/inode availability is ample; temporary
+environment variables are unset in the reported shell, and NFS quota querying
+returns Operation not permitted. The actual exhausted resource remains unknown.
+
+Replaced three global JSON histogram sorts with streaming counters. Added explicit
+summary-only recovery requiring summary-stage evidence, complete manifests,
+unchanged source hashes, database quick_check and matching source/commit counts.
+Original database and scientific code hashes are preserved; reports/issues are
+backed up, derived issues rebuilt and artifact hashes regenerated. Recovery rejects
+partial ingestion and completed audits. Other grouping queries still need scratch
+disk; the guide configures a private local SQLite scratch directory before Python.
+
+Protocol: experiments/E083-audit-summary-recovery.md. Confirmatory engineering
+checks: 34 focused tests passed, including SQL histogram equivalence, legacy failed
+report recovery, retry, source/count refusal, unchanged database hash and recovered
+readiness integration. English guard passed. No workstation recovery or block
+construction executed here; no clustering or biological performance claim.
