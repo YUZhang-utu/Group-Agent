@@ -12,7 +12,9 @@ pdb_pocket_project_prerequisite:
   mdm2_admitted_chains: 68
   mdm2_distinct_pdbs: 60
   mdm2_default_clusters: 6
-  mdm2_user_adoption: pending
+  mdm2_user_adoption: pending_geometry_review_C5_7BJ0
+  mdm2_analysis_export: to_human/E084_MDM2_ANALYSIS_REVIEW.zip
+  mdm2_geometry_finding: trimmed_core_passed_but_7BJ0_pocket_CA_RMSD_23_767_A
 audit_summary_recovery:
   experiment: E083
   status: local_tests_passed_workstation_recovery_pending

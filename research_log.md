@@ -2188,3 +2188,23 @@ Engineering validation: full regression 623 passed, 3 skipped before final viewe
 integration; final focused prompt/chat/consensus/pocket regression is recorded in
 the delivery receipt. Experimental metrics are development-set observations,
 not proof of representative docking recall or binding affinity accuracy.
+
+## 2026-09-28 E084 analysis export and independent alignment finding
+
+User requests cluster membership, reasons and underlying data for independent
+analysis. Exported E084_MDM2_ANALYSIS_REVIEW.zip with 11 CSV tables, four full
+matrices, complete weighted merge history, interactive cavity views, raw grids,
+all 133 source CIFs, original reports/metadata, transforms and SHA256 manifest.
+Input hashes and exact reconstruction of all six original member sets passed.
+No clustering assignments were changed by the export.
+
+Independent all-pocket CA inspection found a critical issue in C5 / 7BJ0:A:
+trimmed fitted core RMSD is 1.818 A, while all 24 observed pocket CA atoms have
+RMSD 23.767 A, maximum displacement 45.800 A and 15 residuals above 5 A. The
+existing core trimming gate can accept a small aligned region while the rest of
+the pocket is severely displaced. The root cause (alignment, assembly, or genuine
+structural difference) remains unresolved. The package preserves this original
+assignment but explicitly marks C5 for geometry review, not consensus/docking use.
+This finding supersedes any interpretation of six clusters as accepted biological
+states. C1 also has representative-coverage/chemical flags, and C6 is borderline
+against C1 (weighted average distance about 0.415 versus cutoff 0.40).

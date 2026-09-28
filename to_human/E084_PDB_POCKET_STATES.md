@@ -1,5 +1,12 @@
 # E084: experimental PDB pocket states
 
+Independent export review found a critical geometry issue in the original C5
+representative, 7BJ0:A: the fitted core RMSD is 1.82 A, but all observed pocket CA
+atoms have RMSD 23.77 A and maximum displacement 45.80 A. Do not treat this state
+as an accepted consensus/docking receptor. The original six-cluster result is
+preserved for analysis; the all-pocket alignment guard requires follow-up before
+production acceptance. See the E084_MDM2_ANALYSIS_REVIEW package, tables 10 and 11.
+
 The first implementation uses the existing verified diversity collection as input,
 but compares receptor pocket space rather than ligand fingerprints. New diversity
 reports require this review before consensus; old sealed reports remain legacy.
