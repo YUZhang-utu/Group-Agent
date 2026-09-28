@@ -47,3 +47,11 @@ not evidence of biological screening quality or measured RTX 5090 acceleration.
   Deposited polymer entities establish why peptide ligands require a separate path.
 - Official Data API: https://data.rcsb.org/ . Cached Search/GraphQL/CCD responses
   and raw coordinate files under the project analysis directory record actual counts.
+
+## E082 MDM2 ensemble docking and PLANTS
+
+Primary-source notes: literature/e082-mdm2-ensemble-sources.md. Relevant evidence:
+Bista et al., Structure (2013), doi:10.1016/j.str.2013.09.006; MDM2 ensemble receptor
+models, JACS (2007), doi:10.1021/ja073687x; PLANTS scoring, JCIM (2009),
+doi:10.1021/ci800298z. These motivate an ensemble/cross-docking protocol, not a
+claim of measured performance for the user's macrocycle library or N-E workflow.

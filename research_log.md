@@ -2090,3 +2090,19 @@ it to origin/feature/structure-guided-chat on GitHub. The ordinary push advanced
 instructions are delivered. Unrelated build output, the E066 patch and the
 historical local E080 ZIP remain outside this release. Full workstation execution
 is still pending; use scripts/run_e081_checked_library.sh with a fresh run root.
+
+## 2026-09-28 E082: MDM2 / PLANTS / N-E block-panel protocol
+
+User proposes 100/200 molecular samples per block with 3D search, docking and
+in-house N-E rescoring; affinity models remain optional and undecided. User
+clarifies PLANTS and MDM2 and raises induced-fit/co-crystal template bias.
+Confirmed existing PLANTS path/discovery but no execution adapter; do not conflate
+configuration with a working PLANTS pipeline. Current execution is Glide-specific.
+
+Recorded experiments/E082-mdm2-plants-ne-panels.md: receptor-state ensemble,
+unfiltered initial panel docking, same-pose/state score provenance, output-geometry
+migration, molecule-level statistics and held-out cross-docking. Consulted primary
+MDM2 structural/ensemble work and PLANTS scoring sources; recorded notes in papers.md
+and literature/e082-mdm2-ensemble-sources.md. No new docking, inference or scientific
+performance experiment ran. Execution settings and N-E callable interface remain
+implementation inputs, while existing full-library blocking is unchanged.

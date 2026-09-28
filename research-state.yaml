@@ -881,3 +881,17 @@ macrocycle_validation_e081:
   full_regression_skipped: 3
   local_receipts: to_human/E081_LOCAL_VALIDATION.json
   scientific_clustering_quality: requires_held_out_score_reference
+
+macrocycle_multimodal_e082:
+  status: protocol_defined_execution_adapters_pending
+  protocol: experiments/E082-mdm2-plants-ne-panels.md
+  target: human_MDM2_Q00987
+  docking_engine: PLANTS
+  rescoring: user_N-E_workflow
+  affinity_model: undecided_optional
+  molecules_per_block: [100, 200]
+  initial_docking_panel: representative_not_filtered_by_3d_scores
+  receptor_strategy: experimental_pocket_state_ensemble
+  plants_execution_adapter: not_implemented
+  ne_callable_interface: not_located
+  docking_or_inference_executed: false
