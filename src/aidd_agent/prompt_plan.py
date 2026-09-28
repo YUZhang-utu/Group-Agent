@@ -23,6 +23,9 @@ ACTION_FIELDS = {
     "anchor_design": ({"source_run"}, {"design"}),
     "guided_funnel": ({"source_run"}, set()),
     "structure_consensus": ({"source_run"}, {"reference_query", "target_chain", "maximum_templates"}),
+    "pocket_states": ({"source_run"}, {"reference_query", "target_chain", "cluster_distance"}),
+    "pocket_adopt": ({"source_run"}, {"cluster_ids"}),
+    "pocket_consensus": ({"source_run"}, {"pocket_state_id", "maximum_templates"}),
     "consensus_recommend": ({"source_run", "provider"}, set()),
     "consensus_design": ({"source_run"}, {"design"}),
     "consensus_funnel": ({"source_run"}, set()),
@@ -193,10 +196,18 @@ def validate_plan(plan):
             raise ValueError('Provide 1..20 explicit PDB IDs')
         if action in {'anchor_recommend','consensus_recommend'} and params['provider'] not in {'gpt','deepseek'}:
             raise ValueError('Unknown recommendation provider')
-        if action=='structure_consensus':
+        if action in {'structure_consensus','pocket_states','pocket_consensus'}:
             if 'reference_query' in params and (not isinstance(params['reference_query'],str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}:[A-Za-z0-9]+:[A-Za-z0-9]+:-?[0-9]+',params['reference_query'])):raise ValueError('Invalid reference ligand identity')
             if 'target_chain' in params and (not isinstance(params['target_chain'],str) or not re.fullmatch(r'[A-Za-z0-9]+',params['target_chain'])):raise ValueError('Invalid target chain')
             if not _integer(params.get('maximum_templates',8),1,100):raise ValueError('Invalid template budget')
+        if action=='pocket_states':
+            from .pocket_states import policy
+            policy({'cluster_distance':params.get('cluster_distance',.40)})
+        if action=='pocket_adopt' and 'cluster_ids' in params:
+            ids=params['cluster_ids']
+            if not isinstance(ids,list) or not ids or len(set(ids))!=len(ids) or any(not isinstance(i,str) or not re.fullmatch(r'pocket-[a-f0-9]{12}',i) for i in ids):raise ValueError('Invalid pocket cluster IDs')
+        if action=='pocket_consensus' and 'pocket_state_id' in params:
+            if not isinstance(params['pocket_state_id'],str) or not re.fullmatch(r'pocket-[a-f0-9]{12}',params['pocket_state_id']):raise ValueError('Invalid pocket state ID')
         if action=='consensus_design' and 'design' in params:
             from .consensus_design import FIELDS
             if not isinstance(params['design'],dict) or set(params['design'])-FIELDS:raise ValueError('Invalid consensus edits')

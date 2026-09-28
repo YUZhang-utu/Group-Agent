@@ -55,3 +55,12 @@ Bista et al., Structure (2013), doi:10.1016/j.str.2013.09.006; MDM2 ensemble rec
 models, JACS (2007), doi:10.1021/ja073687x; PLANTS scoring, JCIM (2009),
 doi:10.1021/ci800298z. These motivate an ensemble/cross-docking protocol, not a
 claim of measured performance for the user's macrocycle library or N-E workflow.
+
+## E084 pocket-state evidence
+
+POVME 3.0: Software for Mapping Binding Pocket Flexibility:
+https://pmc.ncbi.nlm.nih.gov/articles/PMC5751414/ . Pocket shape/chemical comparison
+motivates the workflow; our bounded grid implementation is not a POVME replica.
+MDM2 transient-state experimental evidence:
+https://pmc.ncbi.nlm.nih.gov/articles/PMC4104591/ . Rare states warrant review;
+PDB deposition counts are not equilibrium occupancy estimates.

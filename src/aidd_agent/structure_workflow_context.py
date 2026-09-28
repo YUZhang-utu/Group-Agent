@@ -2,7 +2,8 @@
 from pathlib import Path
 
 STAGES = {
-    'pdb_fetch': [], 'structure_diversity': ['consensus'],
+    'pdb_fetch': [], 'structure_diversity': ['pockets'],
+    'pocket_states': ['adopt'], 'pocket_adopt': ['consensus'], 'pocket_consensus': ['recommend'],
     'structure_consensus': ['recommend'],
     'consensus_recommend': ['adopt', 'design', 'budget'],
     'consensus_design': ['budget', 'guided'], 'consensus_funnel': [],
@@ -38,8 +39,8 @@ def inspect(tools, args):
                         'status','target','reference_site_pdb','readiness','selection','quality_site_unique_ligands',
                         'coverage_curve','template_selection','proposed_template_ids','ranked_molecules',
                         'exported_molecules','start_rank','end_rank','shortfall','review_required',
-                        'limitations','outputs') if k in child}
-                    stage['reference_options']=child.get('cohort',{}).get('reference_options',[])
+                        'limitations','outputs','clusters','sensitivity','selected_cluster_ids','pocket_state_id') if k in child}
+                    stage['reference_options']=child.get('cohort',{}).get('reference_options',child.get('reference_options',[]))
                     stage['proposed_references']=[r.get('query_id') for r in child.get('proposed_references',[])]
                     stage['artifacts']=tools.discover(child,tools.project)
                     if child_path:
@@ -49,7 +50,7 @@ def inspect(tools, args):
                             if matrix:stage['artifacts'].append(matrix)
                     ready=child.get('readiness')
                     stage['next_intents']=STAGES[action] if job['status']=='complete' and child.get('status')=='complete' else []
-                    if ready and ready.startswith('needs_'):
+                    if ready and ready.startswith('needs_') and ready!='needs_user_adoption':
                         stage['next_intents']=[];stage['required_input']=ready
                     if action=='structure_consensus' and ready!='proposal_ready':stage['next_intents']=[]
         except (OSError,ValueError,KeyError,TypeError) as exc:

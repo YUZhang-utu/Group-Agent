@@ -10,8 +10,10 @@ from .gaussian_batch import _atomic_json
 from .screening_selection import check_hashes
 
 SOURCE_ACTIONS={'anchor_recommend':'structure_survey','anchor_design':'anchor_recommend',
+                'pocket_states':'structure_diversity','pocket_adopt':'pocket_states',
+                'pocket_consensus':'pocket_adopt',
                 'guided_funnel':'anchor_design','guided_select':('guided_funnel','consensus_funnel'),
-                'structure_consensus':'structure_diversity','consensus_recommend':'structure_consensus',
+                'structure_consensus':'structure_diversity','consensus_recommend':('structure_consensus','pocket_consensus'),
                 'consensus_design':'consensus_recommend','consensus_funnel':'consensus_design',
                 'consensus_budget':('consensus_design','consensus_recommend'),
                 'budget_page':('consensus_budget','budget_page')}
@@ -51,6 +53,22 @@ def select_candidates(source, output, params):
 
 def execute(action,source,output,params,cfg,allow_compute):
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    if action=='pocket_states':
+        from .pocket_states import build
+        return build(source,output,params.get('reference_query'),params.get('target_chain'),
+                     {'cluster_distance':params.get('cluster_distance',.40)})
+    if action=='pocket_adopt':
+        from .pocket_states import adopt
+        return adopt(source,output,params.get('cluster_ids'))
+    if action=='pocket_consensus':
+        from .pocket_states import state_cohort
+        from .consensus_model import build
+        diversity,cohort,adopted=state_cohort(source,params.get('pocket_state_id'))
+        result=build(diversity,output,maximum_templates=params.get('maximum_templates',8),cohort_override=cohort)
+        result['pocket_state_id']=cohort['pocket_state_id']
+        result['sources'].update(adopted['sources']);result['sources'].update(fingerprint([source]))
+        _atomic_json(output/'report.json',result)
+        return result
     if action in {'consensus_budget','budget_page'}:
         from .budget_workflow import execute as budget_execute
         return budget_execute(action,source,output,params,cfg,allow_compute)

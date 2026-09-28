@@ -2159,3 +2159,32 @@ This delivery is planning guidance, not a clustering implementation or an
 executor-enforced gate. No PDB pocket clustering experiment ran. Existing explicit
 legacy analyses remain available without claiming pocket-state review. Local
 prompt/chat regression: 33 passed; English guard passed. Cofolding is deferred.
+
+## 2026-09-28 E084: executable PDB pocket clustering before consensus
+
+Implemented shared-grid receptor cavity overlap, local change diagnostics, six
+residue-template chemical fields, PDB-weighted average linkage, quality-aware
+medoids and cutoff sensitivity. The default composite distance is 0.40 with 15%
+chemical contribution; this is deliberately permissive and remains exploratory.
+No forced cluster count, no automatic rare-state deletion and no population claims.
+Reference-local missing-atom checks avoid rejecting remote missing sidechain atoms.
+
+Added pocket_states, pocket_adopt and pocket_consensus trusted coordinator actions,
+source-hashed explicit adoption, new-diversity bypass refusal, one-state consensus,
+HTML pocket comparison, saved grids/matrices and aligned representative PyMOL
+catalog support. Automatic chains stop for explicit adoption. Old sealed analyses
+remain legacy. The chemical fields use templates and approximate directions, not
+full electrostatics or hydrogen reconstruction. No PLANTS/N-E job ran.
+
+Exploratory local MDM2 run: existing 133-file E052 collection, 68 admitted chains
+from 60 PDBs, 180 held candidate chains/entries. Final weighted clusters contain
+55/8/2/1/1/1 chains (six states), versus 12 states at distance 0.30 and three at
+0.50. The unweighted development result had five states; it is superseded. One
+broad state's representative does not cover every member within the cutoff and
+chemical differences remain review flags. User adoption is pending. Report:
+data/e084-mdm2-final/report.html; receipt: to_human/E084_MDM2_VALIDATION.json.
+
+Engineering validation: full regression 623 passed, 3 skipped before final viewer
+integration; final focused prompt/chat/consensus/pocket regression is recorded in
+the delivery receipt. Experimental metrics are development-set observations,
+not proof of representative docking recall or binding affinity accuracy.

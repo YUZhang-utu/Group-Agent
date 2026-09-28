@@ -1,11 +1,18 @@
 project: aidd-macrocycle-agent
 pdb_pocket_project_prerequisite:
-  status: planning_contract_recorded_execution_pending
+  status: implemented_local_tests_and_MDM2_exploratory_validation
   guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
   scope: experimental_PDB_only
   precedes: state_specific_interaction_consensus
   requires: explicit_user_adoption_of_pocket_representatives
-  runtime_enforcement: not_implemented
+  runtime_enforcement: new_diversity_requires_adopted_state_consensus
+  implementation_guide: to_human/E084_PDB_POCKET_STATES.md
+  clustering: average_linkage_distance_0_40_chemical_weight_0_15
+  mdm2_exploratory_receipt: to_human/E084_MDM2_VALIDATION.json
+  mdm2_admitted_chains: 68
+  mdm2_distinct_pdbs: 60
+  mdm2_default_clusters: 6
+  mdm2_user_adoption: pending
 audit_summary_recovery:
   experiment: E083
   status: local_tests_passed_workstation_recovery_pending

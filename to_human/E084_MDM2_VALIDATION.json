@@ -1,0 +1,226 @@
+{
+  "experiment": "E084",
+  "scope": "Exploratory local MDM2 PDB pocket comparison, not docking validation",
+  "input_collection": "Existing E052 133-file experimental PDB collection",
+  "reference": {
+    "query_id": "5C5A:NUT:A:201",
+    "target_chain": "A",
+    "id": "5C5A:A"
+  },
+  "admitted_chains": 68,
+  "distinct_admitted_pdbs": 60,
+  "held_candidates": 180,
+  "held_reasons": {
+    "assembly_context_unresolved": 102,
+    "target_identity_or_organism_unverified": 15,
+    "uncertain_pocket_occupancy": 86,
+    "missing_pocket_residue": 296,
+    "pocket_sequence_difference_requires_review": 42,
+    "insufficient_alignment": 11,
+    "missing_pocket_atoms": 24,
+    "alignment_unresolved": 1
+  },
+  "policy": {
+    "spacing": 1.0,
+    "region_padding": 4.0,
+    "probe_radius": 0.5,
+    "cluster_distance": 0.4,
+    "chemical_weight": 0.15,
+    "feature_radius": 2.0,
+    "minimum_alignment_residues": 12,
+    "maximum_core_rmsd": 2.5,
+    "maximum_grid_points": 150000,
+    "local_change_volume": 30.0
+  },
+  "sensitivity": [
+    {
+      "distance": 0.30000000000000004,
+      "clusters": 12
+    },
+    {
+      "distance": 0.4,
+      "clusters": 6
+    },
+    {
+      "distance": 0.5,
+      "clusters": 3
+    }
+  ],
+  "clusters": [
+    {
+      "id": "pocket-38d1e01e1629",
+      "members": [
+        "1RV1:A",
+        "1RV1:B",
+        "1RV1:C",
+        "1T4E:A",
+        "1T4E:B",
+        "1T4F:M",
+        "1YCR:A",
+        "22IZ:A",
+        "3G03:A",
+        "3JZK:A",
+        "3JZR:A",
+        "3JZS:A",
+        "3TJ2:A",
+        "3TU1:A",
+        "3V3B:A",
+        "3VBG:A",
+        "3VBG:B",
+        "3VZV:A",
+        "4DIJ:A",
+        "4JV7:A",
+        "4JV9:A",
+        "4MDQ:A",
+        "4OQ3:A",
+        "4ZFI:A",
+        "4ZYI:A",
+        "5C5A:A",
+        "5J7F:A",
+        "5J7F:D",
+        "5J7G:A",
+        "5LAY:A",
+        "5LN2:A",
+        "5OAI:A",
+        "5SWK:A",
+        "5SWK:B",
+        "5Z02:A",
+        "5ZXF:A",
+        "6AAW:A",
+        "6GGN:A",
+        "6H22:A",
+        "6HFA:A",
+        "6KZU:A",
+        "6Q96:A",
+        "6Q9L:A",
+        "6T2E:A",
+        "6T2F:A",
+        "6Y4Q:A",
+        "7AD0:A",
+        "7AYE:A",
+        "7NA2:A",
+        "8EIC:B",
+        "9FQL:A",
+        "9FQL:B",
+        "9GFC:A",
+        "9GFK:A",
+        "9GFK:B"
+      ],
+      "representative": "6Y4Q:A",
+      "distinct_pdb_support": 47,
+      "small_support": false,
+      "representative_max_distance": 0.43663273001508296,
+      "representative_weighted_distance": 0.2763758797017386,
+      "maximum_chemical_difference": 0.9941860465116279,
+      "review_flags": [
+        "average_linkage_member_outside_representative_cutoff",
+        "inspect_within_cluster_chemical_differences"
+      ]
+    },
+    {
+      "id": "pocket-57e751481943",
+      "members": [
+        "3LBL:A",
+        "4ERF:A",
+        "4OAS:A",
+        "4OCC:A",
+        "4QOC:A",
+        "5TRF:A",
+        "6Q9H:A",
+        "7NA4:A"
+      ],
+      "representative": "4OAS:A",
+      "distinct_pdb_support": 8,
+      "small_support": false,
+      "representative_max_distance": 0.27972756903019497,
+      "representative_weighted_distance": 0.18222408261090461,
+      "maximum_chemical_difference": 0.9157142857142857,
+      "review_flags": [
+        "inspect_within_cluster_chemical_differences"
+      ]
+    },
+    {
+      "id": "pocket-726f4cecdf8b",
+      "members": [
+        "3W69:A",
+        "4ZYC:A"
+      ],
+      "representative": "3W69:A",
+      "distinct_pdb_support": 2,
+      "small_support": true,
+      "representative_max_distance": 0.35277777777777775,
+      "representative_weighted_distance": 0.17638888888888887,
+      "maximum_chemical_difference": 0.9351851851851851,
+      "review_flags": [
+        "inspect_within_cluster_chemical_differences"
+      ]
+    },
+    {
+      "id": "pocket-f3026ae9a8e7",
+      "members": [
+        "4HBM:A"
+      ],
+      "representative": "4HBM:A",
+      "distinct_pdb_support": 1,
+      "small_support": true,
+      "representative_max_distance": 0.0,
+      "representative_weighted_distance": 0.0,
+      "maximum_chemical_difference": 0.0,
+      "review_flags": []
+    },
+    {
+      "id": "pocket-1cb9b36f2817",
+      "members": [
+        "7BJ0:A"
+      ],
+      "representative": "7BJ0:A",
+      "distinct_pdb_support": 1,
+      "small_support": true,
+      "representative_max_distance": 0.0,
+      "representative_weighted_distance": 0.0,
+      "maximum_chemical_difference": 0.0,
+      "review_flags": []
+    },
+    {
+      "id": "pocket-7a786cdb6c02",
+      "members": [
+        "8GCG:A"
+      ],
+      "representative": "8GCG:A",
+      "distinct_pdb_support": 1,
+      "small_support": true,
+      "representative_max_distance": 0.0,
+      "representative_weighted_distance": 0.0,
+      "maximum_chemical_difference": 0.0,
+      "review_flags": []
+    }
+  ],
+  "code_hashes": {
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\pocket_states.py": "caa2318b02840b7fc1d06c84784a4526f0ec5872410e5fb95bb70c6d86d62885",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\consensus_admission.py": "0601eb8d878485c428103745644c468ee46763921fb0e91b808d58f76b8501ed"
+  },
+  "artifacts": {
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e084-mdm2-final\\report.json": "64efd023a560110cc2ac1aa94c4f421411c9b9a8a3c3de357b893bf31d2d6796",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e084-mdm2-final\\pocket-grids.npz": "257b37b960436b2fcb95a5aab8f3860b41aa939ff58ac0db1633cbdb6215f3f9",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\data\\e084-mdm2-final\\report.html": "90373c7881621f4a6b37dcb9abbb0956eef9d6586fa017e14f3111039c577be6"
+  },
+  "decision": "Awaiting user review; no pocket adoption or docking dispatched",
+  "limitations": [
+    "PDB support is not equilibrium occupancy; rare clusters are retained",
+    "Reference-ligand-expanded local region, not exhaustive cavity or access-path detection",
+    "Residue-template chemical fields with outward heavy-atom direction proxies; no affinity claim",
+    "His/Cys protonation, termini, waters, metals and transformed interfaces require separate review",
+    "Only model 1 and identity assembly 1; uncertain pocket atoms are held for review",
+    "Thresholds are exploratory defaults, not calibrated target-independent cutoffs"
+  ],
+  "engineering_validation": {
+    "full_regression_before_final_viewer_integration": {
+      "passed": 623,
+      "skipped": 3
+    },
+    "final_focused_regression": {
+      "passed": 83
+    },
+    "live_provider_and_desktop_acceptance": "not_run"
+  }
+}

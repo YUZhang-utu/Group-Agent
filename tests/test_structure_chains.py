@@ -11,28 +11,25 @@ def start(app,sid,goal='budget'):
         reference=dict(reference_query='6Q9L:HTZ:A:201',target_chain='A'),budget=dict(export_molecules=100000)))
 
 
-def test_automatic_chain_waits_advances_once_and_stops_at_goal(tmp_path,monkeypatch):
+def test_automatic_chain_waits_for_explicit_pocket_adoption(tmp_path,monkeypatch):
     app=ChatAgent(tmp_path,start=False,allow_compute=True);sid=app.new_session()
     add(app,sid,'div','structure_diversity',dict(status='complete'))
     original=DomainTools.call;calls=[]
     def call(self,name,args):
         if name!='workflow':return original(self,name,args)
         decision=args['decision'];intent=decision['intent'];calls.append(decision)
-        action={'consensus':'structure_consensus','recommend':'consensus_recommend','budget':'consensus_budget'}[intent]
-        add(app,sid,intent,action,dict(status='complete',readiness='proposal_ready'),decision['task_id'])
+        action={'pockets':'pocket_states'}[intent]
+        add(app,sid,intent,action,dict(status='complete',readiness='needs_user_adoption'),decision['task_id'])
         app.update(intent,status='queued')
         return dict(status='queued',tasks=[dict(id=intent,status='queued')])
     monkeypatch.setattr(DomainTools,'call',call)
     start(app,sid);tick(app);tick(app)
     assert len(calls)==1
-    app.update('consensus',status='complete');tick(app)
-    app.update('recommend',status='complete');tick(app)
-    app.update('budget',status='complete');tick(app);tick(app)
+    app.update('pockets',status='complete');tick(app);tick(app)
     chain=rows(app,sid)[0]
-    assert chain['status']=='complete' and len(calls)==3
-    assert calls[-1]['budget']['export_molecules']==100000
-    assert [c['task_id'] for c in calls]==['div','consensus','recommend']
-    assert app.snapshot(sid)['structure_chains'][0]['current_task']=='budget'
+    assert chain['status']=='blocked' and len(calls)==1
+    assert [c['task_id'] for c in calls]==['div']
+    assert app.snapshot(sid)['structure_chains'][0]['current_task']=='pockets'
 
 
 def test_pause_block_restart_and_uncertain_dispatch(tmp_path,monkeypatch):
@@ -87,7 +84,7 @@ def test_coordinator_uses_real_validated_dispatch_and_sealed_plan(tmp_path):
     job=app.task(sid,chain['current_task'])
     plan=Path(job['plan']);envelope=json.loads(plan.read_text())
     step=envelope['plan']['steps'][0]
-    assert step['action']=='structure_consensus'
+    assert step['action']=='pocket_states'
     assert step['params']['source_run']==run_id
     assert step['params']['reference_query']=='6Q9L:HTZ:A:201'
     assert (plan.parent/'plan-seal.json').is_file()

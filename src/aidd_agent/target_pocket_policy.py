@@ -13,11 +13,16 @@ PDB counts are structural support, not equilibrium occupancy probabilities.
 Do not automatically discard small clusters or equate high global pocket overlap
 with unchanged local subpockets or interactions. Preserve state-specific contacts;
 do not turn mutually exclusive state contacts into simultaneous mandatory anchors.
-Implementation status: pocket-space/chemical-feature clustering and its persisted
-adoption gate are not yet implemented. Existing structure_diversity and
-structure_consensus do not satisfy this prerequisite. Explain this limitation for
-new end-to-end project requests; offer supported identity/PDB evidence collection
-without claiming the full sequence can execute. Do not invent a pocket action,
-cluster assignment, approved representative or receipt. Existing explicitly
-requested legacy analyses remain available but are not pocket-state-reviewed.
+Implementation: the trusted coordinator runs pocket_states from structure_diversity,
+then pocket_adopt on explicit user acceptance, then pocket_consensus for one adopted
+pocket_state_id. Use pockets with reference {} or actual reference_query/target_chain
+to prepare analysis. cluster_distance defaults to a permissive exploratory .40;
+Use adopt with optional pocket_selection {cluster_ids: actual reviewed IDs} to
+adopt a subset; omit pocket_selection to adopt all reported states explicitly.
+inspect sensitivity counts instead of forcing a cluster count. Chemical fields use
+residue templates and approximate directions, not full electrostatics or hydrogen
+bond energetics. Never invent cluster IDs or adoption receipts. Model-generated
+plans cannot emit source_run actions; these remain trusted coordinator operations.
+New diversity outputs cannot bypass adoption via legacy structure_consensus.
+Existing explicitly requested old analyses remain available without claiming review.
 """

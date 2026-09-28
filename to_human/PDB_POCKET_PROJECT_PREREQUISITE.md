@@ -1,8 +1,9 @@
 # PDB pocket-state prerequisite for new target projects
 
-Status: user-approved workflow design and planner guidance. Pocket clustering,
-persisted user adoption and an executor-enforced prerequisite remain to implement.
-Existing ligand-diversity and consensus adapters do not implement this analysis.
+Status: E084 implements local-grid pocket comparisons, chemical fields, clustering,
+persisted user adoption and the state-specific consensus prerequisite. See
+[the execution guide](E084_PDB_POCKET_STATES.md) for boundaries and validation.
+Legacy sealed analyses remain legacy; new diversity reports require adoption.
 
 ## Required sequence
 
@@ -38,10 +39,9 @@ with an explicit evidence gap. Cofolding and other generated states are deferred
 
 ## Implementation and acceptance boundary
 
-Planner text describes this requirement and accurately exposes the missing
-capability. It is not a runtime gate and does not retrofit old sealed plans.
-The future executor must require an owned, current adopted pocket-state receipt
-before dispatching the new project's consensus; changing inputs invalidates it.
+The coordinator exposes pockets, explicit adoption and per-state consensus.
+New-project consensus requires a current adopted pocket-state receipt; source
+hash changes invalidate it. Existing sealed legacy plans are not retrofitted.
 
 Before enabling that path, validate rigid-transform invariance, identical-pocket
 agreement, local occlusion and feature-direction sensitivity, missing-atom handling,

@@ -83,14 +83,14 @@ def tick(app):
                     chain['error']=None;save(app,chain,'complete')
                     app.message(sid,'assistant',f"Structure chain {chain['id']} complete. Final task: {job['id']}.")
                     continue
-                intent={'structure_diversity':'consensus','structure_consensus':'recommend',
+                intent={'structure_diversity':'pockets','structure_consensus':'recommend','pocket_consensus':'recommend',
                         'consensus_recommend':'budget','consensus_design':'budget'}.get(action)
                 if intent not in stage['next_intents']:raise ValueError('Stage requires input or has no supported continuation: '+action)
                 if intent=='budget' and (chain['goal']!='budget' or not app.allow_compute):raise ValueError('Budget execution is not enabled for this chain')
-                if intent=='consensus' and not all(chain['reference'].get(k) for k in ('reference_query','target_chain')):
+                if intent in {'consensus','pockets'} and not all(chain['reference'].get(k) for k in ('reference_query','target_chain')):
                     raise ValueError('Supply reference_query and target_chain when starting the chain; no reference identity is guessed')
                 decision=dict(intent=intent,task_id=job['id'],message='',request='')
-                if intent=='consensus':decision['reference']=chain['reference']
+                if intent in {'consensus','pockets'}:decision['reference']=chain['reference']
                 if intent=='budget':decision['budget']=chain['budget']
                 chain['pending_decision']=decision;save(app,chain,'dispatching')
                 try:

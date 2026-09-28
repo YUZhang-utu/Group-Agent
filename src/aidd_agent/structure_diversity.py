@@ -250,6 +250,7 @@ def run(protein, output, local_folder=None, reference_pdb='5C5A', maximum=8, sim
         limitations=['Nonpolymeric organic ligand diversity only; polymer ligands reported separately',
             'Resolution/occupancy/completeness screen is not density or biological validation',
             'No new library scan; multi-reference selection is a proposal for human review'])
+    report['pocket_state_review_required']=True
     report['code_hashes']={name:hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
         for name in ('structure_diversity.py','polymer_ligand_diversity.py','structure_diversity_report.py','structure_survey.py','rcsb.py')}
     save(output/'report.json',report)

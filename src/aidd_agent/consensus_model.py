@@ -62,7 +62,7 @@ def consensus(observations, prepared, distance=1.0):
     return anchors,features
 
 
-def build(source, output, reference_query=None, target_chain=None, maximum_templates=8):
+def build(source, output, reference_query=None, target_chain=None, maximum_templates=8, *, cohort_override=None):
     from rdkit import Chem, DataStructs
     from rdkit.Chem import rdFingerprintGenerator
     from rdkit.Chem.Scaffolds import MurckoScaffold
@@ -74,7 +74,9 @@ def build(source, output, reference_query=None, target_chain=None, maximum_templ
     from .gaussian_batch import prepare_gaussian_query
     root=Path(source).parent;out=Path(output);out.mkdir(parents=True,exist_ok=True)
     survey=json.loads(Path(source).read_text());protein=json.loads((root/'protein.json').read_text())
-    admitted=cohort(root,out,protein,survey['reference_site_pdb'],reference_query,target_chain)
+    if survey.get('pocket_state_review_required') and cohort_override is None:
+        raise ValueError('New projects require pocket-state analysis and explicit adoption before consensus')
+    admitted=cohort_override if cohort_override is not None else cohort(root,out,protein,survey['reference_site_pdb'],reference_query,target_chain)
     _atomic_json(out/'cohort.json',admitted)
     report=dict(kind='structure_consensus',status='complete',target=protein,cohort=admitted,
         readiness=admitted['readiness'],sources=fingerprint([source,root/'protein.json',root/'ligand-instances.json']))

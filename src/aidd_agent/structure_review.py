@@ -55,6 +55,16 @@ def structures(job, project, collection='diverse'):
             add(payload['path'],payload.get('pdb_id','PDB structure'),expected=payload.get('sha256'))
         elif payload.get('report'):
             path=ensure_within(Path(payload['report']),project); child=consensus_report(read(path),project)
+            if child.get('kind')=='pocket_adoption':
+                from .screening_selection import check_hashes
+                check_hashes(child['sources'])
+                child=read(ensure_within(Path(child['pocket_report']),project))
+            if child.get('kind')=='pocket_states':
+                representatives={c['representative'] for c in child.get('clusters',[])}
+                for row in child.get('structures',[]):
+                    if collection=='diverse' and row['id'] not in representatives: continue
+                    structure=Path(row['structure_path']).resolve()
+                    add(structure,row['id'],transform=row['transform'],expected=child['sources'].get(str(structure)))
             if child.get('kind')=='structure_consensus':
                 admitted={r['query_id']:r for r in child.get('cohort',{}).get('admitted',[])}
                 chosen=set(child.get('proposed_template_ids',[]))

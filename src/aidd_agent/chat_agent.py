@@ -19,7 +19,7 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 WORKFLOWS = [
-    {"name": "PDB pocket-state prerequisite", "status": "Planning contract recorded; clustering and persisted approval gate not implemented", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
+    {"name": "PDB pocket-state prerequisite", "status": "Pocket grid clustering and explicit adoption implemented; target validation ongoing", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
     {"name":"Automatic structure workflow chains", "status":"Persistent coordinator; workstation acceptance pending", "scope":"Explicitly requested continuation from an existing task through consensus, recommendation and optional budget delivery. Pause/resume future stages, preserve source IDs, block failed or uncertain dispatch. Current scientific tasks remain separately controlled."},
     {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
     {"name":"Contact-first molecule budgets", "status":"Chat budget and budget_page adapters", "scope":"Unique-molecule ANN retrieval, same-pose contact-first template ranks, RRF fusion and paged original/posed MOL2 plus names. Target recall and enrichment require validation."},
@@ -158,10 +158,10 @@ Use budget_page to deliver the next molecules from an existing consensus_budget 
 task without rescoring; include budget {} or export_molecules and optional start_rank.
 Both intents have empty request. They include MOL2/name export in the authorized task.
 Do not route these requests to guided or the old select/export workflow.
-For the general-target workflow, after structure_diversity use intent consensus with an extra
+For the general-target workflow, after structure_diversity use intent pockets with an extra
 reference object containing reference_query (PDB:CCD:author_chain:residue), target_chain, and optional maximum_templates.
 Use only user-provided reference identity; if ambiguous use consensus with reference {} to obtain options.
-This verifies target chain, organism, biological assembly and aligned same pocket before pooling contacts.
+Review pocket_states with the user, then use adopt only on explicit acceptance. On pocket_adopt use consensus with reference {pocket_state_id: actual adopted ID}; omit that ID only if exactly one state was adopted. Each consensus task handles one state. Never automatically adopt pocket states.
 On structure_consensus use recommend. On consensus_recommend use adopt/design. On consensus_design use guided.
 For consensus designs, editable fields are mandatory_anchors, alternative_groups, optional_weights (ID to weight),
 template_ids, evidence_ids, rationale, exclusions, permissiveness, gaussian_weight, optional_weight, minimum_pose_score.
@@ -201,6 +201,15 @@ restore the previous successful agent program. Do not claim an operation has exe
 
 
 def validate_route(value):
+    if isinstance(value,dict) and value.get('intent')=='adopt' and 'pocket_selection' in value:
+        selection=value['pocket_selection']
+        if not isinstance(selection,dict) or set(selection)!={'cluster_ids'}:
+            raise ValueError('Pocket adoption accepts cluster_ids only')
+        from .prompt_plan import validate_plan
+        validate_plan(dict(version=1,summary='Adopt selected pocket states',clarifications=[],
+            steps=[dict(id='adopt',action='pocket_adopt',params=dict(source_run='PROMPT-'+'0'*16,**selection))]))
+        validate_route({k:v for k,v in value.items() if k!='pocket_selection'})
+        return value
     if isinstance(value,dict) and value.get('intent')=='pymol_agent':
         if set(value)!={'intent','message','task_id','request'}:raise ValueError('Invalid PyMOL agent routing fields')
         validate_route(dict(value,intent='run'))
@@ -226,7 +235,7 @@ def validate_route(value):
         return value
     if not isinstance(value, dict) or set(value) not in ({"intent", "message", "task_id", "request"}, {"intent", "message", "task_id", "request", "selection"}, {"intent", "message", "task_id", "request", "design"}, {"intent", "message", "task_id", "request", "reference"}):
         raise ValueError("Invalid chat decision")
-    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided", "consensus"}:
+    if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided", "consensus", "pockets"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
         if not isinstance(value[field], str) or len(value[field]) > 12000:
@@ -245,8 +254,8 @@ def validate_route(value):
     from .consensus_design import FIELDS
     if 'design' in value and (not isinstance(value['design'],dict) or set(value['design'])-({'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}|FIELDS)):
         raise ValueError('Invalid design edits')
-    if (value['intent']=='consensus') != ('reference' in value):raise ValueError('Consensus requires a reference object')
-    if 'reference' in value and (not isinstance(value['reference'],dict) or set(value['reference'])-{'reference_query','target_chain','maximum_templates'}):raise ValueError('Invalid reference choice')
+    if (value['intent'] in {'consensus','pockets'}) != ('reference' in value):raise ValueError('Consensus requires a reference object')
+    if 'reference' in value and (not isinstance(value['reference'],dict) or set(value['reference'])-{'reference_query','target_chain','maximum_templates','cluster_distance','pocket_state_id'}):raise ValueError('Invalid reference choice')
     return value
 
 
@@ -262,10 +271,14 @@ def screening_summary(job):
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
     for step in report.get("steps", {}).values():
+        if step.get('action') in {'pocket_states','pocket_adopt'} and step.get('status')=='complete':
+            child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            return {k:child[k] for k in ('kind','status','readiness','reference','reference_options','clusters',
+                'sensitivity','selected_cluster_ids','warnings','limitations','outputs','reasons') if k in child}
         if step.get('action') in {'consensus_budget','budget_page'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             return {k:child[k] for k in ('kind','status','target','ranked_molecules','exported_molecules','requested_molecules','start_rank','end_rank','shortfall','review_required','outputs','limitations','ranking') if k in child}
-        if step.get('action') in {'structure_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
+        if step.get('action') in {'structure_consensus','pocket_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
                 'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation',
@@ -327,10 +340,14 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind')=='pocket_states':
+        return json.dumps(summary,indent=2)+'\nReview pocket representatives and explicitly adopt them before state-specific consensus.'
+    if summary.get('kind')=='pocket_adoption':
+        return json.dumps(summary,indent=2)+'\nChoose an adopted pocket_state_id for state-specific consensus.'
     if summary.get('kind') in {'consensus_budget','budget_page'}:
         return json.dumps(summary,indent=2)+'\nUse /budget_page for the next nonoverlapping molecule page without rescoring.'
     if summary.get('kind')=='structure_diversity':
-        return json.dumps(summary,indent=2)+'\nChoose the reference ligand instance and target chain in chat to build a same-pocket consensus. Polymer chemical preparation remains separate.'
+        return json.dumps(summary,indent=2)+'\nChoose the reference ligand instance and target chain for pocket-state analysis before consensus. Polymer chemical preparation remains separate.'
     if summary.get('kind') in {'structure_consensus','consensus_recommendation','consensus_design','consensus_funnel'}:
         next_step={'structure_consensus':'Review admitted complexes and independent templates, then request /recommend.',
             'consensus_recommendation':'Use /adopt for the unchanged proposal, or submit edits to create an edited design. Review that design before /guided.',
@@ -550,8 +567,8 @@ class ChatAgent:
         else:
             if decision['task_id']:job=self.task(sid,decision['task_id'])
             else:
-                expected={'confidence':{'af3_run'},'interactions':{'structure_consensus','consensus_design','consensus_recommend'},
-                          'pymol':{'af3_run','pdb_fetch','structure_diversity','structure_consensus','consensus_design','consensus_recommend'}}[intent]
+                expected={'confidence':{'af3_run'},'interactions':{'structure_consensus','pocket_consensus','consensus_design','consensus_recommend'},
+                          'pymol':{'af3_run','pdb_fetch','structure_diversity','pocket_states','pocket_adopt','pocket_consensus','structure_consensus','consensus_design','consensus_recommend'}}[intent]
                 candidates=[j for j in self.jobs(sid) if j['status']=='complete' and any(
                     s.get('action') in expected and s.get('status')=='complete'
                     for s in (read_json(j.get('report')) or {}).get('steps',{}).values())]
@@ -653,9 +670,9 @@ class ChatAgent:
             answer=self.review_action(sid,decision)
             if record: self.message(sid,'assistant',answer)
             return answer
-        if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus'}:
-            expected={'recommend':{'structure_survey','structure_consensus'},'adopt':{'anchor_recommend','consensus_recommend'},
-                      'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity'},
+        if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus','pockets'}:
+            expected={'recommend':{'structure_survey','structure_consensus','pocket_consensus'},'adopt':{'anchor_recommend','consensus_recommend','pocket_states'},
+                      'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity','pocket_adopt'},'pockets':{'structure_diversity'},
                       'budget':{'consensus_design','consensus_recommend'},'budget_page':{'consensus_budget','budget_page'}}[intent]
             if decision['task_id'] is None:
                 candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
@@ -669,14 +686,19 @@ class ChatAgent:
             if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
                 raise ValueError('Wrong source task for '+intent)
             previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
-            action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'structure_consensus','structure_consensus':'consensus_recommend',
+            action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'pocket_states','pocket_states':'pocket_adopt','pocket_adopt':'pocket_consensus','pocket_consensus':'consensus_recommend','structure_consensus':'consensus_recommend',
                     'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
                     'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
             params=dict(source_run=Path(job['plan']).parent.name)
             if intent in {'budget','budget_page'}:params.update(decision['budget'])
             if intent=='recommend':params['provider']=provider
             if intent=='design':params['design']=decision['design']
-            if intent=='consensus':params.update(decision['reference'])
+            if intent in {'consensus','pockets'}:params.update(decision['reference'])
+            if action=='pocket_states':
+                params.pop('maximum_templates',None)
+            if 'pocket_selection' in decision:
+                if action!='pocket_adopt': raise ValueError('Pocket selection requires a pocket-state source task')
+                params.update(decision['pocket_selection'])
             plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
                       steps=[dict(id='guided',action=action,params=params)])
             ctx=self.context
