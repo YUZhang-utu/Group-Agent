@@ -39,7 +39,14 @@ def inspect(tools, args):
                         'status','target','reference_site_pdb','readiness','selection','quality_site_unique_ligands',
                         'coverage_curve','template_selection','proposed_template_ids','ranked_molecules',
                         'exported_molecules','start_rank','end_rank','shortfall','review_required',
-                        'limitations','outputs','clusters','sensitivity','selected_cluster_ids','pocket_state_id') if k in child}
+                        'limitations','outputs','clusters','sensitivity','selected_cluster_ids','pocket_state_id',
+                        'receptor_advice','receptor_options') if k in child}
+                    if child.get('receptor_advice'):
+                        from .receptor_advice import compact
+                        stage['evidence']['receptor_advice'] = compact(child['receptor_advice'])
+                        for key in ('clusters','sensitivity','receptor_options'):
+                            stage['evidence'].pop(key, None)
+                        stage['evidence']['alternative_receptors'] = 'Read receptor_options in the report for individual selection IDs.'
                     stage['reference_options']=child.get('cohort',{}).get('reference_options',child.get('reference_options',[]))
                     stage['proposed_references']=[r.get('query_id') for r in child.get('proposed_references',[])]
                     stage['artifacts']=tools.discover(child,tools.project)

@@ -55,12 +55,15 @@ def structures(job, project, collection='diverse'):
             add(payload['path'],payload.get('pdb_id','PDB structure'),expected=payload.get('sha256'))
         elif payload.get('report'):
             path=ensure_within(Path(payload['report']),project); child=consensus_report(read(path),project)
+            adopted_pockets = None
             if child.get('kind')=='pocket_adoption':
                 from .screening_selection import check_hashes
                 check_hashes(child['sources'])
+                adopted_pockets = set(child['selected_cluster_ids'])
                 child=read(ensure_within(Path(child['pocket_report']),project))
             if child.get('kind')=='pocket_states':
-                representatives={c['representative'] for c in child.get('clusters',[])}
+                choices = child.get('clusters',[]) + child.get('receptor_options',[])
+                representatives={c['representative'] for c in choices if c['id'] in adopted_pockets} if adopted_pockets is not None else {c['representative'] for c in child.get('clusters',[])}
                 for row in child.get('structures',[]):
                     if collection=='diverse' and row['id'] not in representatives: continue
                     structure=Path(row['structure_path']).resolve()

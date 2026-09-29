@@ -56,7 +56,8 @@ def execute(action,source,output,params,cfg,allow_compute):
     if action=='pocket_states':
         from .pocket_states import build
         return build(source,output,params.get('reference_query'),params.get('target_chain'),
-                     {'cluster_distance':params.get('cluster_distance',.40)})
+                     {'cluster_distance':params.get('cluster_distance',.40)},
+                     advice_settings={k:params[k] for k in ('maximum_representatives','coverage_fraction') if k in params})
     if action=='pocket_adopt':
         from .pocket_states import adopt
         return adopt(source,output,params.get('cluster_ids'))

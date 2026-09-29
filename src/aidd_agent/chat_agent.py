@@ -159,9 +159,9 @@ task without rescoring; include budget {} or export_molecules and optional start
 Both intents have empty request. They include MOL2/name export in the authorized task.
 Do not route these requests to guided or the old select/export workflow.
 For the general-target workflow, after structure_diversity use intent pockets with an extra
-reference object containing reference_query (PDB:CCD:author_chain:residue), target_chain, and optional maximum_templates.
+reference object containing reference_query (PDB:CCD:author_chain:residue), target_chain, and optional maximum_representatives (1..100) and coverage_fraction (0..1, exclusive zero).
 Use only user-provided reference identity; if ambiguous use consensus with reference {} to obtain options.
-Review pocket_states with the user, then use adopt only on explicit acceptance. On pocket_adopt use consensus with reference {pocket_state_id: actual adopted ID}; omit that ID only if exactly one state was adopted. Each consensus task handles one state. Never automatically adopt pocket states.
+Present receptor_advice and its coverage alternatives, not raw cluster tables. Review pocket_states with the user, then use adopt only on explicit acceptance. Individual receptor_options are available in the report. On pocket_adopt use consensus with reference {pocket_state_id: actual adopted ID}; omit that ID only if exactly one state was adopted. Each consensus task handles one state. Never automatically adopt pocket states.
 On structure_consensus use recommend. On consensus_recommend use adopt/design. On consensus_design use guided.
 For consensus designs, editable fields are mandatory_anchors, alternative_groups, optional_weights (ID to weight),
 template_ids, evidence_ids, rationale, exclusions, permissiveness, gaussian_weight, optional_weight, minimum_pose_score.
@@ -255,7 +255,7 @@ def validate_route(value):
     if 'design' in value and (not isinstance(value['design'],dict) or set(value['design'])-({'query_id','mandatory_anchors','alternative_groups','optional_anchors','evidence_ids','rationale'}|FIELDS)):
         raise ValueError('Invalid design edits')
     if (value['intent'] in {'consensus','pockets'}) != ('reference' in value):raise ValueError('Consensus requires a reference object')
-    if 'reference' in value and (not isinstance(value['reference'],dict) or set(value['reference'])-{'reference_query','target_chain','maximum_templates','cluster_distance','pocket_state_id'}):raise ValueError('Invalid reference choice')
+    if 'reference' in value and (not isinstance(value['reference'],dict) or set(value['reference'])-{'reference_query','target_chain','maximum_templates','cluster_distance','pocket_state_id','maximum_representatives','coverage_fraction'}):raise ValueError('Invalid reference choice')
     return value
 
 
@@ -273,8 +273,13 @@ def screening_summary(job):
     for step in report.get("steps", {}).values():
         if step.get('action') in {'pocket_states','pocket_adopt'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
+            if child.get('receptor_advice'):
+                from .receptor_advice import compact
+                return dict(kind=child['kind'], status=child['status'], readiness=child['readiness'],
+                            receptor_advice=compact(child['receptor_advice']), outputs=child.get('outputs',{}))
             return {k:child[k] for k in ('kind','status','readiness','reference','reference_options','clusters',
-                'sensitivity','selected_cluster_ids','warnings','limitations','outputs','reasons') if k in child}
+                'sensitivity','selected_cluster_ids','warnings','limitations','outputs','reasons',
+                'receptor_advice','receptor_options') if k in child}
         if step.get('action') in {'consensus_budget','budget_page'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             return {k:child[k] for k in ('kind','status','target','ranked_molecules','exported_molecules','requested_molecules','start_rank','end_rank','shortfall','review_required','outputs','limitations','ranking') if k in child}
@@ -341,6 +346,9 @@ def screening_summary(job):
 
 def screening_feedback(summary):
     if summary.get('kind')=='pocket_states':
+        if summary.get('receptor_advice'):
+            from .receptor_advice import summary as receptor_summary
+            return receptor_summary(summary['receptor_advice'])
         return json.dumps(summary,indent=2)+'\nReview pocket representatives and explicitly adopt them before state-specific consensus.'
     if summary.get('kind')=='pocket_adoption':
         return json.dumps(summary,indent=2)+'\nChoose an adopted pocket_state_id for state-specific consensus.'

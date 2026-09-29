@@ -23,7 +23,7 @@ ACTION_FIELDS = {
     "anchor_design": ({"source_run"}, {"design"}),
     "guided_funnel": ({"source_run"}, set()),
     "structure_consensus": ({"source_run"}, {"reference_query", "target_chain", "maximum_templates"}),
-    "pocket_states": ({"source_run"}, {"reference_query", "target_chain", "cluster_distance"}),
+    "pocket_states": ({"source_run"}, {"reference_query", "target_chain", "cluster_distance", "maximum_representatives", "coverage_fraction"}),
     "pocket_adopt": ({"source_run"}, {"cluster_ids"}),
     "pocket_consensus": ({"source_run"}, {"pocket_state_id", "maximum_templates"}),
     "consensus_recommend": ({"source_run", "provider"}, set()),
@@ -203,6 +203,9 @@ def validate_plan(plan):
         if action=='pocket_states':
             from .pocket_states import policy
             policy({'cluster_distance':params.get('cluster_distance',.40)})
+            if not _integer(params.get('maximum_representatives',32),1,100):raise ValueError('Invalid receptor budget')
+            fraction=params.get('coverage_fraction',.95)
+            if type(fraction) not in (int,float) or not 0 < fraction <= 1:raise ValueError('Invalid receptor coverage target')
         if action=='pocket_adopt' and 'cluster_ids' in params:
             ids=params['cluster_ids']
             if not isinstance(ids,list) or not ids or len(set(ids))!=len(ids) or any(not isinstance(i,str) or not re.fullmatch(r'pocket-[a-f0-9]{12}',i) for i in ids):raise ValueError('Invalid pocket cluster IDs')

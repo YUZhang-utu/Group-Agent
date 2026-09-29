@@ -592,3 +592,12 @@ interactions. Viewer requests and completed receipts are separate states. Local
 adapter checks cannot establish real workstation GUI/inference compatibility.
 Macrocycle block construction remains deferred; the capacity/incremental assignment
 design is recorded without introducing new production rejection rules.
+
+
+## E093 receptor selection
+
+Default reporting now separates a receptor proposal from physical-state claims.
+MDM2 coverage depends strongly on the provisional tolerance:21 representatives
+reach95.2%, while8 reach72.3%. This is a user-facing tradeoff, not a validated
+state count. Series are scaffold proxies; grid perturbation calibration and live
+provider/workstation acceptance remain pending.

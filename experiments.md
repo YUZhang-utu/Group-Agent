@@ -1763,3 +1763,10 @@ Uniform retrieved molecule panel, all stored conformers, all templates. Measure
 zero-survivor rate, survivor distribution, contact improvements, top-rank recall
 against generated-2048, exact kernel equivalence and stage timing. Local full
 regression 499 passed, 2 skipped. Workstation execution remains pending.
+
+
+## E093 receptor advice
+
+Protocol: experiments/E093-receptor-advice.md. Confirmatory related tests:87 passed;
+final budget fallback:13 focused passed. Exploratory MDM2 replay:coverage mode,
+21 representatives for95.2% PDB-weighted coverage. No physical-state conclusion.

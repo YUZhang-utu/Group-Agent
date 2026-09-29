@@ -1,0 +1,188 @@
+{
+  "status": "local_validation_complete",
+  "tests": {
+    "related": 87,
+    "final_focused": 13
+  },
+  "mode": "coverage_representatives",
+  "evidence": {
+    "qualified_chains": 67,
+    "independent_pdbs": 59,
+    "independent_series_proxy": 25,
+    "unique_ligand_identities": 32,
+    "unclassified_ligand_instances": 0,
+    "method": "Generic Murcko ring-scaffold proxy; acyclic/missing structures unclassified",
+    "limitation": "Scaffold count is not verified medicinal-chemistry series independence"
+  },
+  "recommended_k": 21,
+  "coverage": {
+    "tolerance": 0.3575116179819112,
+    "tolerance_source": "near_repeat_proxy",
+    "target": 0.95,
+    "achieved": 0.9519774011299433,
+    "target_met": true,
+    "curve": [
+      {
+        "k": 1,
+        "weighted_coverage": 0.18644067796610175,
+        "maximum_remaining_distance": 0.5778624911038079,
+        "weighted_mean_remaining_distance": 0.4222748550588888
+      },
+      {
+        "k": 2,
+        "weighted_coverage": 0.423728813559322,
+        "maximum_remaining_distance": 0.5778624911038079,
+        "weighted_mean_remaining_distance": 0.3863373205944838
+      },
+      {
+        "k": 3,
+        "weighted_coverage": 0.5084745762711864,
+        "maximum_remaining_distance": 0.5315577985551937,
+        "weighted_mean_remaining_distance": 0.35650950551479593
+      },
+      {
+        "k": 4,
+        "weighted_coverage": 0.5762711864406778,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.33861192107437
+      },
+      {
+        "k": 5,
+        "weighted_coverage": 0.6271186440677965,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.32571871478090625
+      },
+      {
+        "k": 6,
+        "weighted_coverage": 0.6610169491525423,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.3117521612226992
+      },
+      {
+        "k": 7,
+        "weighted_coverage": 0.694915254237288,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.3027047168862732
+      },
+      {
+        "k": 8,
+        "weighted_coverage": 0.7231638418079096,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.29199539400647134
+      },
+      {
+        "k": 9,
+        "weighted_coverage": 0.7485875706214689,
+        "maximum_remaining_distance": 0.5250174674054093,
+        "weighted_mean_remaining_distance": 0.28512285970203205
+      },
+      {
+        "k": 10,
+        "weighted_coverage": 0.7655367231638417,
+        "maximum_remaining_distance": 0.4686294209033018,
+        "weighted_mean_remaining_distance": 0.27622425855956745
+      },
+      {
+        "k": 11,
+        "weighted_coverage": 0.7824858757062145,
+        "maximum_remaining_distance": 0.4686294209033018,
+        "weighted_mean_remaining_distance": 0.26828104844599304
+      },
+      {
+        "k": 12,
+        "weighted_coverage": 0.7994350282485874,
+        "maximum_remaining_distance": 0.45019711184647954,
+        "weighted_mean_remaining_distance": 0.2603381769052591
+      },
+      {
+        "k": 13,
+        "weighted_coverage": 0.8163841807909602,
+        "maximum_remaining_distance": 0.44731315678490696,
+        "weighted_mean_remaining_distance": 0.25270771738243747
+      },
+      {
+        "k": 14,
+        "weighted_coverage": 0.833333333333333,
+        "maximum_remaining_distance": 0.4437369034832542,
+        "weighted_mean_remaining_distance": 0.2451261384538797
+      },
+      {
+        "k": 15,
+        "weighted_coverage": 0.8502824858757062,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.2376051739880618
+      },
+      {
+        "k": 16,
+        "weighted_coverage": 0.867231638418079,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.23065229117445196
+      },
+      {
+        "k": 17,
+        "weighted_coverage": 0.8841807909604519,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.22382223889576858
+      },
+      {
+        "k": 18,
+        "weighted_coverage": 0.9011299435028247,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.217131715517679
+      },
+      {
+        "k": 19,
+        "weighted_coverage": 0.9180790960451977,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.21046167220841983
+      },
+      {
+        "k": 20,
+        "weighted_coverage": 0.9350282485875704,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.20385715620386918
+      },
+      {
+        "k": 21,
+        "weighted_coverage": 0.9519774011299433,
+        "maximum_remaining_distance": 0.42194885764845047,
+        "weighted_mean_remaining_distance": 0.19755510540353272
+      }
+    ],
+    "uncovered": [
+      "1RV1:C",
+      "3VBG:A",
+      "3VBG:B",
+      "6KZU:A",
+      "9GFK:A"
+    ]
+  },
+  "metric_calibration": {
+    "version": "robust-weighted-v1",
+    "scales": [
+      0.23891462607544678,
+      0.49217327994175464
+    ],
+    "shape_weights": [
+      0.5,
+      0.5
+    ],
+    "chemical_weight": 0.15,
+    "normalization": "x/(x+max(0.1,pair_p90)); frozen per report",
+    "scope": "Exploratory cohort calibration; not transferable cutoffs"
+  },
+  "code_hashes": {
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\scripts\\review_receptor_advice.py": "ccf4f11dfac1d83991f0b33086d34e1b3cd18776f49ef5d4d23cee0e06170037",
+    "D:\\agent\\projects\\aidd_structure_guided_chat\\src\\aidd_agent\\receptor_advice.py": "fdb700b373e7e8a4dc8de482233e0ff59b9d4e1b4caca18094fff1940260e3c1"
+  },
+  "source_report": "data/e085-mdm2-final/report.json",
+  "source_report_sha256": "e3b8f19f08978706748d1c842e0efa853d40aef4a2652927cb8ffbcb9c426f7b",
+  "limitations": [
+    "Engineering recommendation, not proof of rigidity or physical states.",
+    "Grid/alignment perturbation calibration remains unperformed.",
+    "Scaffold series are proxies; unknown series reduce evidence, not receptor eligibility.",
+    "PDB weighting corrects chain multiplicity, not sampling bias or equilibrium occupancy.",
+    "Uncovered structures remain available for explicit user selection."
+  ],
+  "live_provider_acceptance": "not_run"
+}

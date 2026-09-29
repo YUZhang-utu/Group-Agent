@@ -72,3 +72,13 @@ https://www.rdkit.org/docs/GettingStartedInPython.html#list-of-available-3d-desc
 Accessed for distinction between chemical properties and coordinate-dependent
 shape descriptors. E088 local VDW-axis extents and branching are explicitly
 implemented proxies, not a claim of exact volume or docking-energy validation.
+
+## E092 clustering interpretation references (2026-09-29)
+
+U. von Luxburg, Clustering Stability: An Overview:
+https://arxiv.org/abs/1007.1075
+Stability has limitations as a universal selector of true cluster count.
+U. von Luxburg et al., Clustering: Science or Art?, PMLR27 (2012):
+https://proceedings.mlr.press/v27/luxburg12a.html
+Cluster evaluation depends on task context. Our proposed PDB pocket evidence
+gate is a project design, not an established physical continuum test.

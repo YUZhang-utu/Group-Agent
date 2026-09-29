@@ -1,18 +1,21 @@
 project: aidd-macrocycle-agent
 pdb_pocket_project_prerequisite:
-  status: E085_field_bug_fixed_partitions_unvalidated
+  status: E093_receptor_advice_local_validation_passed
   guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
   scope: experimental_PDB_only
   precedes: state_specific_interaction_consensus
   requires: explicit_user_adoption_of_pocket_representatives
   runtime_enforcement: new_diversity_requires_adopted_state_consensus
   implementation_guide: to_human/E084_PDB_POCKET_STATES.md
-  clustering: weighted_average_linkage_exploratory_sensitivity_required
+  clustering: evidence_gated_partition_or_weighted_coverage_advice
   mdm2_exploratory_receipt: to_human/E084_MDM2_VALIDATION.json
   mdm2_admitted_chains: 67
   mdm2_distinct_pdbs: 59
   mdm2_default_clusters: unvalidated_parameter_dependent
-  mdm2_user_adoption: pending_corrected_descriptor_and_cutoff_review
+  mdm2_user_adoption: pending_receptor_set_selection
+  receptor_advice_guide: to_human/E093_RECEPTOR_ADVICE.md
+  receptor_advice_tests: 87_related_passed_13_final_focused_passed
+  live_literature_and_workstation_acceptance: pending
   mdm2_analysis_export: to_human/E085_POCKET_REVIEW_FINAL.zip
   E084_distance_status: superseded_four_chemical_channels_buried_by_exclusion
   E085_report: to_human/E085_POCKET_DISTANCE_AUDIT.md

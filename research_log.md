@@ -2312,3 +2312,34 @@ Eleven focused tests passed. Small real-input run conserves 24 conformers, keeps
 21 definite unchanged, and leaves 3 boundary special due to sparse references.
 Source SQLite hashes unchanged. No claim that target was met or search recall
 validated. Guide: to_human/E091_CALIBRATED_ROUTING.md. Workstation run pending.
+
+## 2026-09-29 E092: revisit pocket metric and discrete-state reporting
+
+User steered to target pockets while slow workstation block routing continues.
+Reviewed max fusion, near-repeat controls and no-plateau coverage fallback.
+Verified E085 2211 pairs: global dominance1334/local877, correlation0.756996;
+same-entry different-chain max0.232905 from only9 pairs. Same-ligand max0.214
+is user-reported and pair definition not verified here. Maxima are not hard
+noise floors; no plateau does not prove physical continuity. Proposed weighted
+zero-preserving calibrated fusion, nontrivial stable-partition evidence gate,
+and coverage representatives with explicit uncertainty/rare-structure review.
+Design only: to_human/E092_POCKET_REDESIGN_PROPOSAL.md. No code or workstation
+process changed. Sources: arxiv.org/abs/1007.1075 and PMLR v27/luxburg12a.
+
+
+## 2026-09-29 E093: receptor advice integrated into the agent
+
+Implemented weighted calibrated geometry, explicit near-repeat limitations,
+scaffold-series proxy counts, provisional single-reference branches, supported
+partition checks and coverage fallback. Default chat and HTML deliver a short
+recommendation; diagnostic matrices remain available separately. User adoption
+can select recommended neighborhoods or individual qualified structures. Viewer
+and consensus follow actual adopted IDs. Existing literature tools are wired into
+the domain-agent instructions; no live literature/provider evaluation claimed.
+Confirmatory checks: 87 related tests passed; final budget-fallback change passed
+13 focused tests. Exploratory immutable E085 replay: 67 chains/59 PDBs/25 scaffold
+proxies, coverage mode, 8 references cover72.3%, 21 cover95.2%; five uncovered
+chains retained. Several references need ligand preparation before consensus.
+No biological-state/recall claim. E091 workstation job untouched.
+Guide: to_human/E093_RECEPTOR_ADVICE.md. Local result:
+data/e093-mdm2-final-advice/report.html. Workstation/live provider acceptance pending.

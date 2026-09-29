@@ -210,7 +210,7 @@ def quality(atoms, residues, relevant=None):
     return issues
 
 
-def build(source, output, reference_query=None, target_chain=None, settings=None, excluded_entries=None):
+def build(source, output, reference_query=None, target_chain=None, settings=None, excluded_entries=None, advice_settings=None):
     source = Path(source).resolve(); root = source.parent; out = Path(output).resolve()
     if (out/'report.json').exists(): raise FileExistsError('Use a fresh pocket output')
     out.mkdir(parents=True, exist_ok=True); p = policy(settings)
@@ -341,6 +341,19 @@ def build(source, output, reference_query=None, target_chain=None, settings=None
                                 chemical_distance=chemical.tolist(),local_difference=local.tolist()),
                   code_hashes=fingerprint([Path(__file__),Path(__file__).with_name('consensus_admission.py')]))
     report['sources'].update(fingerprint([artifacts]))
+    from .receptor_advice import attach, summary
+    attach(report, advice_settings)
+    report['code_hashes'].update(fingerprint([Path(__file__).with_name('receptor_advice.py')]))
+    # Keep the saved matrix consistent with the newly versioned recommendation.
+    with np.load(artifacts) as archive:
+        arrays = {k: archive[k] for k in archive.files}
+    arrays['legacy_distance'] = arrays['distance']
+    arrays['distance'] = np.asarray(report['pairwise']['distance'])
+    np.savez_compressed(artifacts, **arrays)
+    report['sources'].update(fingerprint([artifacts]))
+    advice_path = out/'receptor-recommendation.txt'
+    advice_path.write_text(summary(report['receptor_advice']), encoding='utf-8')
+    report['outputs']['recommendation'] = str(advice_path)
     _atomic_json(out/'report.json',report)
     render(report,out/'report.html',grid,masks)
     return report
@@ -366,6 +379,12 @@ const A=new Set(d.masks[+a.value]),B=new Set(d.masks[+b.value]),k=+axis.value;
 let xs=d.grid.map(p=>p[0]),ys=d.grid.map(p=>p[k]);let x=xs.reduce((a,b)=>Math.min(a,b)),y=ys.reduce((a,b)=>Math.min(a,b)),scale=Math.min(790/(xs.reduce((a,b)=>Math.max(a,b))-x||1),440/(ys.reduce((a,b)=>Math.max(a,b))-y||1));
 for(let i=0;i<d.grid.length;i++){if(!A.has(i)&&!B.has(i))continue;ctx.fillStyle=A.has(i)&&B.has(i)?'#b7c0c5':A.has(i)?'#1676b8':'#db843b';let p=d.grid[i];ctx.fillRect(30+(p[0]-x)*scale,470-(p[k]-y)*scale,3,3)}}
 a.onchange=b.onchange=axis.onchange=draw;draw();</script>'''
+    if report.get('receptor_advice'):
+        from .receptor_advice import summary
+        header = '<h1>Receptor selection recommendation</h1><pre style="white-space:pre-wrap">'+html.escape(summary(report['receptor_advice']))+'</pre>'
+        start = page.index('<h1>'); end = page.index('<table>')
+        page = page[:start]+header+'<details><summary>Detailed pocket evidence and selection IDs</summary>'+page[end:]
+        page = page.replace('<th>State</th>', '<th>Selection ID</th>')+'</details>'
     Path(path).write_text(page.replace('ROWS',rows).replace('DATA',data),encoding='utf-8')
 
 
@@ -374,7 +393,8 @@ def adopt(source, output, cluster_ids=None):
     if report.get('descriptor_version', 1) < 2:
         raise ValueError('Recompute pocket fields: descriptor v1 has buried chemical channels and censored local differences')
     if report.get('readiness')!='needs_user_adoption': raise ValueError('Review a completed pocket-state report first')
-    allowed={c['id'] for c in report['clusters']}; selected=list(cluster_ids) if cluster_ids is not None else sorted(allowed)
+    allowed={c['id'] for c in report['clusters']+report.get('receptor_options',[])}
+    selected=list(cluster_ids) if cluster_ids is not None else [c['id'] for c in report['clusters']]
     if not selected or len(set(selected))!=len(selected) or not set(selected)<=allowed: raise ValueError('Invalid pocket-state selection')
     output=Path(output); output.mkdir(parents=True,exist_ok=True)
     if (output/'report.json').exists(): raise FileExistsError('Use a fresh adoption output')
@@ -393,7 +413,7 @@ def state_cohort(adoption, state_id=None):
     if state_id is None and len(selected)==1: state_id=selected[0]
     if state_id not in selected: raise ValueError('Choose one adopted pocket_state_id: '+', '.join(selected))
     report=json.loads(Path(adopted['pocket_report']).read_text())
-    group=next(c for c in report['clusters'] if c['id']==state_id)
+    group=next(c for c in report['clusters']+report.get('receptor_options',[]) if c['id']==state_id)
     rows={r['id']:r for r in report['structures']}; rep=rows[group['representative']]
     if not rep['queries']: raise ValueError('Representative has no prepared ligand reference; review before consensus')
     reference=rep['queries'][0]; inverse=np.linalg.inv(np.array(rep['transform'])); admitted=[]
@@ -408,7 +428,8 @@ def state_cohort(adoption, state_id=None):
     cohort=dict(status='complete',readiness='cohort_ready',reference=dict(query_id=reference['query_id'],
                 target_chain=rep['target_chain'],assembly_id='1',coordinate_frame=reference['query_id']),
                 admitted=admitted,decisions=[],policy=report['policy'],pocket_state_id=state_id,
-                limitations=report['limitations']+['Consensus restricted to one explicitly adopted pocket state'])
+                receptor_selection_role=group.get('role','legacy_pocket_partition'),
+                limitations=report['limitations']+['Consensus restricted to an explicitly adopted local cohort; a coverage neighborhood is not a physical state'])
     return report['diversity_report'],cohort,adopted
 
 
@@ -418,6 +439,8 @@ def main():
     build_parser.add_argument('--output',type=Path,required=True); build_parser.add_argument('--reference-query')
     build_parser.add_argument('--target-chain'); build_parser.add_argument('--cluster-distance',type=float,default=.40)
     build_parser.add_argument('--exclude-entry', action='append', default=[], help='Exclude every chain of this PDB entry')
+    build_parser.add_argument('--maximum-representatives', type=int, default=32)
+    build_parser.add_argument('--coverage-fraction', type=float, default=.95)
     adoption=sub.add_parser('adopt'); adoption.add_argument('--source',type=Path,required=True)
     adoption.add_argument('--output',type=Path,required=True); adoption.add_argument('--cluster-ids',nargs='+')
     consensus=sub.add_parser('consensus'); consensus.add_argument('--source',type=Path,required=True)
@@ -425,7 +448,8 @@ def main():
     args=parser.parse_args()
     if args.command=='build':
         result=build(args.source,args.output,args.reference_query,args.target_chain,dict(cluster_distance=args.cluster_distance),
-                     {code:'Explicit CLI entry exclusion' for code in args.exclude_entry})
+                     {code:'Explicit CLI entry exclusion' for code in args.exclude_entry},
+                     dict(maximum_representatives=args.maximum_representatives,coverage_fraction=args.coverage_fraction))
     elif args.command=='adopt': result=adopt(args.source,args.output,args.cluster_ids)
     else:
         from .guided_workflow import execute
