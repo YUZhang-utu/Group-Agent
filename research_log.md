@@ -2254,3 +2254,19 @@ Local 24-conformer fixture: 10 leaves, 9 classes, 2 queues. Workstation queue
 counts remain pending. User-provided E086 population is 24,663,736; tiny-leaf
 0.58% and boundary 5.61% are distinct populations, not interchangeable.
 Guide: to_human/E087_WORK_QUEUES.md. No whole-library rebuild performed.
+
+## 2026-09-29 E088: angular candidates and side-chain steric review
+
+Added stored-angle boundary inspection with verified finite chirality-hash
+recovery, directed rotations and fixed definite cis/trans constraints. Emits
+candidate classes and sensitivity upper bounds, not adopted membership. Added
+continuous property comparison and actual-coordinate side-chain VDW extents,
+spread, reach and proximal branching. No exact sequence equality imposed.
+Workstation chemistry/typed availability remains unknown per user response.
+Found wrapper stop on review_required exit 2; added explicit offline continuation
+only after complete error-free structural validation, preserving review gate.
+25 focused tests passed. Existing 24-conformer fixture has 3 boundary records:
+2 angular candidates at 35 degrees, 3 at 45; not whole-library evidence.
+Whole-library final grouping cannot be declared without workstation candidate
+counts, property compatibility and subsequent search/recall evaluation.
+Guide: to_human/E088_BOUNDARY_PROPERTIES.md. No frozen membership modified.

@@ -937,3 +937,13 @@ conformer_work_queue_revision:
   sampling_scope: conformer_slot_planning_only_no_coordinate_export
   source_workstation_build: /mnt/local/hand/yuzhang/aidd/mc_runs/e081-001/audit-stage/blocks-20000/backbone
   production_search_dispatch: unchanged
+
+boundary_property_refinement:
+  experiment: E088
+  status: candidate_and_property_tools_tested_workstation_counts_pending
+  guide: to_human/E088_BOUNDARY_PROPERTIES.md
+  candidate_scope: angular_upper_bound_with_verified_chirality_and_definite_states
+  property_scope: continuous_chemistry_and_separate_local_steric_review
+  final_scientific_partition: not_yet_established
+  chemistry_typed_availability: user_uncertain
+  source_model: /mnt/local/hand/yuzhang/aidd/mc_runs/e081-001/audit-stage/blocks-20000/backbone

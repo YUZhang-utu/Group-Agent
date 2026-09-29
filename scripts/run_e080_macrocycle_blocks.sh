@@ -22,5 +22,6 @@ for variant in backbone chemistry typed; do
     --audit "$AUDIT" --output "$OUTPUT/$variant" --variant "$variant" \
     --capacities 20000 "${registry_args[@]}"
   "$PYTHON" -m aidd_agent.conformer_block_validate \
-    --build "$OUTPUT/$variant" --output "$OUTPUT/validation-$variant" --source-samples 200
+    --build "$OUTPUT/$variant" --output "$OUTPUT/validation-$variant" --source-samples 200 \
+    --allow-review-for-offline
 done

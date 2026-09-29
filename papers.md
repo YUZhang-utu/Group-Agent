@@ -64,3 +64,11 @@ motivates the workflow; our bounded grid implementation is not a POVME replica.
 MDM2 transient-state experimental evidence:
 https://pmc.ncbi.nlm.nih.gov/articles/PMC4104591/ . Rare states warrant review;
 PDB deposition counts are not equilibrium occupancy estimates.
+
+## 2026-09-29 E088 descriptor reference
+
+RDKit official documentation:
+https://www.rdkit.org/docs/GettingStartedInPython.html#list-of-available-3d-descriptors
+Accessed for distinction between chemical properties and coordinate-dependent
+shape descriptors. E088 local VDW-axis extents and branching are explicitly
+implemented proxies, not a claim of exact volume or docking-energy validation.

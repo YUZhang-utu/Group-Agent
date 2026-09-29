@@ -271,10 +271,15 @@ def main():
     parser.add_argument('--build', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--source-samples', type=int, default=200)
+    parser.add_argument('--allow-review-for-offline', action='store_true',
+                        help='Exit successfully after complete structural validation while preserving review_required')
     args = parser.parse_args()
     result = validate(args.build, args.output, args.source_samples)
     print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result['release_gate'] == 'passed_for_offline_use' else 2)
+    reviewed_offline = (args.allow_review_for_offline and result.get('status') == 'complete'
+                        and result.get('structural_gate') == 'passed' and not result.get('errors')
+                        and result.get('release_gate') == 'review_required')
+    raise SystemExit(0 if result['release_gate'] == 'passed_for_offline_use' or reviewed_offline else 2)
 
 
 if __name__ == '__main__':
