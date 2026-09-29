@@ -966,3 +966,19 @@ paired_panel_analysis:
   raw_coordinates_recomputed_locally: false
   boundary_membership_adopted: false
   next: diverse_reference_and_heldout_routing_calibration
+
+calibrated_boundary_routing:
+  experiment: E091
+  status: implemented_local_tests_passed_full_workstation_run_pending
+  guide: to_human/E091_CALIBRATED_ROUTING.md
+  user_confirmed_special_fraction_target: 0.01
+  maximum_special_at_current_admitted_size: 246637
+  angular_candidate_policy: up_to_45_degrees
+  reference_molecule_limit: 64
+  minimum_reference_molecules: 32
+  fit_calibration_check_split: 50_25_25_percent
+  prototype_limit: 12
+  calibration_quantile: 0.95
+  independent_check_gate: 0.8
+  output_membership_status: provisional
+  production_dispatch_and_recall: not_validated

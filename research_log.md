@@ -2297,3 +2297,18 @@ not acceptance rates: multiple candidate opportunities and sparse controls.
 Six candidate rotations lack controls. All outputs retain candidate identity.
 Analysis and report in data/e090-workstation-analysis and
  to_human/E090_PAIRED_PANEL_FINDINGS.md. No membership change performed.
+
+## 2026-09-29 E091: candidate-specific full boundary routing
+
+User explicitly confirmed <=1% special-set target. Added full <=45 candidate
+routing with hash-selected distinct-molecule references, disjoint fit/calibration/
+check sets, diverse prototypes, and joint property/steric/circular-backbone score.
+Every supporting match must use one prototype across channels. Sparse/failed
+models do not force acceptance. Output records all boundary CIDs, accepted
+alternatives, selected rotations/prototypes, scores and explicit special reasons.
+Ordinary membership remains unchanged. Full-library run needs ~1.26M candidate
+feature extractions plus references; cached double vectors and stage timing saved.
+Eleven focused tests passed. Small real-input run conserves 24 conformers, keeps
+21 definite unchanged, and leaves 3 boundary special due to sparse references.
+Source SQLite hashes unchanged. No claim that target was met or search recall
+validated. Guide: to_human/E091_CALIBRATED_ROUTING.md. Workstation run pending.
