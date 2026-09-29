@@ -2343,3 +2343,13 @@ chains retained. Several references need ligand preparation before consensus.
 No biological-state/recall claim. E091 workstation job untouched.
 Guide: to_human/E093_RECEPTOR_ADVICE.md. Local result:
 data/e093-mdm2-final-advice/report.html. Workstation/live provider acceptance pending.
+
+
+## 2026-09-29 continuity checkpoint after E093
+
+User confirms E091 block routing is still running and will pull the published
+code only after it finishes. Saved to_human/20260929_AIDD_HANDOFF.md and updated
+research-state.yaml to user-reported running, result pending. Next action is
+receipt inspection and special-set accounting, not a new build. E093 commit
+9515c31 is pushed; workstation pull/restart and live acceptance are deferred.
+No workstation action or new scientific computation performed at this checkpoint.

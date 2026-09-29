@@ -972,7 +972,7 @@ paired_panel_analysis:
 
 calibrated_boundary_routing:
   experiment: E091
-  status: implemented_local_tests_passed_full_workstation_run_pending
+  status: workstation_running_user_reported_result_pending
   guide: to_human/E091_CALIBRATED_ROUTING.md
   user_confirmed_special_fraction_target: 0.01
   maximum_special_at_current_admitted_size: 246637
@@ -985,3 +985,13 @@ calibrated_boundary_routing:
   independent_check_gate: 0.8
   output_membership_status: provisional
   production_dispatch_and_recall: not_validated
+
+continuity_20260929:
+  handoff: to_human/20260929_AIDD_HANDOFF.md
+  user_instruction: wait_for_running_block_job_before_workstation_git_pull
+  running_job: E091_calibrated_boundary_routing
+  workstation_observation: user_report_only_no_direct_process_access
+  next_action: inspect_finished_E091_receipt_and_special_fraction
+  latest_feature_commit: 9515c31
+  github_branch: feature/structure-guided-chat
+  receptor_advice_deployment: published_workstation_pull_deferred_by_user
