@@ -2240,3 +2240,17 @@ this observation. Frozen models unchanged. Synthetic test passed; local small
 model smoke run: 24 conformers, 10 leaves, 9 roots (not workstation evidence).
 Workstation output path and diagnostic counts remain pending. Guide:
 to_human/E086_BLOCK_FRAGMENTATION.md. No full-library rebuild launched.
+
+## 2026-09-29 E087: reduce small-class evaluation overhead
+
+Implemented uncapped class/evaluation-queue sidecar using E086 outputs. Original
+hard-group identities, cis/trans patterns, conformers and leaf mapping preserved.
+Small definite classes pool only for execution at equal length/omega pattern;
+boundary classes pool for review by length, without inferring chemical equality.
+Deterministic nested 100/200 conformer-slot plans explicitly flag unassessed
+classes. This does not export actual molecules or change production dispatch.
+Five focused tests passed, including nonmutation and evidence corruption checks.
+Local 24-conformer fixture: 10 leaves, 9 classes, 2 queues. Workstation queue
+counts remain pending. User-provided E086 population is 24,663,736; tiny-leaf
+0.58% and boundary 5.61% are distinct populations, not interchangeable.
+Guide: to_human/E087_WORK_QUEUES.md. No whole-library rebuild performed.

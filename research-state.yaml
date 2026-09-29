@@ -925,3 +925,15 @@ macrocycle_multimodal_e082:
   plants_execution_adapter: not_implemented
   ne_callable_interface: not_located
   docking_or_inference_executed: false
+
+conformer_work_queue_revision:
+  experiment: E087
+  status: implemented_local_tests_passed_workstation_pending
+  guide: to_human/E087_WORK_QUEUES.md
+  logical_capacity_limit: null
+  preserves_original_hard_groups: true
+  boundary_policy: length_based_review_work_queues_no_chemical_reassignment
+  rare_definite_policy: below_100_pool_by_length_and_exact_omega_pattern
+  sampling_scope: conformer_slot_planning_only_no_coordinate_export
+  source_workstation_build: /mnt/local/hand/yuzhang/aidd/mc_runs/e081-001/audit-stage/blocks-20000/backbone
+  production_search_dispatch: unchanged
