@@ -957,3 +957,12 @@ boundary_pair_review:
   reference_molecules_per_target: 3
   complete_chemistry_build_required: false
   changes_membership: false
+
+paired_panel_analysis:
+  experiment: E090
+  status: workstation_csv_hash_verified_matched_analysis_complete
+  guide: to_human/E090_PAIRED_PANEL_FINDINGS.md
+  input_sha256: 5167b31a3896c342b6ec1dceadc2e668474e5812e2327f636b747ed16cfb297d
+  raw_coordinates_recomputed_locally: false
+  boundary_membership_adopted: false
+  next: diverse_reference_and_heldout_routing_calibration

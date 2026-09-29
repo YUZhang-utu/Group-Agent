@@ -2284,3 +2284,16 @@ selected records, five boundary-reference pairs and one within-class control.
 One target had insufficient distinct reference molecules, explicitly reported.
 Workstation pair results pending; no full chemistry/typed extraction needed.
 Guide: to_human/E089_BOUNDARY_PAIR_REVIEW.md.
+
+## 2026-09-29 E090: analyze supplied workstation pair table
+
+CSV SHA256 matches user receipt. 7,176 rows, 2,107 unique conformers, zero
+same-molecule pairs. Matched target-control differences and equal-query weighting
+remove much of the apparent pooled <=35 RMSD elevation. Median backbone excess
+is +0.0205/+0.0264/+0.0060 A for <=35/35-45/>45. Common 42-target subset has
+>45 excess +0.232 A; do not conclude all broad-angle candidates are equivalent.
+Observed control-envelope existence is 93/89/87 of 100 queries, but these are
+not acceptance rates: multiple candidate opportunities and sparse controls.
+Six candidate rotations lack controls. All outputs retain candidate identity.
+Analysis and report in data/e090-workstation-analysis and
+ to_human/E090_PAIRED_PANEL_FINDINGS.md. No membership change performed.
