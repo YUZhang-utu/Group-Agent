@@ -2270,3 +2270,17 @@ only after complete error-free structural validation, preserving review gate.
 Whole-library final grouping cannot be declared without workstation candidate
 counts, property compatibility and subsequent search/recall evaluation.
 Guide: to_human/E088_BOUNDARY_PROPERTIES.md. No frozen membership modified.
+
+## 2026-09-29 E089: source-backed paired boundary review
+
+Implemented class-balanced candidate panels across <=35, 35-45 and >45 degrees,
+with up to three distinct-molecule target references and within-class controls.
+Raw selected MOL2 record hashes/names, original descriptor values and unit atom
+mapping must reproduce. Typed property order is reconciled with original units;
+proper-rotation backbone RMSD and continuous property/steric differences remain
+separate. All candidate rotations/pairs exported; no membership or cutoff adopted.
+Seven focused tests passed. Small existing source-backed run completed with six
+selected records, five boundary-reference pairs and one within-class control.
+One target had insufficient distinct reference molecules, explicitly reported.
+Workstation pair results pending; no full chemistry/typed extraction needed.
+Guide: to_human/E089_BOUNDARY_PAIR_REVIEW.md.

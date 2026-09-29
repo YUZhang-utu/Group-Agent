@@ -947,3 +947,13 @@ boundary_property_refinement:
   final_scientific_partition: not_yet_established
   chemistry_typed_availability: user_uncertain
   source_model: /mnt/local/hand/yuzhang/aidd/mc_runs/e081-001/audit-stage/blocks-20000/backbone
+
+boundary_pair_review:
+  experiment: E089
+  status: local_source_verified_smoke_passed_workstation_pending
+  guide: to_human/E089_BOUNDARY_PAIR_REVIEW.md
+  angular_bands: [up_to_35, 35_to_45, above_45_control]
+  default_classes_per_band: 100
+  reference_molecules_per_target: 3
+  complete_chemistry_build_required: false
+  changes_membership: false
