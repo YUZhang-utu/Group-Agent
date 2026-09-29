@@ -2228,3 +2228,15 @@ passed; English guard passed 719 files. Descriptor v1 new adoption blocked.
 Artifacts: to_human/E085_POCKET_REVIEW_FINAL.zip and E085_VALIDATION.json.
 Outcome exploratory: fixes confirmed; target-independent calibration and
 cross-docking remain unperformed. No consensus, PLANTS or affinity run.
+
+## 2026-09-29 E086: inspect fragmentation before regrouping
+
+User retains cis/trans classification and removes the need for a logical-class
+capacity limit, requesting inspection first. Added read-only indexed diagnostic
+of roots versus capacity leaves and boundary-associated class populations.
+Confirmed boundary spans 30 < abs(omega) < 150 degrees; prior description as
+only cutoff-adjacent was too narrow. No cis/trans reassignment authorized by
+this observation. Frozen models unchanged. Synthetic test passed; local small
+model smoke run: 24 conformers, 10 leaves, 9 roots (not workstation evidence).
+Workstation output path and diagnostic counts remain pending. Guide:
+to_human/E086_BLOCK_FRAGMENTATION.md. No full-library rebuild launched.
