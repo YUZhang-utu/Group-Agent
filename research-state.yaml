@@ -1039,3 +1039,17 @@ latest_continuity:
   rerun_search: not_requested
   e094_status: running_user_reported
   running_job_policy: no_restart_no_code_pull_no_parameter_changes
+
+mdm2_top_conformer_export:
+  status: implemented_local_tests_passed_workstation_pending
+  guide: to_human/MDM2_TOP_MILLION_CONFORMERS.md
+  script: scripts/select_top_conformers.py
+  input_conformers_user_reported: 3854146
+  requested_output_conformers: 1000000
+  ranking_unit: unique_conformer_global_id
+  scoring_source: sealed_pre_molecule_compression_pose_chunks
+  ranking_policy: conformer_contact_first_template_ranks_then_tiered_RRF
+  multiple_conformers_per_molecule: allowed
+  original_coordinates: preserved
+  local_related_tests_passed: 7
+  source_recalculation: none
