@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "source_conformers": 24,
+  "regular_conformers": 21,
+  "special_conformers": 3,
+  "regular_work_blocks": 2,
+  "property_work_blocks": 2,
+  "minimum_test_block_size": 5,
+  "minimum_production_block_size": 5000,
+  "profile_origins": {
+    "E091": 3,
+    "source_verified": 18
+  },
+  "resume_committed_profiles_preserved": 11,
+  "validation": {
+    "status": "complete",
+    "structural_gate": "passed",
+    "conformers": 24,
+    "work_blocks": 3,
+    "source_coordinates_recomputed": false,
+    "scientific_recall": "not_validated",
+    "property_gate": "passed",
+    "property_blocks": 2,
+    "regular_conformers": 21
+  },
+  "input_hashes_unchanged": true,
+  "scope": "Real 24-conformer local source replay; not workstation full-library completion",
+  "focused_tests_passed": 50,
+  "english_guard": "passed",
+  "workstation_full_library": "not_run_from_this_host"
+}

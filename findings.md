@@ -601,3 +601,7 @@ MDM2 coverage depends strongly on the provisional tolerance:21 representatives
 reach95.2%, while8 reach72.3%. This is a user-facing tradeoff, not a validated
 state count. Series are scaffold proxies; grid perturbation calibration and live
 provider/workstation acceptance remain pending.
+
+## E094: identity classes versus usable work blocks
+
+Fragmentation can be removed at the execution layer without forcing new chemical equivalences. A minimum-population pool allocator preserves original identities and E091 membership states while preventing small independent regular blocks. Side-chain summaries can refine large pools only with complete per-conformer property coverage and the same minimum-child population. Actual local steric proxies are included; exact sequence matching and pocket-clash inference are not implied. Source profiling remains the expensive full-library step; E091 profiles cover only a subset. Real small-source and interrupted-resume checks passed, with workstation acceptance pending.

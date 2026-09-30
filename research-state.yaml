@@ -972,7 +972,7 @@ paired_panel_analysis:
 
 calibrated_boundary_routing:
   experiment: E091
-  status: workstation_running_user_reported_result_pending
+  status: workstation_complete_user_receipt_target_met_validation_pending
   guide: to_human/E091_CALIBRATED_ROUTING.md
   user_confirmed_special_fraction_target: 0.01
   maximum_special_at_current_admitted_size: 246637
@@ -995,3 +995,32 @@ continuity_20260929:
   latest_feature_commit: 9515c31
   github_branch: feature/structure-guided-chat
   receptor_advice_deployment: published_workstation_pull_deferred_by_user
+
+continuity_20260930:
+  report: to_human/20260930_E091_WORKSTATION_REVIEW.md
+  evidence: user_pasted_receipt_aggregates_only
+  special_conformers: 132885
+  special_fraction: 0.005387869866917161
+  engineering_target_met: true
+  population_accounting: reported_totals_passed
+  local_implementation_hash: matches
+  remote_artifact_verification: pending
+  next_action: sidecar_membership_and_queue_validation_then_search_benchmark
+
+final_work_blocks_e094:
+  status: implemented_local_tests_and_real_replay_passed_workstation_pending
+  guide: to_human/E094_FINAL_WORK_BLOCKS.md
+  runner: scripts/run_e094_work_blocks.sh
+  minimum_regular_population: 5000
+  maximum_capacity: null
+  rare_classes: explicit_pools_preserving_original_identities
+  special_pool: exhaustive_unchanged
+  property_refinement: continuous_chemistry_and_coordinate_steric_summaries
+  maximum_property_children_per_parent: 8
+  minimum_property_centroid_contrast: 0.35
+  full_property_coverage_required: true
+  property_extraction_resume: code_and_input_signature_checked
+  local_tests_passed: 50
+  local_real_conformers: 24
+  workstation_execution: pending
+  search_recall: unvalidated

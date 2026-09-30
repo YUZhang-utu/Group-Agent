@@ -2353,3 +2353,11 @@ research-state.yaml to user-reported running, result pending. Next action is
 receipt inspection and special-set accounting, not a new build. E093 commit
 9515c31 is pushed; workstation pull/restart and live acceptance are deferred.
 No workstation action or new scientific computation performed at this checkpoint.
+
+## 2026-09-30: E091 workstation completion reported
+
+User supplied the completed E091 receipt. Reported aggregates conserve all 24,663,736 admitted conformers: 23,279,397 unchanged definite, 1,251,454 provisional boundary assignments and 132,885 special (0.538787%). Engineering <=1% target met; scientific recall/production dispatch remains unvalidated. Local implementation hash matches receipt; remote output hashes not independently verified. Feature extraction consumed 94.05% of 4.49 hours. Do not rerun extraction or loosen policy. Next step is sidecar membership/queue verification and held-out search plus special-set timing. Separate 1,150,072 chemistry-review records remain excluded. See to_human/20260930_E091_WORKSTATION_REVIEW.md.
+
+## 2026-09-30: E094 final work blocks and side-chain refinement
+
+Implemented complete E091 CID/target overlay validation, uncapped work pools with a 5,000-conformer minimum, indexed identity enumeration/export, and independent full-membership validation. Small chemical classes retain original identities inside explicit scheduling pools; residual mixed patterns are labeled, not declared equivalent. Added resumable property preparation with E091 cache reuse and source-verified missing profiles, then adaptive broad-property partitions with the same size floor and at most eight children per parent. Full coverage is mandatory before refinement. Real 24-conformer replay conserved 21 regular + 3 special, produced two regular work blocks at a test floor of five, reused three profiles and computed 18. Intentional interruption retained 11 committed profiles; resume preserved them and completed the rest. 50 related tests and English guard passed. No workstation full-library completion, search recall, timing, PLANTS or N-E execution claimed. Guide: to_human/E094_FINAL_WORK_BLOCKS.md.
