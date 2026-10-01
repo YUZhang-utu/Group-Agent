@@ -1090,3 +1090,32 @@ bounded_property_refinement_e095:
   independent_molecule_evaluation: pending
   positional_sidechain_features: not_available_in_cached_summary
   workstation_result: pending
+
+e095_workstation_receipt:
+  evidence: user_pasted_complete_report
+  regular_blocks: 1188
+  parent_blocks: 384
+  added_blocks: 804
+  smallest_regular_block: 5011
+  largest_regular_block: 94822
+  regular_conformers: 24530851
+  special_conformers: 132885
+  membership_gate: passed_against_complete_cached_profiles
+  wall_seconds: 380.48668200708926
+joint_spatial_e096:
+  status: implemented_locally_validated_ready_for_workstation
+  guide: to_human/E096_JOINT_SPATIAL_BLOCKS.md
+  runner: scripts/run_e096_joint_spatial_blocks.sh
+  descriptor_width: 317
+  parent_source: original_384_E094_work_parents
+  maximum_regular_blocks_current_library: 1536
+  minimum_child_population: 5000
+  minimum_original_parent_fraction: 0.20
+  raw_source_extraction_required: true
+  extraction_resume: committed_batches_with_unchanged_signatures
+  partition_resume: committed_parents_with_unchanged_signatures
+  check_grouping: source_molecule_id
+  local_related_tests_passed: 35
+  workstation_execution: pending
+  runtime: unmeasured_at_full_scale
+  limitations: finite_spatial_moments_not_atomwise_equivalence_or_recall_validation
