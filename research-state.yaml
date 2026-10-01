@@ -1008,7 +1008,7 @@ continuity_20260930:
   next_action: sidecar_membership_and_queue_validation_then_search_benchmark
 
 final_work_blocks_e094:
-  status: workstation_running_user_reported_20260930
+  status: workstation_running_user_reported_20261001
   guide: to_human/E094_FINAL_WORK_BLOCKS.md
   runner: scripts/run_e094_work_blocks.sh
   minimum_regular_population: 5000
@@ -1026,22 +1026,23 @@ final_work_blocks_e094:
   search_recall: unvalidated
 
 latest_continuity:
-  date: 2026-09-30
-  handoff: to_human/20260930_AIDD_EXPORT_AND_BLOCKS_HANDOFF.md
-  supersedes: to_human/20260929_AIDD_HANDOFF.md
+  date: 2026-10-01
+  handoff: to_human/20261001_AIDD_TWO_RUNNING_JOBS_HANDOFF.md
+  supersedes: to_human/20260930_AIDD_EXPORT_AND_BLOCKS_HANDOFF.md
   mdm2_export_status: user_reported_complete_receipt_not_yet_inspected
   selected_molecules: 1000000
   selected_conformers: 3854146
   selection_counts_evidence: user_pasted_numpy_lengths
   next_selection_unit: conformer_not_molecule
   next_selection_target: approximately_1000000_conformers
-  scoring_coverage: inspect_saved_per_conformer_scores_before_selection
+  scoring_coverage: checked_by_running_selector_final_receipt_pending
+  next_action: inspect_logs_and_completion_receipts_of_both_running_jobs
   rerun_search: not_requested
   e094_status: running_user_reported
   running_job_policy: no_restart_no_code_pull_no_parameter_changes
 
 mdm2_top_conformer_export:
-  status: implemented_local_tests_passed_workstation_pending
+  status: workstation_running_user_reported_20261001
   guide: to_human/MDM2_TOP_MILLION_CONFORMERS.md
   script: scripts/select_top_conformers.py
   input_conformers_user_reported: 3854146
@@ -1053,3 +1054,7 @@ mdm2_top_conformer_export:
   original_coordinates: preserved
   local_related_tests_passed: 7
   source_recalculation: none
+  published_commit: a6a3205
+  workstation_process_access: none_user_report_only
+  output_directory: /mnt/local/hand/yuzhang/aidd/exports/mdm2-11templates-top1m-conformers
+  log: /mnt/local/hand/yuzhang/aidd/exports/mdm2-11templates-top1m-conformers.log
