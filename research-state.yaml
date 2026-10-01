@@ -1076,3 +1076,17 @@ completed_jobs_receipt_20261001:
   input_scored_conformers: 3854146
   unscored_conformers: 0
   scientific_recall: not_validated
+
+bounded_property_refinement_e095:
+  status: implemented_locally_validated_ready_for_workstation
+  guide: to_human/E095_BOUNDED_SIDECHAIN_BLOCKS.md
+  runner: scripts/run_e095_property_blocks.sh
+  minimum_child_population: 5000
+  minimum_original_parent_fraction: 0.20
+  maximum_children_per_parent: 4
+  input: completed_E094_profiles_without_MOL2_recomputation
+  verification: full_output_membership_against_complete_cached_profiles
+  related_tests_passed: 25
+  independent_molecule_evaluation: pending
+  positional_sidechain_features: not_available_in_cached_summary
+  workstation_result: pending

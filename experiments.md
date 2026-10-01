@@ -1770,3 +1770,9 @@ regression 499 passed, 2 skipped. Workstation execution remains pending.
 Protocol: experiments/E093-receptor-advice.md. Confirmatory related tests:87 passed;
 final budget fallback:13 focused passed. Exploratory MDM2 replay:coverage mode,
 21 representatives for95.2% PDB-weighted coverage. No physical-state conclusion.
+
+
+## E095 protocol: bounded cached-property refinement
+Engineering hypothesis: globally scaled chemistry/steric groups with fit/check dispersion reduction identify useful work subdivisions missed by v1 fixed raw RMS. Preserve every parent identity and special pool; minimum 5000 and 20% of original parent, maximum four children. Fit/check split is deterministic by conformer CID, not independent molecule validation. Fixed global scaling fitted to cached population; check gains are exploratory internal checks, not biological or recall evidence. Test constant features, sparse tails, broad separated populations, stable ownership/counts, source mutation refusal and resume behavior before publishing. Workstation output must report accepted/rejected proposals and full membership validation.
+
+E095 local outcome: exploratory fixtures confirm bounded subdivision, rare-tail retention, constant-profile rejection, population conservation, input tamper rejection, internal-check rejection and resume. 25 related tests pass. Full workstation experiment remains pending; no validated search-recall improvement is asserted.
