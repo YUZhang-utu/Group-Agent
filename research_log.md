@@ -2373,3 +2373,11 @@ User now requests selection from the completed 3,854,146-conformer export. Code 
 
 ## 2026-10-01: two active workstation jobs checkpoint
 User reports the MDM2 top-million-conformer selector is running and asks to retain the parallel E094 block-job state. Updated research-state.yaml and saved to_human/20261001_AIDD_TWO_RUNNING_JOBS_HANDOFF.md with exact supplied paths, input counts, output expectations, ranking semantics, validation gates and no-restart/no-pull policy. Prior 3,854,146-conformer export remains user-reported complete. Neither running job has supplied a completion receipt; no process was inspected remotely. Next action is log/receipt review, not duplicate computation. No executable files changed.
+
+
+## 2026-10-01: both workstation completion receipts supplied
+User supplied E094 structural/property gate passes and top-million completion. 384 regular blocks plus one special pool; minimum 5,393 and no below-floor blocks. Property count equals regular parent count, implying no extra splits. 1,000,000 exported conformers represent 460,332 molecules, all 3,854,146 input candidates scored. Recorded in to_human/20261001_AIDD_TWO_JOBS_COMPLETED.md. Remote artifacts not directly inspected. Next: metadata distribution/split-evidence review and transfer existing MOL2 parts, not rebuild.
+
+
+## 2026-10-01: investigate missing side-chain subdivisions
+User requests backbone-first then side-chain properties. Audited v1 summarization and partition: order-invariant 69D summaries, PCA median proposal, fixed RMS cutoff, absent rejection evidence. Added standalone read-only diagnose_e094_properties.py for full size metadata and exact root replay from cached profiles (top 10 parents by default). No production algorithm or frozen hashes changed; no workstation run or GitHub publication. Three local diagnostic regressions and English guard passed. Await workstation diagnostic report before attributing zero splits or changing criteria. Guide: to_human/E094_PROPERTY_DIAGNOSTIC.md.
