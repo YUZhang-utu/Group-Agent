@@ -122,3 +122,39 @@ def test_resumed_task_is_pending_with_existing_id(tmp_path):
     assert result['status']=='queued'
     assert result['tasks'][0]['id']=='known-task'
     assert len(app.jobs(sid))==1
+
+
+def test_invalid_answer_schema_has_actionable_feedback():
+    with pytest.raises(ValueError, match='missing=evidence_ids'):
+        validate_step(dict(kind='answer',answer='No task submitted.'))
+    with pytest.raises(ValueError, match='extra=decision'):
+        validate_step(dict(kind='answer',answer='Done',evidence_ids=[],decision={}))
+    with pytest.raises(ValueError, match='1..16000'):
+        validate_step(dict(kind='answer',answer='',evidence_ids=[]))
+
+
+def test_receptor_stage_rejects_sampling_options_with_repair_feedback(tmp_path):
+    seen=[]
+    decision=dict(intent='block_evaluation',message='',task_id=None,request='',
+                  evaluation=dict(stage='adopt_receptors',count=100,seed=20261002))
+    app=ChatAgent(tmp_path,start=False,domain_planner=scripted([
+        tool('workflow',decision=decision),answer('The request was rejected; no task was queued.')],seen))
+    sid=app.new_session()
+    app.ask(sid,'Prepare the accepted receptors only. Sampling later uses 100 per block.','deepseek')
+    assert 'Stage adopt_receptors does not accept count, seed' in seen[-1]['previous_error']
+    assert 'Do not change the requested stage' in seen[-1]['previous_error']
+    assert not app.jobs(sid)
+
+
+def test_invalid_plans_do_not_bypass_time_budget(tmp_path,monkeypatch):
+    from aidd_agent import domain_agent
+    clock=[0.0]; calls=[]
+    def planner(*args,**kwargs):
+        calls.append(1);clock[0]=181.0
+        raise ValueError('Malformed LLM JSON response')
+    app=ChatAgent(tmp_path,start=False);sid=app.new_session()
+    monkeypatch.setattr(domain_agent.time,'time',lambda:clock[0])
+    result=run(app,sid,'Inspect status only','deepseek',planner=planner)
+    assert len(calls)==1
+    assert 'step/time limit' in result and 'do not resubmit' in result
+    assert not app.jobs(sid)

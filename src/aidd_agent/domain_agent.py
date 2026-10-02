@@ -84,7 +84,11 @@ def validate_step(value):
         if set(value)!={'kind','tool','arguments','purpose'} or value['tool'] not in TOOLS or not isinstance(value['arguments'],dict):raise ValueError('Invalid tool step')
         if not isinstance(value['purpose'],str) or len(value['purpose'])>1000:raise ValueError('Invalid tool purpose')
     elif value.get('kind')=='answer':
-        if set(value)!={'kind','answer','evidence_ids'} or not isinstance(value['answer'],str) or not 1<=len(value['answer'])<=16000:raise ValueError('Invalid final answer')
+        expected={'kind','answer','evidence_ids'}
+        if set(value)!=expected:
+            raise ValueError('Invalid final answer fields: missing='+','.join(sorted(expected-set(value)))+'; extra='+','.join(sorted(set(value)-expected))+'. Return exactly kind, answer, evidence_ids; use [] when no evidence is cited.')
+        if not isinstance(value['answer'],str) or not 1<=len(value['answer'])<=16000:
+            raise ValueError('Invalid final answer text: answer must be a string of 1..16000 characters.')
         if not isinstance(value['evidence_ids'],list) or any(not isinstance(v,str) for v in value['evidence_ids']):raise ValueError('Invalid evidence IDs')
     else:raise ValueError('Choose tool or answer')
     return value
@@ -118,6 +122,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
     def save():write_json(path,audit)
     try:
         for iteration in range(max_steps):
+            if time.time()-audit['started']>180:break
             context=dict(request=request,conversation=history,evidence=evidence[-6:],
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
@@ -156,12 +161,13 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 if isinstance(result,dict) and (result.get('status')=='failed' or (isinstance(result.get('result'),dict) and result['result'].get('status')=='failed')):record['status']='failed'
             except (ValueError,KeyError,IndexError,TypeError,OSError,RuntimeError,sqlite3.Error) as exc:
                 record.update(status='failed',error=f'{type(exc).__name__}: {exc}');result=dict(error=record['error'])
+                last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
             if time.time()-audit['started']>180:break
         if answer is None:
             audit['status']='pending' if waiting else 'incomplete'
-            answer='The agent reached its step/time limit. Completed tool results are saved; no additional computation was started. '
+            answer='The agent reached its step/time limit before producing a valid final answer. Saved tool receipts determine which operations were submitted; do not resubmit them without checking task status. '
             if waiting:answer+='A submitted operation is still pending. '
             if last_error:answer+='Planner error: '+last_error
             audit['answer']=answer

@@ -119,11 +119,19 @@ share docking results across block schemes. sample_prepare exports then prepares
 but does not execute docking. prepare/run/analyze consume the corresponding completed
 sample/preparation/run task; task_id selects an owned task, null uses latest compatible.
 request must be empty. No paths or receptor coordinates in evaluation: trusted local
-configuration supplies reviewed receptor/site inputs. Do not substitute Glide.
+configuration or an owned plants_receptors result supplies receptor/site inputs.
+Do not substitute Glide. When preparing accepted receptors, omit schemes/count/seed
+even if the user restates future sampling preferences in the same message. Those
+options belong to a later sample request, not to receptor adoption/preparation.
+Example workflow decision for explicit acceptance and preparation (replace selection
+IDs with actual accepted IDs): {"intent":"block_evaluation","message":"Prepare accepted receptors",
+"task_id":null,"request":"","evaluation":{"stage":"adopt_receptors","cluster_ids":["ACTUAL_SELECTION_ID"]}}.
+The outer response must still be the domain tool/answer envelope when using that loop.
 Use run with a self-contained request for explicitly requested end-to-end block
 sample -> prepare -> PLANTS -> analyze execution; the planner uses typed step references.
-Status questions use status/results, never block_evaluation. A new target requires
-its reviewed local receptor profile; the block evaluator does not infer a receptor.
+Status questions use status/results, never block_evaluation. For a new target use
+the PDB identity and receptor assessment workflow first, followed by human adoption
+and automated SPORES preparation; do not require a manually prepared local profile.
 Use select for a selection preview from a completed evidence task. selection must contain
 required_anchors (exact full IDs from that task), match_mode (all or any), minimum_score
 (explicit user threshold in (0,1]), and optional max_molecules (explicit user cap).
@@ -244,7 +252,7 @@ def validate_route(value):
             from .prompt_plan import validate_plan
             validate_plan(dict(version=1,summary='Adopt receptors',clarifications=[],steps=[dict(id='adopt',action='pocket_adopt',params=dict(source_run='PROMPT-'+'0'*16,cluster_ids=e['cluster_ids']))]))
         if e['stage'] in ('sample','sample_prepare','evaluate'): validate_options(options)
-        elif options: raise ValueError('Follow-up consumes frozen sampling options')
+        elif options: raise ValueError('Stage '+e['stage']+' does not accept '+', '.join(sorted(options))+'. Omit these fields; schemes/count/seed are only allowed for sample, sample_prepare, evaluate. Do not change the requested stage to bypass this check.')
         return value
     if isinstance(value,dict) and value.get('intent')=='adopt' and 'pocket_selection' in value:
         selection=value['pocket_selection']
