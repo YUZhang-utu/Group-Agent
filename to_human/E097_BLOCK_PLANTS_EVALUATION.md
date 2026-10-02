@@ -198,3 +198,20 @@ same prepared report and recovered output directory; completed jobs are reused.
 Do not point the new implementation directly at the old run: its implementation
 signature is intentionally frozen. First-batch parsing success is not cross-docking
 or biological validation, and only tests the first receptor.
+
+### Worker scheduling and stopped-run checkpoints
+
+`block_plants run --workers 20` overrides only the concurrent PLANTS process count
+(1..64). It does not edit the sealed preparation profile or docking settings.
+Within the same implementation, changing worker count preserves resumability.
+The report records workers_this_invocation; recovery itself reports null workers.
+
+For migration from an older implementation, stop the original runner first. Keep
+its output directory. Run `recover --include-checkpoints` into a fresh directory:
+this includes completed per-job receipts written after the last aggregate report.
+It verifies each receipt's files, receptor/ligand identity, exact generated config,
+score/pose identity and preparation/executable seals. It refuses a source whose
+runner still holds its output lock. Failed/uncommitted additional checkpoints are
+not imported and will be run in the new directory. In-flight jobs without a saved
+receipt may need to be repeated. Do not run two schedulers on the same panel.
+The new recovered directory can then be resumed with --workers 20 without resampling.

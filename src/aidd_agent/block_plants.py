@@ -130,11 +130,22 @@ def collect_pose_rows(attempt, job):
     return rows
 
 
+def plants_config(c, receptor):
+    lines=['scoring_function chemplp','search_speed '+c['search_speed'],'protein_file protein.mol2','ligand_file ligands.mol2',
+           'output_dir poses','bindingsite_center '+' '.join(map(str,receptor['center'])),f'bindingsite_radius {receptor["radius"]}',
+           f'rigid_ligand {int(c["ligand_mode"]=="rigid")}',f'cluster_structures {c["cluster_structures"]}',
+           'cluster_rmsd 2.0','keep_original_mol2_description 1','write_multi_mol2 1','merge_multi_conf_output 0']
+    return '\n'.join(lines)+'\n'
+
+
 @exclusive_output
-def run(prepared_report, output, *, max_jobs=None):
+def run(prepared_report, output, *, max_jobs=None, workers=None):
+    if workers is not None and (type(workers) is not int or not 1<=workers<=64):
+        raise ValueError("workers must be an integer from 1 to 64")
     prepared=Path(prepared_report).resolve().parent; prep=check_outputs(prepared)
     sample_dir=Path(prep['sample_report']).parent; check_outputs(sample_dir)
     c=read(prepared/'profile.json'); output=Path(output).resolve()
+    effective_workers=c['workers'] if workers is None else workers
     executable=Path(c['executable'])
     if not executable.is_file(): raise ValueError('Configured PLANTS executable is missing')
     signature=dict(prepared_report=str(prepared/'report.json'),prepared_sha256=sha(prepared/'report.json'),
@@ -163,11 +174,7 @@ def run(prepared_report, output, *, max_jobs=None):
         ligand=sample_dir/job['chunk']['path']
         if sha(ligand)!=job['chunk']['sha256']: raise ValueError('Ligand chunk changed')
         shutil.copyfile(ligand,attempt/'ligands.mol2')
-        lines=['scoring_function chemplp','search_speed '+c['search_speed'],'protein_file protein.mol2','ligand_file ligands.mol2',
-               'output_dir poses','bindingsite_center '+' '.join(map(str,receptor['center'])),f'bindingsite_radius {receptor["radius"]}',
-               f'rigid_ligand {int(c["ligand_mode"]=="rigid")}',f'cluster_structures {c["cluster_structures"]}',
-               'cluster_rmsd 2.0','keep_original_mol2_description 1','write_multi_mol2 1','merge_multi_conf_output 0']
-        (attempt/'plantsconfig').write_text('\n'.join(lines)+'\n',encoding='ascii')
+        (attempt/'plantsconfig').write_text(plants_config(c,receptor),encoding='ascii')
         start=time.monotonic(); rows=[]; error=None
         try:
             with (attempt/'plants.log').open('w',encoding='utf-8') as log:
@@ -188,14 +195,14 @@ def run(prepared_report, output, *, max_jobs=None):
     gate=bool(first and first['status']=='complete')
     print('PLANTS first-job gate: '+('passed' if gate else 'failed'),flush=True)
     if gate:
-        with ThreadPoolExecutor(max_workers=c['workers']) as pool:
+        with ThreadPoolExecutor(max_workers=effective_workers) as pool:
             for i,result in enumerate(pool.map(execute,selected[1:]),2):
                 print(f'PLANTS {i}/{len(selected)}: {result["job"]} {result["status"]}',flush=True)
                 save(output/'progress.json',dict(completed_jobs=i,requested_jobs=len(selected),last_job=result['job']))
-    return summarize_run(prepared,prep,c,output,jobs,gate)
+    return summarize_run(prepared,prep,c,output,jobs,gate,workers=effective_workers)
 
 
-def summarize_run(prepared, prep, c, output, jobs, gate):
+def summarize_run(prepared, prep, c, output, jobs, gate, *, workers=None):
     all_rows=[]; done=0; failures=0
     for job in jobs:
         path=output/job['id']/'receipt.json'
@@ -220,14 +227,21 @@ def summarize_run(prepared, prep, c, output, jobs, gate):
     r=dict(status=status,kind='block_plants_run',prepared_report=str(prepared/'report.json'),sample_report=prep['sample_report'],
            jobs=len(jobs),attempted_jobs=done,failed_jobs=failures,scored=sum(r['status']=='ok' for r in all_rows),
            first_job_gate='passed' if gate else 'failed',
-           ligand_mode=c['ligand_mode'],score='ChemPLP TOTAL_SCORE (lower is better)',output_hashes=hashes,
+           ligand_mode=c['ligand_mode'],score='ChemPLP TOTAL_SCORE (lower is better)',workers_this_invocation=workers,output_hashes=hashes,
            limitations=['Docking is stochastic; sample seed does not seed the PLANTS optimizer.',
                         'Missing/failed/not-run scores are excluded, never zero-imputed.'])
     save(output/'report.json',r); return r
 
 
 @exclusive_output
-def recover(run_report, output):
+def recover(run_report, output, *, include_checkpoints=False):
+    from .prompt_workflow import file_lock
+    root=Path(run_report).resolve().parent
+    with file_lock(root.parent/('.'+root.name+'.e097.lock')):
+        return _recover(run_report,output,include_checkpoints=include_checkpoints)
+
+
+def _recover(run_report, output, *, include_checkpoints=False):
     """Reparse sealed successful-engine outputs into a fresh resumable run; never execute PLANTS."""
     source=Path(run_report).resolve(); old=read(source); root=source.parent
     if old.get('kind')!='block_plants_run' or old.get('status') not in ('complete','partial'):
@@ -250,8 +264,10 @@ def recover(run_report, output):
         receipt_path=root/job['id']/'receipt.json'
         if not receipt_path.exists(): continue
         rel=str(receipt_path.relative_to(root))
-        if rel not in old['output_hashes']: raise ValueError('Unsealed job receipt')
+        if rel not in old['output_hashes'] and not include_checkpoints: raise ValueError('Unsealed job receipt; stopped-run migration requires --include-checkpoints')
         receipt=read(receipt_path)
+        if rel not in old['output_hashes'] and receipt.get('status')!='complete':
+            continue  # Uncommitted/failed work will be executed normally in the new run.
         if receipt.get('job')!=job['id']: raise ValueError('Recovery job identity mismatch')
         if receipt.get('status')!='complete' and receipt.get('error')!='Unknown PLANTS ranking header':
             raise ValueError('Recovery only accepts completed jobs or the known post-execution ranking-header failure')
@@ -266,6 +282,9 @@ def recover(run_report, output):
             raise ValueError('Recovery receptor mismatch')
         if sha(receipt_path.parent/attempt/'ligands.mol2')!=job['chunk']['sha256']:
             raise ValueError('Recovery ligand mismatch')
+        receptor=next(r for r in c['receptors'] if r['id']==job['receptor'])
+        if (receipt_path.parent/attempt/'plantsconfig').read_text()!=plants_config(c,receptor):
+            raise ValueError('Recovery docking configuration mismatch')
         # Require all MOL2 files read by the parser to be covered by the old receipt.
         for pose in (receipt_path.parent/attempt/'poses').glob('*.mol2'):
             if str(pose.relative_to(receipt_path.parent)) not in receipt['output_hashes']:
@@ -279,7 +298,7 @@ def recover(run_report, output):
     output.mkdir(parents=True)
     signature['implementation_sha256']=sha(Path(__file__));save(output/'signature.json',signature)
     save(output/'recovery.json',dict(source_report=str(source),source_report_sha256=sha(source),
-         recovered_jobs=[job['id'] for job,_,_ in plans],engine_executed=False))
+         recovered_jobs=[job['id'] for job,_,_ in plans],engine_executed=False,include_checkpoints=include_checkpoints))
     for job,receipt,attempt in plans:
         directory=output/job['id'];directory.mkdir()
         for name,digest in receipt['output_hashes'].items():
@@ -360,9 +379,12 @@ def main():
     for name in ('prepare','run','recover','analyze'):
         s=sub.add_parser(name); s.add_argument('--source',required=True); s.add_argument('--output',required=True)
         if name=='prepare': s.add_argument('--profile',required=True)
-        if name=='run': s.add_argument('--max-jobs',type=int)
+        if name=='recover': s.add_argument('--include-checkpoints',action='store_true',help='Import verified completed receipts after the last report; stop the old process first')
+        if name=='run':
+            s.add_argument('--max-jobs',type=int)
+            s.add_argument('--workers',type=int,help='Concurrent PLANTS processes, 1..64; scheduling only')
     a=p.parse_args()
-    result=prepare(a.source,a.profile,a.output) if a.action=='prepare' else run(a.source,a.output,max_jobs=a.max_jobs) if a.action=='run' else recover(a.source,a.output) if a.action=='recover' else analyze(a.source,a.output)
+    result=prepare(a.source,a.profile,a.output) if a.action=='prepare' else run(a.source,a.output,max_jobs=a.max_jobs,workers=a.workers) if a.action=='run' else recover(a.source,a.output,include_checkpoints=a.include_checkpoints) if a.action=='recover' else analyze(a.source,a.output)
     print(json.dumps(result,indent=2))
 
 

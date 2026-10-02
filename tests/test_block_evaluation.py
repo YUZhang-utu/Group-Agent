@@ -131,6 +131,38 @@ def test_failed_jobs_are_partial_and_retried(tmp_path,monkeypatch):
     assert list(out.rglob('attempt-002'))
 
 
+def test_worker_override_and_stopped_checkpoint_migration(tmp_path,monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    cfg,source=fixture(tmp_path);s=tmp_path/'samples';sample(cfg,s,count=2)
+    profile=plants_profile(tmp_path,source);config=json.loads(profile.read_text())
+    config['receptors'].append(dict(config['receptors'][0],id='second'))
+    save(profile,config)
+    p=tmp_path/'prepared';prepare(s/'report.json',profile,p)
+    hashes={str(f.relative_to(p)):sha(f) for f in p.rglob('*') if f.is_file()}
+    pools=[];calls=[]
+    def pool(*,max_workers):
+        pools.append(max_workers);return ThreadPoolExecutor(max_workers=max_workers)
+    def engine(*a,**kw):calls.append(1);return fake_plants(*a,**kw)
+    monkeypatch.setattr('aidd_agent.block_plants.ThreadPoolExecutor',pool)
+    monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',engine)
+    out=tmp_path/'docking'
+    assert run(p/'report.json',out,workers=20,max_jobs=1)['workers_this_invocation']==20
+    old_report=(out/'report.json').read_bytes();old_scores=(out/'scores.csv').read_bytes()
+    run(p/'report.json',out,workers=8)
+    # Simulate a stopped run: later completed receipts exist but summary is still old.
+    (out/'report.json').write_bytes(old_report);(out/'scores.csv').write_bytes(old_scores)
+    with pytest.raises(ValueError,match='include-checkpoints'):
+        recover(out/'report.json',tmp_path/'rejected')
+    new=tmp_path/'recovered'
+    assert recover(out/'report.json',new,include_checkpoints=True)['status']=='complete'
+    assert run(p/'report.json',new,workers=24)['status']=='complete'
+    assert pools==[20,8,24] and len(calls)==2
+    assert hashes=={str(f.relative_to(p)):sha(f) for f in p.rglob('*') if f.is_file()}
+    for value in (0,65,True,1.5):
+        with pytest.raises(ValueError,match='workers must'):
+            run(p/'report.json',new,workers=value)
+
+
 def test_failed_first_job_stops_unscheduled_receptors(tmp_path,monkeypatch):
     cfg,source=fixture(tmp_path);s=tmp_path/'samples';sample(cfg,s,count=2)
     profile=plants_profile(tmp_path,source);c=json.loads(profile.read_text())
