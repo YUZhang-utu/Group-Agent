@@ -69,7 +69,7 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
         model = dict(provider="offline-fixture", model="fixture-not-a-live-LLM", fixture_sha256=ev.sha(response_file))
     else:
         plan, model = chat_plan(prompt, strict_json(Path(llm_profile).read_text(encoding="utf-8")))
-        if any("source_run" in s["params"] for s in plan["steps"]):
+        if any(set(s["params"]) & {'source_run','receptor_run'} for s in plan["steps"]):
             raise ValueError("Use separate chat evidence/selection/export actions for prior tasks")
     chemistry_prompt = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
     for step in plan['steps']:
@@ -118,10 +118,18 @@ def load_runtime(path):
     if path is None: return {}, []
     path = Path(path).resolve()
     cfg = strict_json(path.read_text(encoding="utf-8"))
-    if not isinstance(cfg, dict) or set(cfg) - {"af3_profile", "search", "pymol"}: raise ValueError("Unknown runtime settings")
+    if not isinstance(cfg, dict) or set(cfg) - {"af3_profile", "search", "pymol", "block_evaluation"}: raise ValueError("Unknown runtime settings")
     if 'pymol' in cfg and (not isinstance(cfg['pymol'],dict) or set(cfg['pymol'])!={'executable'} or not isinstance(cfg['pymol']['executable'],str) or not cfg['pymol']['executable']):
         raise ValueError('pymol requires the trusted installed executable')
     inputs = [path]
+    if 'block_evaluation' in cfg:
+        block=cfg['block_evaluation']
+        if not isinstance(block,dict) or set(block)-{'sampling_profile','plants_profile','receptor_tools_profile'}:
+            raise ValueError('Invalid block evaluation configuration')
+        for key in block:
+            p=Path(block[key]); p=p if p.is_absolute() else path.parent/p
+            block[key]=str(p.resolve())
+            if p.is_file(): inputs.append(p)
     if cfg.get("af3_profile"):
         p = Path(cfg["af3_profile"])
         if not p.is_absolute(): p = path.parent / p
@@ -152,6 +160,69 @@ def load_runtime(path):
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     action, params = step["action"], step["params"]
+    if action=='receptor_assess':
+        from .structure_diversity import run as diversity
+        from .pocket_states import build
+        protein=ev.read(execution/params['protein_step']/'protein.json')
+        # The owning plan/code/runtime seal binds any resumable substage receipts.
+        diversity_dir=directory/'diversity'; pocket_dir=directory/'pockets'
+        marker=directory/'diversity-seal.json'
+        if marker.exists():
+            from .screening_selection import check_hashes
+            check_hashes(ev.read(marker))
+        else:
+            diversity(protein,diversity_dir,reference_pdb=params['reference_pdb'].upper())
+            _atomic_json(marker,fingerprint(p for p in diversity_dir.rglob('*') if p.is_file()))
+        if (pocket_dir/'report.json').exists():
+            from .screening_selection import check_hashes
+            result=ev.read(pocket_dir/'report.json');check_hashes(result['sources'])
+            if result.get('status')!='complete': raise ValueError('Incomplete pocket assessment')
+        else:
+            result=build(diversity_dir/'report.json',pocket_dir,reference_query=params.get('reference_query'),target_chain=params.get('target_chain'),
+                         advice_settings={k:params[k] for k in ('maximum_representatives','coverage_fraction') if k in params})
+        return dict(status=result['kind'],report=str(pocket_dir/'report.json'),readiness=result['readiness'],receptor_advice=result.get('receptor_advice'))
+    if action=='plants_receptors':
+        from .screening_selection import upstream
+        from .plants_receptors import prepare
+        if not allow_compute: raise Blocked('Enable --allow-compute for SPORES receptor preparation')
+        profile=cfg.get('block_evaluation',{}).get('receptor_tools_profile')
+        if not profile: raise Blocked('Configure installed SPORES/PLANTS in block_evaluation.receptor_tools_profile')
+        if 'source_run' in params: source,_=upstream(execution,params['source_run'],'pocket_adopt')
+        else: source=execution/params['adoption_step']/'guided/report.json'
+        output=directory/'receptors';result=prepare(source,profile,output)
+        return dict(status=result['kind'],report=str(output/'report.json'),receptors=result['receptors'])
+    if action in {'block_sample','block_plants_prepare','block_plants_run','block_analyze'}:
+        from .block_sampling import sample
+        from .block_plants import prepare, run, analyze, SOURCE_ACTIONS as BLOCK_SOURCES
+        config=cfg.get('block_evaluation',{}); output=directory/'blocks'
+        if action in {'block_sample','block_plants_run'} and not allow_compute:
+            raise Blocked('Enable --allow-compute for block sampling/export or PLANTS execution')
+        if action=='block_sample':
+            if not config.get('sampling_profile'): raise Blocked('Configure block_evaluation.sampling_profile')
+            result=sample(config['sampling_profile'],output,resume=output.exists(),**params)
+        else:
+            if 'source_run' in params:
+                from .screening_selection import upstream
+                source,_=upstream(execution,params['source_run'],BLOCK_SOURCES[action])
+            else:
+                ref={'block_plants_prepare':'sample_step','block_plants_run':'prepared_step','block_analyze':'docking_step'}[action]
+                source=execution/params[ref]/'blocks/report.json'
+            if action=='block_plants_prepare':
+                profile=config.get('plants_profile')
+                if 'receptor_run' in params:
+                    from .screening_selection import upstream
+                    from .block_sampling import check_outputs
+                    receptor_report,_=upstream(execution,params['receptor_run'],'plants_receptors')
+                    check_outputs(receptor_report.parent)
+                    profile=str(receptor_report.parent/'plants-profile.json')
+                if not profile: raise Blocked('Prepare adopted pocket representatives with SPORES, then select the receptor task')
+                result=prepare(source,profile,output)
+            elif action=='block_plants_run': result=run(source,output)
+            else: result=analyze(source,output)
+        if result['status']!='complete': raise RuntimeError('PLANTS panel is partial; inspect blocks/report.json and resume failed jobs')
+        return dict(status=result['kind'],report=str(output/'report.json'),
+                    slots=result.get('slots'),unique_conformers=result.get('unique_conformers'),
+                    scored=result.get('scored'),comparisons=result.get('comparisons'))
     from .guided_workflow import SOURCE_ACTIONS, execute as execute_guided
     if action in SOURCE_ACTIONS:
         from .screening_selection import upstream
@@ -194,7 +265,13 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         else: summary = export(source, output)
         return dict(status=summary["kind"], report=str(output / "report.json"),
                     e031_changes_ranking=False, biological_quality="not_evaluated")
-    if action == "protein_fetch":
+    if action=='protein_from_pdb':
+        from .protein_data import resolve_pdb_target
+        identity=resolve_pdb_target(params['pdb_id'],params.get('entity_id'),services.fetch_json)
+        _atomic_json(directory/'target-identity.json',identity)
+        if identity['status']!='complete': raise Blocked('PDB target identity is ambiguous; inspect target-identity.json and select an entity_id')
+        record=identity['protein']
+    elif action == "protein_fetch":
         record = fetch_protein(params["accession"], params.get("organism_id"), services.fetch_json)
     elif action == "protein_resolve":
         record = resolve_protein(params["gene"], params["organism_id"], services.fetch_json)
@@ -320,7 +397,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     plan = validate_plan(envelope["plan"])
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
-    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page'} for s in plan["steps"])
+    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page','block_plants_prepare','block_plants_run','block_analyze','plants_receptors'} for s in plan["steps"])
     cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
@@ -344,7 +421,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
-                for ref in ("protein_step", "input_step"):
+                for ref in ("protein_step", "input_step", "sample_step", "prepared_step", "docking_step", "adoption_step"):
                     if ref in step["params"]:
                         parent = execution / step["params"][ref]
                         dependencies.extend(p for p in parent.rglob("*") if p.is_file())
@@ -355,11 +432,16 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 try:
                     results[sid] = dict(status="running", action=step["action"])
                     _atomic_json(execution / "report.json", report)
+                    if 'receptor_run' in step['params']:
+                        from .screening_selection import upstream
+                        _,receptor_files=upstream(execution,step['params']['receptor_run'],'plants_receptors')
+                        dependencies.extend(receptor_files)
                     if "source_run" in step["params"]:
                         from .screening_selection import upstream
                         from .guided_workflow import SOURCE_ACTIONS
+                        from .block_plants import SOURCE_ACTIONS as BLOCK_SOURCES
                         source_action = {"review_screening": "search_3d", "classify_screening":"review_screening", "full_library_screen":"classify_screening", "condition_funnel":"select_screening", "benchmark_funnel":"select_screening", "select_screening": ("review_screening","classify_screening","full_library_screen","condition_funnel"),
-                                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking", **SOURCE_ACTIONS}[step["action"]]
+                                         "export_screening": "select_screening", "prepare_docking":"export_screening", "run_docking":"prepare_docking", **SOURCE_ACTIONS, **BLOCK_SOURCES}[step["action"]]
                         _, source_files = upstream(execution, step["params"]["source_run"], source_action)
                         dependencies.extend(source_files)
                         if step['action'] in {'anchor_recommend','consensus_recommend'}:

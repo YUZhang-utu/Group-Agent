@@ -13,6 +13,13 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 ACTION_FIELDS = {
+    "protein_from_pdb": ({"pdb_id"}, {"entity_id"}),
+    "receptor_assess": ({"protein_step", "reference_pdb"}, {"reference_query", "target_chain", "maximum_representatives", "coverage_fraction"}),
+    "plants_receptors": (set(), {"source_run", "adoption_step"}),
+    "block_sample": (set(), {"schemes", "count", "seed"}),
+    "block_plants_prepare": (set(), {"source_run", "sample_step", "receptor_run"}),
+    "block_plants_run": (set(), {"source_run", "prepared_step"}),
+    "block_analyze": (set(), {"source_run", "docking_step"}),
     "protein_fetch": ({"accession"}, {"organism_id"}),
     "protein_resolve": ({"gene", "organism_id"}, set()),
     "pdb_search": ({"protein_step"}, {"max_resolution"}),
@@ -99,6 +106,28 @@ a model-created plan. Tell the user to review a completed search through the cha
 
 
 SYSTEM_PROMPT += TARGET_POCKET_POLICY
+SYSTEM_PROMPT += '''
+When the user supplies only a PDB ID, protein_from_pdb resolves its UniProt identity
+from RCSB. Ambiguous polymer entities require clarification; do not guess the target.
+It can be a protein_step for receptor_assess using that same reference_pdb.
+receptor_assess retrieves the experimental structure cohort and computes pocket
+evidence plus single/multiple receptor advice in one task, stopping before adoption.
+Existing pocket assessment recommends single/multiple representatives, followed by
+explicit human adoption. The local plants_receptors coordinator prepares those
+adopted structures using installed SPORES, native ligand centroids and site radii.
+It does not require the user to create receptor MOL2 or manually enter coordinates.
+Never bypass adoption or infer confirmation from a request for recommendations.
+For frozen macrocycle block evaluation, block_sample samples conformers uniformly per
+regular block of the configured E094/E095/E096 partitions (default all three, count
+100, seed 20261002). It exports original conformers and deduplicates docking inputs
+across schemes while retaining all memberships. Runtime supplies paths; never invent them.
+block_plants_prepare takes sample_step pointing to block_sample; block_plants_run
+takes prepared_step pointing to block_plants_prepare; block_analyze takes docking_step
+pointing to block_plants_run. Use only requested stages: prepare is not permission to
+run docking. Prepared reviewed receptors/site settings come from trusted runtime.
+PLANTS defaults to rigid ligand conformer evaluation, not flexible ligand optimization.
+Follow-up existing-task stages use the local block_evaluation chat coordinator.
+'''
 
 
 def strict_json(text):
@@ -143,7 +172,20 @@ def validate_plan(plan):
         required, optional = ACTION_FIELDS[action]
         if not required <= params.keys() or params.keys() - required - optional:
             raise ValueError(f"Invalid parameters for {action}")
-        for ref, allowed in (("protein_step", {"protein_fetch", "protein_resolve"}), ("input_step", {"af3_prepare"})):
+        if action=='block_sample':
+            from .block_sampling import validate_options
+            validate_options(params)
+        block_refs={'plants_receptors':('adoption_step','pocket_adopt'),
+                    'block_plants_prepare':('sample_step','block_sample'),
+                    'block_plants_run':('prepared_step','block_plants_prepare'),
+                    'block_analyze':('docking_step','block_plants_run')}
+        if action in block_refs:
+            ref,previous=block_refs[action]
+            if ('source_run' in params)+(ref in params)!=1:
+                raise ValueError('Exactly one source run or preceding block step required')
+            if ref in params and (not isinstance(params[ref],str) or seen.get(params[ref])!=previous):
+                raise ValueError('Wrong block workflow dependency')
+        for ref, allowed in (("protein_step", {"protein_fetch", "protein_resolve", "protein_from_pdb"}), ("input_step", {"af3_prepare"})):
             if ref in params and (not isinstance(params[ref], str) or seen.get(params[ref]) not in allowed):
                 raise ValueError("Dependency must name a preceding step of the correct type")
         if "accession" in params and (not isinstance(params["accession"], str) or not re.fullmatch(r"[A-Z0-9]{6}(?:[A-Z0-9]{4})?", params["accession"])):
@@ -156,6 +198,8 @@ def validate_plan(plan):
             raise ValueError("Invalid resolution cutoff")
         if "pdb_id" in params and (not isinstance(params["pdb_id"], str) or not re.fullmatch(r"[0-9][A-Za-z0-9]{3}", params["pdb_id"])):
             raise ValueError("Invalid PDB ID")
+        if 'entity_id' in params and (not isinstance(params['entity_id'],str) or not re.fullmatch('[0-9]{1,6}',params['entity_id'])): raise ValueError('Invalid PDB entity ID')
+        if 'receptor_run' in params and (not isinstance(params['receptor_run'],str) or not re.fullmatch('PROMPT-[a-f0-9]{16}',params['receptor_run'])): raise ValueError('Invalid receptor task reference')
         if action == "af3_prepare":
             if not isinstance(params["name"], str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", params["name"]):
                 raise ValueError("Invalid AF3 job name")
@@ -180,12 +224,14 @@ def validate_plan(plan):
             if not isinstance(params["source_run"], str) or not re.fullmatch(r"PROMPT-[a-f0-9]{16}", params["source_run"]):
                 raise ValueError("Invalid source run ID")
             if len(steps) != 1:
-                raise ValueError("Evidence, selection and export require separate tasks")
+                chain=tuple(s.get('action') for s in steps)
+                if step is not steps[0] or chain not in {('pocket_adopt','plants_receptors'),('block_plants_run','block_analyze')}:
+                    raise ValueError("Evidence, selection and export require separate tasks")
         if "coarse_only" in params and type(params["coarse_only"]) is not bool:
             raise ValueError("coarse_only must be boolean")
         if 'max_structures' in params and not _integer(params['max_structures'],1,100):
             raise ValueError('max_structures must be 1..100')
-        if action=='structure_diversity':
+        if action in {'structure_diversity','receptor_assess'}:
             if not isinstance(params['reference_pdb'],str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',params['reference_pdb']):
                 raise ValueError('Provide an explicit reference PDB for site comparison')
             if not _integer(params.get('maximum_references',8),1,100):raise ValueError('Invalid reference budget')
@@ -196,11 +242,11 @@ def validate_plan(plan):
             raise ValueError('Provide 1..20 explicit PDB IDs')
         if action in {'anchor_recommend','consensus_recommend'} and params['provider'] not in {'gpt','deepseek'}:
             raise ValueError('Unknown recommendation provider')
-        if action in {'structure_consensus','pocket_states','pocket_consensus'}:
+        if action in {'structure_consensus','pocket_states','pocket_consensus','receptor_assess'}:
             if 'reference_query' in params and (not isinstance(params['reference_query'],str) or not re.fullmatch(r'[0-9][A-Za-z0-9]{3}:[A-Za-z0-9]+:[A-Za-z0-9]+:-?[0-9]+',params['reference_query'])):raise ValueError('Invalid reference ligand identity')
             if 'target_chain' in params and (not isinstance(params['target_chain'],str) or not re.fullmatch(r'[A-Za-z0-9]+',params['target_chain'])):raise ValueError('Invalid target chain')
             if not _integer(params.get('maximum_templates',8),1,100):raise ValueError('Invalid template budget')
-        if action=='pocket_states':
+        if action in {'pocket_states','receptor_assess'}:
             from .pocket_states import policy
             policy({'cluster_distance':params.get('cluster_distance',.40)})
             if not _integer(params.get('maximum_representatives',32),1,100):raise ValueError('Invalid receptor budget')

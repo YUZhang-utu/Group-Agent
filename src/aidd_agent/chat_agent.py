@@ -19,6 +19,7 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 WORKFLOWS = [
+    {"name":"Block evaluation with PLANTS", "status":"Sampling/export, prepared-receptor execution and analysis adapters; live PLANTS acceptance pending", "scope":"E094/E095/E096 uniform per-block conformer samples, shared conformer/receptor docking results, block statistics and pose handoff. Trusted reviewed receptor profiles required."},
     {"name": "PDB pocket-state prerequisite", "status": "Pocket grid clustering and explicit adoption implemented; target validation ongoing", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
     {"name":"Automatic structure workflow chains", "status":"Persistent coordinator; workstation acceptance pending", "scope":"Explicitly requested continuation from an existing task through consensus, recommendation and optional budget delivery. Pause/resume future stages, preserve source IDs, block failed or uncertain dispatch. Current scientific tasks remain separately controlled."},
     {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
@@ -34,7 +35,7 @@ WORKFLOWS = [
     {"name": "Screening evidence and human selection", "status": "available", "scope": "Review a completed search, preview explicit same-pose anchor conditions, then separately request SDF/ID export for docking preparation."},
     {"name": "New-target query preparation", "status": "structure_survey and adopted guided designs", "scope": "Requires mapped target-bound reference coordinates; exploratory thresholds are not independent retrieval calibration."},
     {"name": "Molecule aggregation and pocket QC", "status": "CLI components; chat integration pending", "scope": "Requires validated query poses, receptor/site definitions and aggregation artifacts."},
-    {"name": "Flexible docking", "status": "Glide preparation/execution adapter; workstation validation pending", "scope": "Derive pocket from crystal ligand, prepare inputs, explicitly run licensed preparation and reference-gated docking. PLANTS execution and cross-docking validation remain pending."},
+    {"name": "Flexible docking", "status": "Glide preparation/execution adapter; workstation validation pending", "scope": "Derive pocket from crystal ligand, prepare inputs, explicitly run licensed preparation and reference-gated docking. Block panels have a separate PLANTS adapter; cross-docking validation remains pending."},
     {"name": "Biological enrichment and final selection", "status": "not validated", "scope": "Requires held-out active/decoy labels, diversity/property criteria and experimental evidence."},
 ]
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
@@ -93,7 +94,36 @@ grid is needed in advance. Use run_docking only on an existing preparation task 
 the user explicitly requests execution. This runs PrepWizard/LigPrep, grid generation,
 reference redocking, then candidate docking only if the reference RMSD gate passes.
 Do not run these during 3D feature classification. Local licenses/version compatibility
-and preparation chemistry must be reviewed; PLANTS execution is not supported yet.
+and preparation chemistry must be reviewed. For block panels use block_evaluation instead.
+For a supplied PDB ID and a receptor-selection request, use run requesting
+protein_from_pdb followed by receptor_assess with that reference PDB. This computes
+the pocket-based single/multiple receptor proposal before human adoption.
+Resolve ambiguous entities explicitly.
+Use pockets to assess single versus multiple receptors, then adopt the user's selected
+representatives. After explicit adoption use block_evaluation stage receptors to run
+SPORES and compute native ligand site centroids/radii. Do not ask users to manually
+prepare protein MOL2 or box coordinates when the adopted pocket task is available.
+Use block_evaluation with an additional evaluation object for conformer block sampling
+and PLANTS. evaluation contains stage: sample/sample_prepare/adopt_receptors/receptors/prepare/run/dock_analyze/evaluate/analyze,
+plus schemes/count/seed ONLY for sample, sample_prepare or evaluate. prepare/sample_prepare/evaluate
+may specify receptor_task_id (an owned plants_receptors task); otherwise the latest
+compatible receptor-preparation task is used. receptors consumes an adopted pocket task.
+adopt_receptors is ONLY for explicit human acceptance plus a request to prepare:
+it consumes pocket_states, optionally cluster_ids, records adoption then runs SPORES.
+evaluate samples, prepares, docks and analyzes using the selected existing receptor task;
+use it ONLY when full docking execution is explicitly requested, never for prepare-only.
+dock_analyze consumes an existing preparation task and runs docking then analysis.
+Defaults are all three
+E094/E095/E096 schemes, 100 conformers per block, seed 20261002. Duplicate conformers
+share docking results across block schemes. sample_prepare exports then prepares jobs,
+but does not execute docking. prepare/run/analyze consume the corresponding completed
+sample/preparation/run task; task_id selects an owned task, null uses latest compatible.
+request must be empty. No paths or receptor coordinates in evaluation: trusted local
+configuration supplies reviewed receptor/site inputs. Do not substitute Glide.
+Use run with a self-contained request for explicitly requested end-to-end block
+sample -> prepare -> PLANTS -> analyze execution; the planner uses typed step references.
+Status questions use status/results, never block_evaluation. A new target requires
+its reviewed local receptor profile; the block evaluator does not infer a receptor.
 Use select for a selection preview from a completed evidence task. selection must contain
 required_anchors (exact full IDs from that task), match_mode (all or any), minimum_score
 (explicit user threshold in (0,1]), and optional max_molecules (explicit user cap).
@@ -201,6 +231,21 @@ restore the previous successful agent program. Do not claim an operation has exe
 
 
 def validate_route(value):
+    if isinstance(value,dict) and value.get('intent')=='block_evaluation':
+        if set(value)!={'intent','message','task_id','request','evaluation'}: raise ValueError('Invalid block routing fields')
+        validate_route({k:('status' if k=='intent' else v) for k,v in value.items() if k!='evaluation'})
+        e=value['evaluation']
+        if not isinstance(e,dict) or e.get('stage') not in ('sample','sample_prepare','adopt_receptors','receptors','prepare','run','dock_analyze','evaluate','analyze'): raise ValueError('Invalid block stage')
+        from .block_sampling import validate_options
+        options={k:v for k,v in e.items() if k not in ('stage','receptor_task_id','cluster_ids')}
+        if 'receptor_task_id' in e and (e['stage'] not in ('prepare','sample_prepare','evaluate') or not isinstance(e['receptor_task_id'],str) or not e['receptor_task_id']): raise ValueError('Invalid receptor task selection')
+        if 'cluster_ids' in e:
+            if e['stage']!='adopt_receptors': raise ValueError('Cluster IDs only for explicit receptor adoption')
+            from .prompt_plan import validate_plan
+            validate_plan(dict(version=1,summary='Adopt receptors',clarifications=[],steps=[dict(id='adopt',action='pocket_adopt',params=dict(source_run='PROMPT-'+'0'*16,cluster_ids=e['cluster_ids']))]))
+        if e['stage'] in ('sample','sample_prepare','evaluate'): validate_options(options)
+        elif options: raise ValueError('Follow-up consumes frozen sampling options')
+        return value
     if isinstance(value,dict) and value.get('intent')=='adopt' and 'pocket_selection' in value:
         selection=value['pocket_selection']
         if not isinstance(selection,dict) or set(selection)!={'cluster_ids'}:
@@ -270,8 +315,12 @@ def screening_summary(job):
     from .project_context import ensure_within
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
+    block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze'} and s.get('status')=='complete']
+    if block_steps:
+        child=read_json(ensure_within(Path(block_steps[-1]['result']['report']),Path(job['plan']).parent)) or {}
+        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','receptors','sites','limitations') if k in child}
     for step in report.get("steps", {}).values():
-        if step.get('action') in {'pocket_states','pocket_adopt'} and step.get('status')=='complete':
+        if step.get('action') in {'pocket_states','receptor_assess','pocket_adopt'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             if child.get('receptor_advice'):
                 from .receptor_advice import compact
@@ -345,6 +394,8 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze'}:
+        return json.dumps(summary,indent=2)+'\nUse natural language to request the next block evaluation stage. Docking scores do not establish affinity or search recall.'
     if summary.get('kind')=='pocket_states':
         if summary.get('receptor_advice'):
             from .receptor_advice import summary as receptor_summary
@@ -659,6 +710,51 @@ class ChatAgent:
         validate_route(decision)
         profile = select_llm_profile(provider, config_dir=self.config_dir)
         intent = decision["intent"]
+        if intent=='block_evaluation':
+            e=decision['evaluation']; stage=e['stage']; steps=[]
+            if stage in ('sample','sample_prepare','evaluate'):
+                steps=[dict(id='sample',action='block_sample',params={k:v for k,v in e.items() if k not in ('stage','receptor_task_id')})]
+                if stage in ('sample_prepare','evaluate'): steps.append(dict(id='prepare',action='block_plants_prepare',params=dict(sample_step='sample')))
+            else:
+                expected={'adopt_receptors':'pocket_states','receptors':'pocket_adopt','prepare':'block_sample','run':'block_plants_prepare','dock_analyze':'block_plants_prepare','analyze':'block_plants_run'}[stage]
+                allowed={expected}|({'receptor_assess'} if stage=='adopt_receptors' else set())
+                if decision['task_id'] is None:
+                    jobs=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
+                          any(s.get('action') in allowed and s.get('status')=='complete' for s in (read_json(j['report']) or {}).get('steps',{}).values())]
+                    if not jobs: raise ValueError('Complete '+expected+' in this conversation first')
+                    job=jobs[-1]
+                else: job=self.task(sid,decision['task_id'])
+                if job['status']!='complete' or not job.get('plan'): raise ValueError('Choose a completed block source task')
+                matches=[s for s in (read_json(job['report']) or {}).get('steps',{}).values() if s.get('action') in allowed and s.get('status')=='complete']
+                if len(matches)!=1: raise ValueError('Wrong source stage for block evaluation')
+                action={'adopt_receptors':'pocket_adopt','receptors':'plants_receptors','prepare':'block_plants_prepare','run':'block_plants_run','dock_analyze':'block_plants_run','analyze':'block_analyze'}[stage]
+                params=dict(source_run=Path(job['plan']).parent.name)
+                if stage=='adopt_receptors' and 'cluster_ids' in e:params['cluster_ids']=e['cluster_ids']
+                steps=[dict(id=stage,action=action,params=params)]
+                if stage=='adopt_receptors': steps.append(dict(id='receptors',action='plants_receptors',params=dict(adoption_step='adopt_receptors')))
+                if stage=='dock_analyze': steps.append(dict(id='analysis',action='block_analyze',params=dict(docking_step='dock_analyze')))
+            if stage in ('prepare','sample_prepare','evaluate'):
+                if e.get('receptor_task_id'): receptor_job=self.task(sid,e['receptor_task_id'])
+                else:
+                    candidates=[j for j in self.jobs(sid) if j['status']=='complete' and j.get('report') and
+                                any(s.get('action')=='plants_receptors' and s.get('status')=='complete' for s in (read_json(j['report']) or {}).get('steps',{}).values())]
+                    receptor_job=candidates[-1] if candidates else None
+                if receptor_job:
+                    matches=[s for s in (read_json(receptor_job['report']) or {}).get('steps',{}).values() if s.get('action')=='plants_receptors' and s.get('status')=='complete']
+                    if receptor_job['status']!='complete' or len(matches)!=1:raise ValueError('Select a completed receptor preparation task')
+                    steps[-1]['params']['receptor_run']=Path(receptor_job['plan']).parent.name
+            if stage=='evaluate':
+                steps.extend([dict(id='dock',action='block_plants_run',params=dict(prepared_step='prepare')),
+                              dict(id='analysis',action='block_analyze',params=dict(docking_step='dock'))])
+            plan=dict(version=1,summary='Block evaluation: '+stage,clarifications=[],steps=steps); ctx=self.context
+            path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
+            jid=uuid.uuid4().hex[:16]
+            with self.connect() as db:
+                db.execute('INSERT INTO jobs(id,session,request,provider,profile,status,plan,report,log,created) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                           (jid,sid,plan['summary'],provider,'','queued',str(path),str(path.parent/'execution/report.json'),str(self.root/(jid+'.log')),time.time()))
+            answer=f'Task {jid} queued: {plan["summary"]}. Inspect task progress for execution results.'
+            if record: self.message(sid,'assistant',answer)
+            return answer
         if intent=='pymol_agent':
             from .pymol_agent import run_agent
             root=self.root/'viewers'/sid
@@ -679,7 +775,7 @@ class ChatAgent:
             if record: self.message(sid,'assistant',answer)
             return answer
         if intent in {'budget','budget_page','recommend','adopt','design','guided','consensus','pockets'}:
-            expected={'recommend':{'structure_survey','structure_consensus','pocket_consensus'},'adopt':{'anchor_recommend','consensus_recommend','pocket_states'},
+            expected={'recommend':{'structure_survey','structure_consensus','pocket_consensus'},'adopt':{'anchor_recommend','consensus_recommend','pocket_states','receptor_assess'},
                       'design':{'anchor_recommend','consensus_recommend'},'guided':{'anchor_design','consensus_design'},'consensus':{'structure_diversity','pocket_adopt'},'pockets':{'structure_diversity'},
                       'budget':{'consensus_design','consensus_recommend'},'budget_page':{'consensus_budget','budget_page'}}[intent]
             if decision['task_id'] is None:
@@ -694,7 +790,7 @@ class ChatAgent:
             if sum(s.get('action') in expected and s.get('status')=='complete' for s in details.get('steps',{}).values())!=1:
                 raise ValueError('Wrong source task for '+intent)
             previous=next(s['action'] for s in details['steps'].values() if s.get('action') in expected and s.get('status')=='complete')
-            action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'structure_diversity':'pocket_states','pocket_states':'pocket_adopt','pocket_adopt':'pocket_consensus','pocket_consensus':'consensus_recommend','structure_consensus':'consensus_recommend',
+            action=('consensus_budget' if intent=='budget' else 'budget_page') if intent in {'budget','budget_page'} else {'receptor_assess':'pocket_adopt','structure_diversity':'pocket_states','pocket_states':'pocket_adopt','pocket_adopt':'pocket_consensus','pocket_consensus':'consensus_recommend','structure_consensus':'consensus_recommend',
                     'consensus_recommend':'consensus_design','consensus_design':'consensus_funnel',
                     'structure_survey':'anchor_recommend','anchor_recommend':'anchor_design','anchor_design':'guided_funnel'}[previous]
             params=dict(source_run=Path(job['plan']).parent.name)

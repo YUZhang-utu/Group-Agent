@@ -1,0 +1,19 @@
+{
+  "executable": "/absolute/path/to/PLANTS1.2_64bit",
+  "ligand_mode": "rigid",
+  "search_speed": "speed1",
+  "cluster_structures": 1,
+  "workers": 4,
+  "timeout_seconds": 7200,
+  "ligand_chemistry_reviewed": false,
+  "receptors": [
+    {
+      "id": "replace_with_reviewed_receptor_id",
+      "mol2": "/absolute/path/to/prepared_receptor.mol2",
+      "center": null,
+      "radius": null,
+      "reviewed": false,
+      "evidence": "Replace with source PDB/chain, preparation protocol and binding-site evidence."
+    }
+  ]
+}

@@ -135,7 +135,8 @@ def test_http_token_origin_and_assets(tmp_path):
         result=post('/api/message',dict(session=sid,text='/capabilities',provider='deepseek'))
         assert "WEE1" in result['message']
         assert "Glide preparation/execution adapter; workstation validation pending" in result['message']
-        assert "PLANTS execution and cross-docking validation remain pending" in result['message']
+        assert "Block evaluation with PLANTS" in result['message']
+        assert "live PLANTS acceptance pending" in result['message']
         with urlopen(Request(base+'/api/state?session='+sid,headers={'Authorization':'Bearer fixture-token'})) as r:
             state=json.load(r)
             assert len(state['messages'])==2 and not state['tasks']

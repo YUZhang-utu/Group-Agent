@@ -1078,7 +1078,7 @@ completed_jobs_receipt_20261001:
   scientific_recall: not_validated
 
 bounded_property_refinement_e095:
-  status: implemented_locally_validated_ready_for_workstation
+  status: workstation_complete_user_reported
   guide: to_human/E095_BOUNDED_SIDECHAIN_BLOCKS.md
   runner: scripts/run_e095_property_blocks.sh
   minimum_child_population: 5000
@@ -1089,7 +1089,7 @@ bounded_property_refinement_e095:
   related_tests_passed: 25
   independent_molecule_evaluation: pending
   positional_sidechain_features: not_available_in_cached_summary
-  workstation_result: pending
+  workstation_result: user_receipt_membership_gate_passed
 
 e095_workstation_receipt:
   evidence: user_pasted_complete_report
@@ -1103,7 +1103,7 @@ e095_workstation_receipt:
   membership_gate: passed_against_complete_cached_profiles
   wall_seconds: 380.48668200708926
 joint_spatial_e096:
-  status: implemented_locally_validated_ready_for_workstation
+  status: workstation_complete_reported_metadata_gates_pass_diagnostic_pending
   guide: to_human/E096_JOINT_SPATIAL_BLOCKS.md
   runner: scripts/run_e096_joint_spatial_blocks.sh
   descriptor_width: 317
@@ -1116,6 +1116,63 @@ joint_spatial_e096:
   partition_resume: committed_parents_with_unchanged_signatures
   check_grouping: source_molecule_id
   local_related_tests_passed: 35
-  workstation_execution: pending
-  runtime: unmeasured_at_full_scale
+  workstation_execution: user_supplied_complete_reports_2026_10_02
+  runtime: profiles_37917_5816_seconds_blocks_1285_2944_seconds_reported
   limitations: finite_spatial_moments_not_atomwise_equivalence_or_recall_validation
+
+latest_e096_continuity:
+  date: 2026-10-01
+  handoff: to_human/20261001_AIDD_E096_OVERNIGHT_HANDOFF.md
+  published_commit: 97ff820
+  remote_branch: feature/structure-guided-chat
+  output_directory: /mnt/local/hand/yuzhang/aidd/mc_runs/e081-001/audit-stage/blocks-20000/final-blocks-e096-joint
+  next_action: inspect_progress_or_profiles_and_blocks_completion_reports
+  runtime_policy: no_duplicate_job_no_pull_or_code_changes_while_running
+  source_process_access: none
+
+e096_result_review_20261002:
+  report: to_human/20261002_E096_RESULT_REVIEW.md
+  regular_blocks: 1189
+  regular_conformers: 24530851
+  special_conformers: 132885
+  smallest_block: 5015
+  largest_block: 94952
+  small_blocks: 0
+  membership: user_reported_passed_against_complete_cached_profiles
+  next: run_readonly_small_file_diagnostic_and_workstation_ionizable_controls
+  local_tests: 16_targeted_passed
+  raw_library_ionizable_census: not_performed
+
+
+e096_diagnostic_received_20261002:
+  status: offline_candidate_ready_for_evaluation
+  metadata_checks: 13_passed_no_errors
+  matching_environment_ionizable_controls: 4_passed
+  raw_chemistry_census: not_performed
+  median_block_population: 8132
+  largest_ten_fraction: 0.037565512912699196
+  typed_spatial_weighted_variance_share: 0.4255755778889561
+  typed_spatial_median_axis_squared_loading_share: 0.3392733590033916
+  next: prepare_sampling_and_independent_retrieval_PLANTS_NE_evaluation
+  production_search_dispatch: unvalidated
+  repartition_requested: false
+
+e097_block_evaluation:
+  status: implemented_local_fixture_validation_passed_workstation_pending
+  schemes: [E094, E095, E096]
+  conformers_per_regular_block: 100
+  expected_sampling_slots: 276100
+  deduplication: conformer_id_across_schemes_same_receptor_and_settings
+  special_pool: unchanged_excluded_from_regular_panel
+  ligand_mode: PLANTS_rigid_ligand
+  receptor_workflow: PDB_identity_pocket_advice_explicit_adoption_clean_SPORES_native_ligand_centroid
+  spores_executable_user_supplied: ~/pdb/1/SPORES_64bit
+  spores_mode_user_supplied: complete
+  actual_pdb_reference: not_selected_6Y4Q_was_only_command_example
+  llm_integration: typed_plans_owned_chat_and_domain_workflow_dispatch
+  local_related_tests: 85_passed
+  live_engines: not_run
+  full_library_sampling: not_run_locally
+  ne_rescoring: pose_identity_handoff_only_model_not_run
+  guide: to_human/E097_BLOCK_PLANTS_EVALUATION.md
+  handoff: to_human/20261002_AIDD_E097_BLOCK_DOCKING_HANDOFF.md

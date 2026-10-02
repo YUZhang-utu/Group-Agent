@@ -13,6 +13,31 @@ def get_json(url):
     return json.loads(raw)
 
 
+def resolve_pdb_target(pdb_id, entity_id=None, fetch=get_json):
+    """Resolve target identity from RCSB evidence, never from a guessed PDB label."""
+    if not re.fullmatch(r'[0-9][A-Za-z0-9]{3}',pdb_id): raise ValueError('Invalid PDB ID')
+    code=pdb_id.upper();base='https://data.rcsb.org/rest/v1/core/'
+    entry=fetch(base+'entry/'+code);entities=entry['rcsb_entry_container_identifiers']['polymer_entity_ids']
+    if entity_id is not None and entity_id not in entities: raise ValueError('Requested entity absent from PDB entry')
+    candidates=[]
+    for eid in entities:
+        if entity_id is not None and eid!=entity_id:continue
+        raw=fetch(base+f'polymer_entity/{code}/{eid}')
+        identifiers=raw.get('rcsb_polymer_entity_container_identifiers',{})
+        refs=identifiers.get('reference_sequence_identifiers') or []
+        for ref in refs:
+            if ref.get('database_name')=='UniProt':
+                candidates.append(dict(entity_id=eid,accession=ref['database_accession'],
+                    chains=identifiers.get('auth_asym_ids',[]),description=raw.get('rcsb_polymer_entity',{}).get('pdbx_description'),
+                    source_url=base+f'polymer_entity/{code}/{eid}',source_payload_sha256=hashlib.sha256(json.dumps(raw,sort_keys=True).encode()).hexdigest()))
+    accessions={c['accession'] for c in candidates}
+    if len(accessions)!=1:
+        return dict(status='needs_target_identity',pdb_id=code,candidates=candidates,
+                    reason='Choose the target polymer entity; the entry has ambiguous or missing UniProt mappings')
+    protein=fetch_protein(next(iter(accessions)),fetch=fetch)
+    return dict(status='complete',pdb_id=code,candidates=candidates,protein=protein)
+
+
 def fetch_protein(accession, organism_id=None, fetch=get_json):
     if not re.fullmatch(r"[A-Z0-9]{6}(?:[A-Z0-9]{4})?", accession): raise ValueError("Invalid accession")
     url = f"https://rest.uniprot.org/uniprotkb/{accession}.json"

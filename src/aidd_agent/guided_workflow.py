@@ -10,7 +10,7 @@ from .gaussian_batch import _atomic_json
 from .screening_selection import check_hashes
 
 SOURCE_ACTIONS={'anchor_recommend':'structure_survey','anchor_design':'anchor_recommend',
-                'pocket_states':'structure_diversity','pocket_adopt':'pocket_states',
+                'pocket_states':'structure_diversity','pocket_adopt':('pocket_states','receptor_assess'),
                 'pocket_consensus':'pocket_adopt',
                 'guided_funnel':'anchor_design','guided_select':('guided_funnel','consensus_funnel'),
                 'structure_consensus':'structure_diversity','consensus_recommend':('structure_consensus','pocket_consensus'),

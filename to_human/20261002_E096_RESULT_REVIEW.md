@@ -1,5 +1,48 @@
 # E096 workstation receipt review - 2026-10-02
 
+## Diagnostic received: offline candidate ready for evaluation
+
+The user subsequently supplied the complete workstation diagnostic. All 13 metadata
+checks passed, errors were empty, and all three small-file hashes matched. Retain
+E096 as the frozen offline candidate for evaluation; do not repartition merely to
+change block count. Production search dispatch and retrieval recall remain unvalidated.
+
+Block sizes: p10 5,765.8; median 8,132; p90 62,154.6; p95 73,355.2;
+p99 88,555.28. Largest ten blocks contain 3.75655% of regular conformers. Parent
+child counts: 88 parents unchanged, 41 with two children, one with three, and 254
+with four. This is a bounded, unequal partition; it is not dominated by a handful
+of enormous blocks and does not create sub-5,000-member fragments. Use separate
+execution batching rather than changing scientific membership for load balancing.
+
+Weighted descriptor variance shares: broad chemistry 18.5104%, local sterics 9.5873%,
+backbone geometry 29.3447%, typed spatial 42.5576%. Typed spatial squared loading
+share on accepted axes: p10 27.9604%, median 33.9273%, p90 47.6224%. These establish
+spatial participation in the stored metric and splits, not improved retrieval or
+causal importance. Marginal medians across feature groups must not be summed.
+Median internal check dispersion reduction is 10.1775%; this is not recall gain.
+
+All four workstation synthetic ionizable controls passed. RDKit 2026.03.5 feature
+definition and descriptor implementation hashes match the original run. Thus the
+two feature families work on the tested controls in the matching environment.
+The zero counts in admitted library features are not evidence that every source
+molecule is electrically neutral; molecule preparation, chemistry coverage and
+residue containment still need a bounded raw-structure inventory if investigating
+the underlying chemical explanation. The earlier warning text conservatively asks
+for controls; those controls are now completed. A raw-library census is not.
+
+Next evaluation protocol (not executed): preserve E095 baseline, E096 and all IDs;
+start with 100 conformers per E096 regular block (118,900 slots), diversify molecule
+IDs where possible, retain selection probabilities/source locators, and account for
+unequal block populations in population-level estimates. Separate exploratory block
+profiling from a newly reserved molecule-held-out query/reference evaluation; do not
+relabel the adaptively reused internal check split as an unbiased test. Run existing
+3D search, then PLANTS/MDM2 against reviewed receptor choices, then the user's N-E
+workflow. Keep the 132,885-conformer special pool searchable and benchmark its cost.
+Do not prune unsampled blocks. The deferred 1,150,072 chemistry-review conformers
+remain outside this stage. Sampling/export, docking and N-E have not started here.
+
+The older sections below preserve the review history before this diagnostic arrived.
+
 ## Evidence received
 
 User supplied completion reports, not local copies of the large output databases.
