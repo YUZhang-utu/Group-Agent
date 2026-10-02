@@ -54,6 +54,17 @@ def test_atom_renumbering_is_not_a_new_geometry():
     np.testing.assert_allclose(vector(mol),vector(Chem.RenumberAtoms(mol,order)),rtol=1e-5,atol=1e-6)
 
 
+@pytest.mark.parametrize('side,family_index',[('CCCCN',5),('CCCC[NH3+]',5),('CC(=O)O',6),('CC(=O)[O-]',6)])
+def test_ionizable_features_survive_residue_fragment_mapping(side,family_index):
+    mol=Chem.MolFromSmiles(f'N1[C@@H]({side})C(=O)N[C@@H](C)C(=O)N[C@@H](C)C1=O')
+    conf=Chem.Conformer(mol.GetNumAtoms())
+    for i,p in enumerate(np.random.default_rng(81).normal(size=(mol.GetNumAtoms(),3))):conf.SetAtomPosition(i,p)
+    mol.AddConformer(conf)
+    result=vector(mol)
+    for lag in range(4):
+        assert result[24+lag*56+family_index*7]>0
+
+
 def test_same_molecule_cannot_supply_both_fit_and_check():
     x=np.zeros((10000,WIDTH),dtype=np.float32);x[5000:]=1
     leaves,evidence=partition(x,['same-molecule']*len(x))
