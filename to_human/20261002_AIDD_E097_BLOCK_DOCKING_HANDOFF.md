@@ -1,5 +1,8 @@
 # AIDD E097 continuity, 2026-10-02
 
+Superseded by [the running-docking checkpoint](20261002_AIDD_E097_DOCKING_RUNNING_HANDOFF.md).
+The text below records the earlier implementation state, not current execution status.
+
 Resume in `D:/agent/projects/aidd_structure_guided_chat`, branch
 `feature/structure-guided-chat`, remote `YUZhang-utu/Group-Agent`.
 

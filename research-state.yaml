@@ -1158,7 +1158,7 @@ e096_diagnostic_received_20261002:
   repartition_requested: false
 
 e097_block_evaluation:
-  status: implemented_local_fixture_validation_passed_workstation_pending
+  status: workstation_docking_running_user_confirmed
   schemes: [E094, E095, E096]
   conformers_per_regular_block: 100
   expected_sampling_slots: 276100
@@ -1168,11 +1168,34 @@ e097_block_evaluation:
   receptor_workflow: PDB_identity_pocket_advice_explicit_adoption_clean_SPORES_native_ligand_centroid
   spores_executable_user_supplied: ~/pdb/1/SPORES_64bit
   spores_mode_user_supplied: complete
-  actual_pdb_reference: not_selected_6Y4Q_was_only_command_example
+  actual_pdb_reference: 6Y4Q_in_completed_workstation_assessment
   llm_integration: typed_plans_owned_chat_and_domain_workflow_dispatch
   local_related_tests: 85_passed
-  live_engines: not_run
+  live_engines: SPORES_three_receptors_complete_PLANTS_first_100_scores_verified_full_run_ongoing
   full_library_sampling: not_run_locally
   ne_rescoring: pose_identity_handoff_only_model_not_run
   guide: to_human/E097_BLOCK_PLANTS_EVALUATION.md
-  handoff: to_human/20261002_AIDD_E097_BLOCK_DOCKING_HANDOFF.md
+  handoff: to_human/20261002_AIDD_E097_DOCKING_RUNNING_HANDOFF.md
+
+
+e097_docking_running_checkpoint_20261002:
+  evidence: user_reports_only_no_remote_process_access
+  latest_user_state: docking_running
+  last_reported_progress: 145_of_8445
+  current_workers: unconfirmed_original_4_or_proposed_20
+  latest_published_code: 12e0412
+  proposed_20_worker_migration: instructions_delivered_execution_not_confirmed
+  unique_conformers: 273873
+  receptors: [1RV1_B, 7NA2_A, 5J7F_A]
+  expected_conformer_receptor_scores: 821619
+  first_batch_recovery: 100_scored_0_failed_first_gate_passed
+  task_assessment: ea9380bc47cc45f9
+  task_receptor_preparation: a55310a3a93e4479
+  task_sampling_preparation: 8d1383bfe8354ed0
+  execution_directory: /mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution
+  original_cli_output: plants-recovered
+  proposed_parallel_output: plants-parallel20
+  cli_docking_registered_as_chat_task: false
+  next_action: inspect_actual_process_output_workers_and_matching_log_before_any_mutation
+  do_not: duplicate_launch_resample_repartition_or_pull_into_active_checkout
+  pending: full_panel_completion_block_analysis_NE_handoff_and_CLI_agent_result_registration
