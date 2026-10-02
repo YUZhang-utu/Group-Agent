@@ -8,7 +8,7 @@ import subprocess
 import pytest
 
 from aidd_agent.block_sampling import sample, check_outputs
-from aidd_agent.block_plants import prepare, run, analyze, parse_ranking
+from aidd_agent.block_plants import prepare, run, analyze, parse_ranking, recover
 from aidd_agent.final_work_blocks import sha
 from aidd_agent.joint_spatial_profiles import save
 from aidd_agent.mol2 import parse_mol2_block, iter_mol2_blocks
@@ -146,6 +146,66 @@ def test_failed_first_job_stops_unscheduled_receptors(tmp_path,monkeypatch):
 def test_bad_output_identity_and_scores_rejected(tmp_path,name,score):
     p=tmp_path/'scores.csv';p.write_text('LIGAND_ENTRY,TOTAL_SCORE\n'+name+','+score+'\n')
     with pytest.raises(ValueError): parse_ranking(p,[dict(cid='a',alias='c000000001')])
+
+
+def test_native_plants_omitted_name_header_and_reordered_entries(tmp_path):
+    p=tmp_path/'scores.csv'
+    p.write_text('TOTAL_SCORE,SCORE_RB_PEN,TIME\n'
+                 'c000141837_entry_00002_conf_01,-82.2662,-82.2662,1.04165\n'
+                 'c000132700_entry_00001_conf_01,-73.9855,-73.9855,1.14469\n')
+    records=[dict(cid='first',alias='c000132700'),dict(cid='second',alias='c000141837')]
+    rows=parse_ranking(p,records)
+    assert rows['c000132700']['score']==-73.9855
+    assert rows['c000141837']['cid']=='second'
+
+
+@pytest.mark.parametrize('header,row',[
+    ('TOTAL_SCORE,TIME','c000000001_entry_00001_conf_01,-1'),
+    ('TOTAL_SCORE,TIME','-1,1'),
+    ('LIGAND_ENTRY,TOTAL_SCORE','c000000001_entry_00001_conf_01,-1,extra'),
+    ('TOTAL_SCORE,TOTAL_SCORE','c000000001_entry_00001_conf_01,-1,-2'),
+    ('TOTAL_SCORE,TIME','c000000001_entry_00002_conf_01,-1,1'),
+    ('TOTAL_SCORE,TIME','c000000001_entry_00001_conf_01,nan,1'),
+])
+def test_ranking_does_not_guess_malformed_column_or_identity(tmp_path,header,row):
+    p=tmp_path/'scores.csv';p.write_text(header+'\n'+row+'\n')
+    with pytest.raises(ValueError):parse_ranking(p,[dict(cid='a',alias='c000000001')])
+
+
+def test_recover_native_outputs_without_engine_and_resume(tmp_path,monkeypatch):
+    cfg,source=fixture(tmp_path);s=tmp_path/'samples';sample(cfg,s,count=2)
+    p=tmp_path/'prepared';prepare(s/'report.json',plants_profile(tmp_path,source),p)
+    def native(*a,**kw):
+        result=fake_plants(*a,**kw)
+        ranking=Path(kw['cwd'])/'poses/bestranking.csv'
+        ranking.write_text(ranking.read_text().replace('LIGAND_ENTRY,TOTAL_SCORE','TOTAL_SCORE'))
+        return result
+    def old_parser(*args):raise ValueError('Unknown PLANTS ranking header')
+    monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',native)
+    monkeypatch.setattr('aidd_agent.block_plants.parse_ranking',old_parser)
+    out=tmp_path/'old';assert run(p/'report.json',out)['failed_jobs']==1
+    before={str(f.relative_to(out)):sha(f) for f in out.rglob('*') if f.is_file()}
+    monkeypatch.setattr('aidd_agent.block_plants.parse_ranking',parse_ranking)
+    def forbidden(*a,**kw):pytest.fail('Recovery/resume must not launch the engine')
+    monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',forbidden)
+    new=tmp_path/'recovered';r=recover(out/'report.json',new)
+    assert r['failed_jobs']==0 and r['scored']>0 and r['first_job_gate']=='passed'
+    assert before=={str(f.relative_to(out)):sha(f) for f in out.rglob('*') if f.is_file()}
+    assert run(p/'report.json',new,max_jobs=1)['scored']==r['scored']
+    with (new/'scores.csv').open() as f:
+        assert all(Path(row['pose_file']).is_relative_to(new) for row in csv.DictReader(f))
+    assert analyze(new/'report.json',tmp_path/'analysis')['status']=='complete'
+    pose=next(out.rglob('docked_ligands.mol2'));pose.write_text(pose.read_text()+'\n')
+    with pytest.raises(ValueError,match='hash/path mismatch'):recover(out/'report.json',tmp_path/'tampered')
+
+
+def test_recovery_rejects_engine_failure(tmp_path,monkeypatch):
+    cfg,source=fixture(tmp_path);s=tmp_path/'samples';sample(cfg,s,count=2)
+    p=tmp_path/'prepared';prepare(s/'report.json',plants_profile(tmp_path,source),p)
+    monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',lambda *a,**kw:subprocess.CompletedProcess(a[0],1))
+    out=tmp_path/'failed';run(p/'report.json',out)
+    with pytest.raises(ValueError,match='known post-execution'):
+        recover(out/'report.json',tmp_path/'recovered')
 
 
 def test_model_schema_dependencies_and_no_model_paths():

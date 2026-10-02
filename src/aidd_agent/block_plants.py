@@ -88,19 +88,46 @@ def parse_ranking(path, records):
     """Original-title aliases plus 1-based entry indices prevent filename guessing."""
     by_alias={r['alias']:r for r in records}; found={}
     with Path(path).open(encoding='utf-8-sig',newline='') as f:
-        reader=csv.DictReader(f)
-        headers={re.sub('[^A-Z0-9]','',k.upper()):k for k in reader.fieldnames or []}
-        scorekey=headers.get('TOTALSCORE'); namekey=headers.get('LIGANDENTRY') or headers.get('LIGAND') or headers.get('NAME')
-        if not scorekey or not namekey: raise ValueError('Unknown PLANTS ranking header')
+        reader=csv.reader(f)
+        fields=next(reader,[])
+        normalized=[re.sub('[^A-Z0-9]','',k.upper()) for k in fields]
+        if len(set(normalized))!=len(normalized) or 'TOTALSCORE' not in normalized:
+            raise ValueError('Unknown or duplicate PLANTS ranking header')
+        names=[i for i,k in enumerate(normalized) if k in ('LIGANDENTRY','LIGAND','NAME','PLANTSLIGANDDESCRIPTION')]
+        implicit=not names and bool(normalized) and normalized[0]=='TOTALSCORE'
+        if len(names)>1 or (not names and not implicit): raise ValueError('Unknown PLANTS ranking header')
+        name_index=names[0] if names else 0
+        score_index=normalized.index('TOTALSCORE')+int(implicit)
         for row in reader:
-            name=row[namekey].strip(); m=re.fullmatch(r'(c\d{9})_entry_(\d+)_conf_(\d+)(?:\.mol2)?',name)
+            if not row: continue
+            if len(row)!=len(fields)+int(implicit): raise ValueError('PLANTS ranking row width mismatch')
+            name=row[name_index].strip(); m=re.fullmatch(r'(c\d{9})_entry_(\d+)_conf_(\d+)(?:\.mol2)?',name)
             if not m or m[1] not in by_alias: raise ValueError('Unrecognized PLANTS pose identity: '+name)
             entry=int(m[2]); record=by_alias[m[1]]
             if not 1<=entry<=len(records) or records[entry-1]['alias']!=m[1]: raise ValueError('PLANTS entry/title mismatch')
-            value=float(row[scorekey])
+            value=float(row[score_index])
             if not math.isfinite(value) or m[1] in found: raise ValueError('Duplicate or nonfinite best-ranking score')
             found[m[1]]=dict(cid=record['cid'],alias=m[1],score=value,pose_name=name.removesuffix('.mol2'))
     return found
+
+
+def collect_pose_rows(attempt, job):
+    rows=[]
+    found=parse_ranking(attempt/'poses/bestranking.csv',job['chunk']['records'])
+    pose_locations={}
+    for p in sorted((attempt/'poses').glob('*.mol2')):
+        for idx,text in iter_mol2_blocks(p):
+            title=text.splitlines()[1].strip().removesuffix('.mol2')
+            if title in {r['pose_name'] for r in found.values()}:
+                if title in pose_locations: raise ValueError('Ambiguous output pose title')
+                pose_locations[title]=(str(p.resolve()),idx)
+    for record in job['chunk']['records']:
+        hit=found.get(record['alias']); pose=pose_locations.get(hit['pose_name']) if hit else None
+        rows.append(dict(cid=record['cid'],alias=record['alias'],receptor=job['receptor'],job=job['id'],
+                         status='ok' if pose else 'missing_pose' if hit else 'missing_score',
+                         score=hit['score'] if pose else None,pose_name=hit['pose_name'] if hit else '',
+                         pose_file=pose[0] if pose else '',pose_index=pose[1] if pose else None))
+    return rows
 
 
 @exclusive_output
@@ -147,20 +174,7 @@ def run(prepared_report, output, *, max_jobs=None):
                 result=subprocess.run([str(executable),'--mode','screen','plantsconfig'],cwd=attempt,stdout=log,
                                       stderr=subprocess.STDOUT,timeout=c['timeout_seconds'],shell=False)
             if result.returncode: raise RuntimeError('PLANTS exit code '+str(result.returncode))
-            found=parse_ranking(attempt/'poses/bestranking.csv',job['chunk']['records'])
-            pose_locations={}
-            for p in sorted((attempt/'poses').glob('*.mol2')):
-                for idx,text in iter_mol2_blocks(p):
-                    title=text.splitlines()[1].strip().removesuffix('.mol2')
-                    if title in {r['pose_name'] for r in found.values()}:
-                        if title in pose_locations: raise ValueError('Ambiguous output pose title')
-                        pose_locations[title]=(str(p.resolve()),idx)
-            for record in job['chunk']['records']:
-                hit=found.get(record['alias']); pose=pose_locations.get(hit['pose_name']) if hit else None
-                rows.append(dict(cid=record['cid'],alias=record['alias'],receptor=job['receptor'],job=job['id'],
-                                 status='ok' if pose else 'missing_pose' if hit else 'missing_score',
-                                 score=hit['score'] if pose else None,pose_name=hit['pose_name'] if hit else '',
-                                 pose_file=pose[0] if pose else '',pose_index=pose[1] if pose else None))
+            rows=collect_pose_rows(attempt,job)
         except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
             error=str(exc)
             rows=[dict(cid=r['cid'],alias=r['alias'],receptor=job['receptor'],job=job['id'],status='failed',score=None,pose_name='',pose_file='',pose_index=None) for r in job['chunk']['records']]
@@ -178,6 +192,10 @@ def run(prepared_report, output, *, max_jobs=None):
             for i,result in enumerate(pool.map(execute,selected[1:]),2):
                 print(f'PLANTS {i}/{len(selected)}: {result["job"]} {result["status"]}',flush=True)
                 save(output/'progress.json',dict(completed_jobs=i,requested_jobs=len(selected),last_job=result['job']))
+    return summarize_run(prepared,prep,c,output,jobs,gate)
+
+
+def summarize_run(prepared, prep, c, output, jobs, gate):
     all_rows=[]; done=0; failures=0
     for job in jobs:
         path=output/job['id']/'receipt.json'
@@ -192,6 +210,7 @@ def run(prepared_report, output, *, max_jobs=None):
     write_csv(output/'scores.csv',all_rows,fields)
     status='complete' if done==len(jobs) and not failures else 'partial'
     hashes={'scores.csv':sha(output/'scores.csv'),'signature.json':sha(output/'signature.json')}
+    if (output/'recovery.json').exists(): hashes['recovery.json']=sha(output/'recovery.json')
     # Seal receipts and pose files too: reuse is bound to coordinates, not just scores.
     for job in jobs:
         receipt=output/job['id']/'receipt.json'
@@ -205,6 +224,77 @@ def run(prepared_report, output, *, max_jobs=None):
            limitations=['Docking is stochastic; sample seed does not seed the PLANTS optimizer.',
                         'Missing/failed/not-run scores are excluded, never zero-imputed.'])
     save(output/'report.json',r); return r
+
+
+@exclusive_output
+def recover(run_report, output):
+    """Reparse sealed successful-engine outputs into a fresh resumable run; never execute PLANTS."""
+    source=Path(run_report).resolve(); old=read(source); root=source.parent
+    if old.get('kind')!='block_plants_run' or old.get('status') not in ('complete','partial'):
+        raise ValueError('Existing PLANTS run report required')
+    def sealed(base, name, digest):
+        path=(base/name).resolve()
+        if not path.is_relative_to(base.resolve()) or not path.is_file() or sha(path)!=digest:
+            raise ValueError('Recovery source hash/path mismatch: '+name)
+        return path
+    for name,digest in old['output_hashes'].items(): sealed(root,name,digest)
+    signature=read(root/'signature.json'); prepared=Path(old['prepared_report']).resolve().parent
+    if signature.get('prepared_report')!=str(prepared/'report.json') or signature.get('prepared_sha256')!=sha(prepared/'report.json'):
+        raise ValueError('Recovery preparation signature mismatch')
+    prep=check_outputs(prepared); check_outputs(Path(prep['sample_report']).parent)
+    c=read(prepared/'profile.json'); executable=Path(c['executable'])
+    if signature.get('executable')!=str(executable) or signature.get('executable_sha256')!=sha(executable):
+        raise ValueError('Recovery executable changed')
+    jobs=read(prepared/'jobs.json')['jobs']; plans=[]
+    for job in jobs:
+        receipt_path=root/job['id']/'receipt.json'
+        if not receipt_path.exists(): continue
+        rel=str(receipt_path.relative_to(root))
+        if rel not in old['output_hashes']: raise ValueError('Unsealed job receipt')
+        receipt=read(receipt_path)
+        if receipt.get('job')!=job['id']: raise ValueError('Recovery job identity mismatch')
+        if receipt.get('status')!='complete' and receipt.get('error')!='Unknown PLANTS ranking header':
+            raise ValueError('Recovery only accepts completed jobs or the known post-execution ranking-header failure')
+        for name,digest in receipt['output_hashes'].items(): sealed(receipt_path.parent,name,digest)
+        rankings=[Path(name) for name in receipt['output_hashes'] if Path(name).parts[-2:]==('poses','bestranking.csv')]
+        if len(rankings)!=1: raise ValueError('Expected one sealed ranking attempt')
+        attempt=rankings[0].parent.parent
+        if len(attempt.parts)!=1 or not re.fullmatch(r'attempt-\d+',attempt.name): raise ValueError('Invalid attempt path')
+        for name in (attempt/'protein.mol2',attempt/'ligands.mol2',attempt/'plantsconfig',attempt/'plants.log'):
+            if str(name) not in receipt['output_hashes']: raise ValueError('Missing sealed engine input/log')
+        if sha(receipt_path.parent/attempt/'protein.mol2')!=sha(prepared/'receptors'/(job['receptor']+'.mol2')):
+            raise ValueError('Recovery receptor mismatch')
+        if sha(receipt_path.parent/attempt/'ligands.mol2')!=job['chunk']['sha256']:
+            raise ValueError('Recovery ligand mismatch')
+        # Require all MOL2 files read by the parser to be covered by the old receipt.
+        for pose in (receipt_path.parent/attempt/'poses').glob('*.mol2'):
+            if str(pose.relative_to(receipt_path.parent)) not in receipt['output_hashes']:
+                raise ValueError('Unsealed pose output')
+        rows=collect_pose_rows(receipt_path.parent/attempt,job)
+        if not rows or any(row['status']!='ok' for row in rows): raise ValueError('Recovery has missing scores or poses')
+        plans.append((job,receipt,attempt))
+    if not plans: raise ValueError('No recoverable jobs')
+    output=Path(output).resolve()
+    if output.exists(): raise ValueError('Recovery requires a fresh output directory')
+    output.mkdir(parents=True)
+    signature['implementation_sha256']=sha(Path(__file__));save(output/'signature.json',signature)
+    save(output/'recovery.json',dict(source_report=str(source),source_report_sha256=sha(source),
+         recovered_jobs=[job['id'] for job,_,_ in plans],engine_executed=False))
+    for job,receipt,attempt in plans:
+        directory=output/job['id'];directory.mkdir()
+        for name,digest in receipt['output_hashes'].items():
+            src=sealed(root/job['id'],name,digest);dst=directory/name;dst.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(src,dst)
+            if sha(dst)!=digest: raise ValueError('Recovery copy hash mismatch')
+        rows=collect_pose_rows(directory/attempt,job)
+        score_path=attempt/'scores.json';save(directory/score_path,rows)
+        hashes=dict(receipt['output_hashes']);hashes[str(score_path)]=sha(directory/score_path)
+        recovered=dict(receipt,status='complete',error=None,rows=rows,
+                       output_hashes=hashes,
+                       recovery_source_receipt=str(root/job['id']/'receipt.json'))
+        save(directory/'receipt.json',recovered)
+    gate=(output/jobs[0]['id']/'receipt.json').exists()
+    return summarize_run(prepared,prep,c,output,jobs,gate)
 
 
 @exclusive_output
@@ -267,12 +357,12 @@ def analyze(run_report, output):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__); sub=p.add_subparsers(dest='action',required=True)
-    for name in ('prepare','run','analyze'):
+    for name in ('prepare','run','recover','analyze'):
         s=sub.add_parser(name); s.add_argument('--source',required=True); s.add_argument('--output',required=True)
         if name=='prepare': s.add_argument('--profile',required=True)
         if name=='run': s.add_argument('--max-jobs',type=int)
     a=p.parse_args()
-    result=prepare(a.source,a.profile,a.output) if a.action=='prepare' else run(a.source,a.output,max_jobs=a.max_jobs) if a.action=='run' else analyze(a.source,a.output)
+    result=prepare(a.source,a.profile,a.output) if a.action=='prepare' else run(a.source,a.output,max_jobs=a.max_jobs) if a.action=='run' else recover(a.source,a.output) if a.action=='recover' else analyze(a.source,a.output)
     print(json.dumps(result,indent=2))
 
 

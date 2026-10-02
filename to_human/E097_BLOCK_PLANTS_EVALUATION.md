@@ -167,3 +167,34 @@ ambiguity, receptor cleaning, centroid generation and mocked SPORES/PLANTS execu
 Real binary formats, full-library runtime, MDM2 receptor suitability and live-provider
 intent quality are separate workstation acceptance checks. An optimizer RNG seed is
 not claimed: the seed recorded here governs panel sampling only.
+
+## PLANTS 1.2 omitted ligand-name header recovery
+
+The workstation first batch completed in 117.15 seconds with zero skipped ligands,
+but the old adapter rejected its ranking header. This PLANTS output omits the name
+column from the header: TOTAL_SCORE begins the header while each data row starts
+with the pose name. The parser now requires exactly one additional data column for
+this specific layout and preserves strict alias/entry, finite-score and pose checks.
+Explicit ligand-name headers remain supported. No scoring or docking settings changed.
+
+To recover a sealed old run without executing PLANTS:
+
+```bash
+python -m aidd_agent.block_plants recover \
+  --source /absolute/old-run/report.json \
+  --output /absolute/new-recovered-run
+```
+
+Use a fresh output directory. Recovery validates the original report/receipt hashes,
+prepared inputs and executable identity. It only accepts completed receipts or the
+specific post-execution Unknown PLANTS ranking header failure. Other engine failures,
+unsealed poses, changed inputs, missing scores and missing poses stop recovery.
+Original files remain unchanged. The new run seals copied raw outputs and corrected
+scores, with a recovery.json provenance record. It may remain partial when other jobs
+have not run. The CLI result is not automatically registered as a Chat task.
+
+After inspecting recovery, an explicitly authorized CLI continuation can use the
+same prepared report and recovered output directory; completed jobs are reused.
+Do not point the new implementation directly at the old run: its implementation
+signature is intentionally frozen. First-batch parsing success is not cross-docking
+or biological validation, and only tests the first receptor.
