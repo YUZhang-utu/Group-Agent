@@ -2561,3 +2561,15 @@ check passed after the partial-resume receipt fix. These are local fixtures,
 not EquiScore predictions. Live Linux installation, real 96-pair pilot and full
 821619-pair evaluation remain pending on the workstation. Natural-language Chat
 dispatch is not registered yet; terminal commands are in the E103 setup guide.
+
+## 2026-10-05: workstation pilot startup failure awaiting worker traceback
+
+User reported the coordinator's missing-predictions exception from the first
+EquiScore pilot. This proves no prediction database was produced, not which
+startup stage failed. Requested the final 80 worker.log lines. Added bounded
+current-invocation traceback and exit-code forwarding to the coordinator; 23
+focused ranking/rescoring tests passed, including startup failure and log-tail
+isolation. Root cause and live recovery remain pending the workstation log.
+Do not reinstall, alter receptor validation, or resubmit inference on this
+evidence alone. Updating coordinator code requires a fresh sealed output parent
+for a later retry; preserve the failed run for diagnosis.

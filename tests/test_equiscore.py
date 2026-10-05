@@ -107,6 +107,33 @@ def test_changed_pilot_inputs_block_full(engine, tmp_path):
     assert len(calls) == 1
 
 
+def test_startup_failure_displays_underlying_exception(engine, tmp_path, monkeypatch):
+    source, profile, _ = engine
+    def fail(command, **kwargs):
+        kwargs['stdout'].write('Traceback (most recent call last):\nValueError: fixture receptor mismatch\n')
+        kwargs['stdout'].flush()
+        return SimpleNamespace(returncode=1)
+    monkeypatch.setattr(es.subprocess, 'run', fail)
+    with pytest.raises(RuntimeError, match='worker exit code 1') as caught:
+        es.run(source, profile, tmp_path / 'pilot')
+    assert 'ValueError: fixture receptor mismatch' in str(caught.value)
+    assert not (tmp_path / 'pilot/report.json').exists()
+
+
+def test_worker_log_tail_excludes_previous_attempt_and_is_bounded(tmp_path):
+    log = tmp_path / 'worker.log'
+    log.write_bytes(b'Previous unrelated error\n')
+    start = log.stat().st_size
+    with log.open('ab') as stream:
+        stream.write(b'Current failure\n')
+    error = es.worker_failure(tmp_path, 'Failed', 2, start)
+    assert 'Previous unrelated' not in str(error) and 'Current failure' in str(error)
+    with log.open('ab') as stream:
+        stream.write(b'x' * 15000 + b'\nRuntimeError: final cause\n')
+    assert len(str(es.worker_failure(tmp_path, 'Failed', 2, start))) < 12500
+    assert 'RuntimeError: final cause' in str(es.worker_failure(tmp_path, 'Failed', 2, start))
+
+
 def test_partial_receipt_resumes_only_missing_pairs(engine, tmp_path):
     source, profile, calls = engine
     out = tmp_path / 'pilot'

@@ -97,6 +97,17 @@ def write_csv(path, rows, fields=None):
         writer.writeheader(); writer.writerows(rows)
 
 
+def worker_failure(output, reason, exit_code, log_start=0):
+    """Expose a bounded tail of this invocation, without masking the worker error."""
+    log = Path(output) / 'worker.log'
+    with log.open('rb') as stream:
+        stream.seek(0, 2)
+        stream.seek(max(log_start, stream.tell() - 12000))
+        tail = '\n'.join(stream.read().decode('utf-8', errors='replace').splitlines()[-60:])
+    return RuntimeError(f'{reason} (worker exit code {exit_code}). Log: {log}\n'
+                        + (tail or 'No output was recorded by this worker invocation.'))
+
+
 @exclusive_output
 def run(source, profile, output, *, scope='pilot', pilot_report=None):
     from .prompt_workflow import file_lock
@@ -158,17 +169,18 @@ def run(source, profile, output, *, scope='pilot', pilot_report=None):
             lib = str(Path(config['python']).parent.parent / 'lib')
             worker_env['LD_LIBRARY_PATH'] = lib + (':' + worker_env['LD_LIBRARY_PATH'] if worker_env.get('LD_LIBRARY_PATH') else '')
         with (output / 'worker.log').open('a', encoding='utf-8') as log:
+            log_start = log.tell()
             result = subprocess.run([config['python'], str(worker), '--job', str(output / 'job.json')], stdout=log, stderr=subprocess.STDOUT, shell=False, env=worker_env)
         for name, digest in inputs.items():
             if sha(name) != digest: raise ValueError('Source/configuration changed during EquiScore execution')
         database = output / 'predictions.sqlite'
         if not database.is_file():
-            raise RuntimeError('EquiScore did not produce predictions; inspect ' + str(output / 'worker.log'))
+            raise worker_failure(output, 'EquiScore did not produce predictions', result.returncode, log_start)
         rows = collect(source.parent / 'scores.csv', database, set(selected) if selected is not None else None)
         write_csv(output / 'scores.csv', rows)
         good = sum(row['status'] == 'ok' for row in rows)
         receipt = output / 'environment.json'
-        if not receipt.is_file(): raise RuntimeError('Worker environment receipt is missing')
+        if not receipt.is_file(): raise worker_failure(output, 'Worker environment receipt is missing', result.returncode, log_start)
         report = dict(kind='block_equiscore_run', status='complete' if good == len(rows) and result.returncode == 0 else 'partial',
             scope=scope, identity=identity, score='EquiScore', better='higher', model='EquiScore screening',
             model_commit=COMMIT, weights_sha256=WEIGHT_SHA, model_executed=True,
