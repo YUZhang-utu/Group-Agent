@@ -1317,7 +1317,7 @@ rescoring_literature_review:
 
 equiscore_e103:
   date: 2026-10-05
-  status: workstation_pilot_startup_failed_worker_traceback_pending
+  status: unused_checkpoint_keys_fixed_workstation_pilot_retry_pending
   protocol: experiments/E103-equiscore-rescoring.md
   guide: to_human/20261005_EQUISCORE_SETUP.md
   install: scripts/install_equiscore.sh
@@ -1331,5 +1331,5 @@ equiscore_e103:
   chat_dispatch: not_registered_yet
   live_installation: not_run
   real_inference: not_run
-  focused_tests: 23_passed
+  focused_tests: 28_passed
   full_regression: 780_passed_6_skipped

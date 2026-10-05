@@ -112,6 +112,25 @@ SHA256: `d4367bb73686b2363e238abb778fab55e2924458ec1ced561072bd82f711695d`.
 Official screening uses softmax class 1 and descending ordering; this number is
 not a calibrated probability of experimental activity or a binding affinity.
 
+Checkpoint compatibility correction: the pinned screening checkpoint contains
+`mu` and `dev`, which the current upstream model does not define or use. Upstream
+filters all unknown checkpoint entries. Our adapter allows only those two unused
+extra keys after verifying the checkpoint hash, then loads all model parameters
+with `strict=True`. Other unexpected keys, missing parameters and shape mismatches
+remain errors. This fixes the workstation-reported startup exception, but a
+successful live pilot is still required.
+
+After pulling this correction, preserve the failed run and select a fresh output
+parent because the worker code seal changed. For the existing workstation run:
+
+```bash
+export EQUISCORE_OUTPUT=/mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution/equiscore-v2
+bash scripts/run_e103_equiscore.sh pilot
+```
+
+Keep the same `EQUISCORE_OUTPUT` for later full/analyze commands. No environment
+reinstallation or docking rerun is required for this checkpoint-key correction.
+
 The DGL wheel is listed at https://data.dgl.ai/wheels/repo.html. ProLIF 1.1 API:
 https://prolif.readthedocs.io/en/v1.1.0/source/modules/interaction-fingerprint.html.
 Protocol: `experiments/E103-equiscore-rescoring.md`.

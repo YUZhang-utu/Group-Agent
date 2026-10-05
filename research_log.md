@@ -2573,3 +2573,17 @@ isolation. Root cause and live recovery remain pending the workstation log.
 Do not reinstall, alter receptor validation, or resubmit inference on this
 evidence alone. Updating coordinator code requires a fresh sealed output parent
 for a later retry; preserve the failed run for diagnosis.
+
+## 2026-10-05: identified and corrected unused screening checkpoint entries
+
+Workstation worker traceback identifies strict load failure from unexpected
+`mu` and `dev` entries. Inspected pinned upstream model sources (neither key is
+defined or referenced) and utils.initialize_model (filters all non-model keys).
+Corrected our adapter to allow only those two unused extras after the existing
+full-file checkpoint hash check, retaining strict loading of every model key.
+Unknown extras, missing model keys and shape errors still fail. This was our
+checkpoint compatibility error, not evidence of bad ligand inputs.
+Focused engineering regression: 28 passed, including known-extra filtering,
+unknown-extra rejection, strict-error propagation and preserving keys if expected
+by the model. No local Torch/CUDA inference claimed. Workstation acceptance needs
+a fresh sealed pilot directory; preserve the failed directory and installed env.

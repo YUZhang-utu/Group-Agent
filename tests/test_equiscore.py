@@ -182,3 +182,47 @@ def test_worker_rejects_unsealed_pose_and_changed_input(tmp_path):
     worker.verify_pose_inputs(row, tmp_path, hashes, set())
     ligand.write_text('changed ligand')
     with pytest.raises(ValueError, match='changed'): worker.verify_pose_inputs(row, tmp_path, hashes, set())
+
+
+@pytest.fixture
+def worker_module():
+    filename = Path(__file__).resolve().parents[1] / 'scripts/equiscore_worker.py'
+    spec = importlib.util.spec_from_file_location('equiscore_worker', filename)
+    worker = importlib.util.module_from_spec(spec); spec.loader.exec_module(worker)
+    return worker
+
+
+def test_screening_checkpoint_ignores_only_unused_known_keys(worker_module):
+    from unittest.mock import Mock
+    model = Mock()
+    model.state_dict.return_value = {'layer.weight': object()}
+    weight = object()
+    state = {'layer.weight': weight, 'mu': 0, 'dev': 1}
+    assert worker_module.load_screening_state(model, {'model': state}) == ['dev', 'mu']
+    model.load_state_dict.assert_called_once_with({'layer.weight': weight}, strict=True)
+    assert set(state) == {'layer.weight', 'mu', 'dev'}  # Never mutate the checkpoint.
+
+
+def test_screening_checkpoint_unknown_extra_rejected(worker_module):
+    from unittest.mock import Mock
+    model = Mock(); model.state_dict.return_value = {'weight': object()}
+    with pytest.raises(ValueError, match='unknown'):
+        worker_module.load_screening_state(model, {'model': {'weight': 1, 'mu': 0, 'unknown': 2}})
+    model.load_state_dict.assert_not_called()
+
+
+@pytest.mark.parametrize('failure', ['Missing key: layer.weight', 'size mismatch for layer.weight'])
+def test_screening_checkpoint_strict_errors_propagate(worker_module, failure):
+    from unittest.mock import Mock
+    model = Mock(); model.state_dict.return_value = {'layer.weight': object()}
+    model.load_state_dict.side_effect = RuntimeError(failure)
+    with pytest.raises(RuntimeError, match=failure):
+        worker_module.load_screening_state(model, {'model': {'mu': 0, 'dev': 1}})
+    assert model.load_state_dict.call_args.kwargs == {'strict': True}
+
+
+def test_screening_checkpoint_keeps_keys_expected_by_model(worker_module):
+    from unittest.mock import Mock
+    model = Mock(); model.state_dict.return_value = {'mu': 0, 'dev': 1}
+    assert worker_module.load_screening_state(model, {'model': {'mu': 7, 'dev': 8}}) == []
+    model.load_state_dict.assert_called_once_with({'mu': 7, 'dev': 8}, strict=True)

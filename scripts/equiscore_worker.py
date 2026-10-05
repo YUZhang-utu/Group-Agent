@@ -23,6 +23,24 @@ def sha(path):
     return h.hexdigest()
 
 
+def load_screening_state(model, checkpoint):
+    """Drop only known unused entries in the pinned official screening weights.
+
+    Upstream filters every key absent from model.state_dict(). Here the exception
+    is limited to mu/dev; all model parameters still load with strict=True.
+    The caller verifies the complete checkpoint SHA256 before deserialization.
+    """
+    state = checkpoint['model']
+    expected = set(model.state_dict())
+    extra = set(state) - expected
+    if extra - {'mu', 'dev'}:
+        raise ValueError('Unexpected screening checkpoint keys: ' + ', '.join(sorted(extra)))
+    model.load_state_dict({key: value for key, value in state.items() if key not in extra}, strict=True)
+    if extra:
+        print('Ignored known unused official checkpoint entries: ' + ', '.join(sorted(extra)), flush=True)
+    return sorted(extra)
+
+
 def load_model(profile):
     repo = Path(profile['repository']).resolve()
     weights = repo / 'workdir/official_weight/save_model_screen.pt'
@@ -50,7 +68,7 @@ def load_model(profile):
     torch.cuda.manual_seed_all(42)
     model = EquiScore(args)
     checkpoint = torch.load(str(weights), map_location='cpu')
-    model.load_state_dict(checkpoint['model'], strict=True)
+    load_screening_state(model, checkpoint)
     model = model.to('cuda:0').eval()
     return model, args
 
