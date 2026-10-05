@@ -1,4 +1,11 @@
 project: aidd-macrocycle-agent
+latest_continuation:
+  saved: 2026-10-05
+  handoff: to_human/20261005_AIDD_AGENT_HANDOFF.md
+  current: EquiScore_workstation_pilot_96_of_96_complete
+  next: inspect_full_run_process_logs_and_receipts_before_any_submission
+  full_launch: command_provided_user_execution_not_confirmed
+  preserve: successful_pilot_code_profile_environment_and_original_PLANTS_outputs
 pdb_pocket_project_prerequisite:
   status: E093_receptor_advice_local_validation_passed
   guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
@@ -1313,14 +1320,14 @@ rescoring_literature_review:
   primary: [EquiScore, SCORCH2, GenScore, RTMScore, DeepRLI]
   peptide_candidate: DeepPpIScore_noncanonical_support_unverified
   affinity_side_candidate: E-CloudBind
-  models_installed_or_run: false
+  models_installed_or_run: EquiScore_pilot_only_other_candidates_not_run
 
 equiscore_e103:
   date: 2026-10-05
-  status: DGL_GPU_gate_passed_numpy_ABI_overlay_repair_workstation_retry_pending
+  status: workstation_pilot_complete_per_user_receipt_full_pending
   protocol: experiments/E103-equiscore-rescoring.md
   guide: to_human/20261005_EQUISCORE_SETUP.md
-  install: scripts/install_equiscore.sh
+  install: scripts/setup_equiscore_existing.py
   launcher: scripts/run_e103_equiscore.sh
   upstream_commit: 8b2a9289cf7d181fa49de6ac6712260e8c500c4a
   checkpoint: save_model_screen.pt
@@ -1329,12 +1336,17 @@ equiscore_e103:
   full: all_saved_poses_no_redocking_successful_pilot_required
   block_ranking: top10_distinct_molecules_best_in_block_conformer
   chat_dispatch: not_registered_yet
-  live_installation: not_run
-  real_inference: not_run
+  live_installation: preflight_ready_per_user_receipt
+  real_inference: pilot_96_of_96_scored_zero_failures_per_user_receipt
+  pilot_elapsed_seconds: 12.190821549855173
+  pilot_output_parent: /mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution/equiscore-v3
+  pilot_source_sha256: e5a9487d23469ec4846021014a617ee5791af1f6688ec677b0509fe4ffd4dd39
+  pilot_scores_sha256: 26945b9ce30e3bf70716c0073a464ed980d918f178ff014ea9a03dabfb89b71c
+  full_run_status: background_full_then_analysis_command_provided_launch_not_confirmed
   focused_tests: 33_passed
   user_verified_python: /home/y/yuzhang/envs/dl4s/bin/python
   user_verified_torch: 2.7.0+cu128
-  user_DGL: 2.5.0+cu121_GPU_gate_passed_before_chemistry_import_failure
+  user_DGL: 2.5.0+cu121_pilot_passed
   chemistry_overlay: numpy_1.26.4_MDAnalysis_2.7.0_ProLIF_1.1.0
   failed_legacy_pilot: 96_model_failed_no_kernel_image
   full_regression: 780_passed_6_skipped

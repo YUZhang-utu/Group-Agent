@@ -334,5 +334,6 @@ and heavy coordinates, explicit null failures, and 96/96 pilot pairs for the
 three-receptor workstation panel. This gate is not a scientific accuracy test.
 Full inference yields independent EquiScore Top-10 molecule ranks, ChemPLP rank
 changes and Top-10 molecule overlap. No label-free overlap is called EF1.
-Engineering checks: 21 focused tests; regression 780 passed, 6 skipped. Linux
-environment installation and real GPU pilot still require workstation receipts.
+Final compatibility-focused checks: 33 passed; earlier full regression 780 passed,
+6 skipped. User supplied a successful real pilot receipt: 96/96 scored, zero
+failures. Full-panel scoring and analysis still require workstation receipts.

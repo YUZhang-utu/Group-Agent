@@ -2616,3 +2616,31 @@ installation could not run because local Python is 3.13 and NumPy 1.26 has no
 matching wheel; no local chemistry or GPU preflight success is claimed. Added a
 clear Python 3.9-3.12 setup guard. Actual workstation chemistry preflight and pilot
 remain pending. References are recorded in the setup guide.
+
+## 2026-10-05: real workstation EquiScore pilot passed
+
+User pasted block_equiscore_run receipt: complete, scope pilot, 96 pairs, 96
+scored, zero failed, worker exit 0, 12.190821549855173 seconds. Source report
+SHA256 e5a9487d23469ec4846021014a617ee5791af1f6688ec677b0509fe4ffd4dd39 matches
+the previously reported full PLANTS panel. Worker SHA256
+80b3627330752a3ae512d92deb206b953cc6bda01df4166bbc290d45a7bcdd47 and coordinator
+9b4ff7a5933d4b6bc336602bb6b6d82a59b8d3d67ff14bd28677d1c315d1ba92 independently
+match current local files. Environment: Python 3.9.25, Torch 2.7.0+cu128,
+DGL 2.5.0+cu121, RTX 5090, RDKit 2025.9.2, NumPy 1.26.4, MDAnalysis 2.7.0,
+ProLIF 1.1.0. Scores hash 26945b9ce30e3bf70716c0073a464ed980d918f178ff014ea9a03dabfb89b71c.
+This is a user-supplied remote execution receipt, not local inspection of the
+96 values or validation of predictive accuracy. Ligand chemistry remains
+unreviewed. Next: full scoring of existing 821619 pairs with identical sealed
+code/profile/environment, followed on success by Top-10 distinct-molecule block
+analysis and ChemPLP comparison. No new remote job submitted from this session.
+
+## 2026-10-05: continuation snapshot saved at user's request
+
+Saved to_human/20261005_AIDD_AGENT_HANDOFF.md with exact paths, successful pilot
+seals, working environment, resolved compatibility failures, accepted Top-10
+ranking rule, existing ChemPLP results and pending EquiScore full/Chat work.
+Updated state, findings and experiment/benchmark summaries to distinguish the
+successful pilot from the unconfirmed full launch. The background full-plus-
+analysis command has been given to the user, but no launch or completion receipt
+was supplied. Next session must inspect before resubmitting. No executable code
+or environment changed while saving this record.

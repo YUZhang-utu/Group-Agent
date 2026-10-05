@@ -1808,5 +1808,8 @@ fixed hash order against all receptors, independently of ChemPLP. Successful
 pilot is required for full saved-pose scoring. Rank blocks using the mean of
 the ten highest EquiScore values for distinct molecules, choosing each molecule's
 best in-block conformer. Model ranking is independent of the ChemPLP shortlist.
-Local engineering suite: 780 passed, 6 skipped. Workstation installation and
-scientific inference: not run. No confirmatory model-quality conclusion exists.
+Earlier engineering suite: 780 passed, 6 skipped; final compatibility-focused
+checks: 33 passed. Workstation preflight and technical pilot now passed per user
+receipt (96/96 scored, zero failures, 12.190821549855173 seconds). Full-run and
+analysis launch command was provided; execution/completion is unconfirmed.
+No confirmatory model-quality conclusion exists.

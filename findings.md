@@ -611,7 +611,20 @@ Fragmentation can be removed at the execution layer without forcing new chemical
 The completed docking receipt enables an initial descriptive comparison, pending
 sealed workstation analysis. Different block counts produced unequal sampling
 budgets, so scheme means do not establish routing superiority. N-E is user-owned
-and awaiting code. A public GNINA baseline is proposed, not yet executed. Boltz-2
+and awaiting code. The user declined GNINA and selected EquiScore. Boltz-2
 documentation does not support assuming reliable affinity for arbitrary large
 noncanonical macrocycles. Biological EF requires experimental labels; label-free
 score-tail recovery answers a different question. No model superiority is found.
+
+## E102/E103 current workstation evidence (2026-10-05)
+
+User receipts confirm complete PLANTS scoring (821619 conformer/receptor pairs)
+and Top-10 distinct-molecule ranking for 8283 scheme/block/receptor groups.
+The real EquiScore technical pilot now also completed: 96/96 pairs, zero failures,
+under Torch 2.7/cu128 and the pinned chemistry overlay on RTX 5090. This supports
+technical compatibility for the sample only. Full EquiScore execution/analysis
+was instructed but not yet confirmed. Its priorities, model comparison and any
+predictive improvement remain unknown. Resume from
+to_human/20261005_AIDD_AGENT_HANDOFF.md; inspect existing task/process receipts
+before submitting work. EquiScore Chat dispatch and the user's N-E model remain
+pending. No experimental enrichment or affinity-validation claim is supported.
