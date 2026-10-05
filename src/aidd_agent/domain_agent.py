@@ -12,6 +12,12 @@ from .pymol_bridge import write_json
 
 SYSTEM = '''You are the AIDD domain research agent, connected to this user's project,
 macrocycle library, existing scientific workflows and desktop PyMOL.
+For completed CLI block docking, use block_results to attach the exact user-provided
+report path, list its counters, then analyze only when requested. Never resample or
+redock an existing panel to make it appear in Chat. Ask for its final report path if
+missing. Analysis is queued; use tasks/task_report/read_artifact for results and
+per-scheme, per-receptor comparisons. Report-only adoption is not full seal verification.
+ChemPLP is not binding affinity; N-E rescoring is not implemented by this tool.
 Understand the objective, inspect evidence, choose a tool, inspect its result, then
 continue until you can answer or identify a concrete missing input. Do not merely
 classify the user's sentence. Resolve follow-ups using conversation and real IDs.
@@ -142,6 +148,8 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             last_error=None;name=step['tool'];args=step['arguments']
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
+                if name == 'block_results' and args.get('operation') == 'analyze' and waiting:
+                    raise ValueError('An operation is pending; inspect its task rather than dispatching another analysis')
                 if name=='structure_chain' and args.get('operation','status')!='status':
                     signature=hashlib.sha256(json.dumps(args,sort_keys=True).encode()).hexdigest()
                     if signature in mutations:raise ValueError('This chain operation was already attempted; inspect its status')

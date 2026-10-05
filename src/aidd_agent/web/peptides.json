@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "label": "N-methyl and para-fluorophenyl",
+      "smiles": "COC[C@@H]1NC(=O)[C@H](CC2CC2)NC(=O)CNC(=O)[C@H](Cc2ccc(F)cc2)N(C)C(=O)[C@@H](C)NC1=O",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    },
+    {
+      "label": "Thienyl and cyclopropyl side chains",
+      "smiles": "CC(C)C[C@@H]1NC(=O)CNC(=O)[C@H](CC2CC2)NC(=O)[C@H](C)N(C)C(=O)[C@H](Cc2cccs2)NC(=O)[C@@H](C)NC1=O",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    },
+    {
+      "label": "Pipecolic and naphthyl building blocks",
+      "smiles": "CC(C)[C@H]1CC(=O)N2CCCC[C@H]2C(=O)N[C@@H](Cc2ccc3ccccc3c2)C(=O)N(C)CC(=O)N[C@@H](CO)C(=O)N1",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    },
+    {
+      "label": "Proline, alkyne and fluorinated side chains",
+      "smiles": "C#CC[C@@H]1NC(=O)CNC(=O)[C@H](C)N(C)C(=O)[C@H](CC(F)(F)F)NC(=O)[C@@H]2CCCN2C1=O",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    },
+    {
+      "label": "Beta-amino acid and pyridyl building blocks",
+      "smiles": "C[C@H]1CCNC(=O)CNC(=O)[C@H](CC2CC2)NC(=O)[C@H](C)N(C)C(=O)[C@H](Cc2ccncc2)NC1=O",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    },
+    {
+      "label": "Methoxy and biphenyl side chains",
+      "smiles": "COC[C@H]1C(=O)N[C@@H](Cc2ccc(-c3ccccc3)cc2)C(=O)NCC(=O)N[C@H](C(C)C)C(=O)N[C@@H](C)C(=O)N1C",
+      "role": "Illustrative chemical graph; not a screened hit or synthesis claim"
+    }
+  ],
+  "wordmark": {
+    "smiles": "C[C@@H]1NC(=O)CN(C)C(=O)[C@H](C2CC2)NC(=O)C(C)(C)NC(=O)[C@H](C)N(C)C1=O",
+    "building_blocks": "N-methyl, alpha-aminoisobutyric and cyclopropyl substitutions",
+    "layout": "Constrained illustrative D-shaped 2D ring; not a physical conformation"
+  },
+  "solvent_background": "Schematic water above nonpolar hydrocarbon motifs; not a density or partitioning simulation"
+}

@@ -1,8 +1,8 @@
 """Compact planner routing, paired with repository-discoverable Codex skills."""
 
 WORKFLOW_SKILLS = (
-    {"name": "aidd-block-evaluation", "actions": ["receptor_assess", "plants_receptors", "protein_from_pdb", "block_sample", "block_plants_prepare", "block_plants_run", "block_analyze"],
-     "description": "Seeded E094/E095/E096 block conformer panels, shared PLANTS jobs and block-aware analysis; reviewed runtime receptor inputs required."},
+    {"name": "aidd-block-evaluation", "actions": ["receptor_assess", "plants_receptors", "protein_from_pdb", "block_sample", "block_plants_prepare", "block_plants_run", "block_analyze", "block_import_analysis"],
+     "description": "Seeded E094/E095/E096 panels and shared PLANTS jobs. Completed CLI reports use session-owned attachment IDs and local-coordinator-only analysis; never redock to import results."},
     {"name": "aidd-3d-search", "actions": ["consensus_budget", "budget_page", "search_3d", "review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"],
      "description": "Calibrated WEE1 full-library retrieval and Gaussian refinement; E031 annotations only."},
     {"name": "aidd-protein-preparation", "actions": ["protein_fetch", "protein_resolve", "pdb_search", "pdb_fetch", "structure_survey", "structure_diversity", "structure_consensus", "pocket_states", "pocket_adopt", "pocket_consensus", "consensus_recommend", "consensus_design", "consensus_funnel", "anchor_recommend", "anchor_design", "guided_funnel", "guided_select"],

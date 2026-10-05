@@ -19,7 +19,8 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 WORKFLOWS = [
-    {"name":"Block evaluation with PLANTS", "status":"Sampling/export, prepared-receptor execution and analysis adapters; live PLANTS acceptance pending", "scope":"E094/E095/E096 uniform per-block conformer samples, shared conformer/receptor docking results, block statistics and pose handoff. Trusted reviewed receptor profiles required."},
+    {"name":"Completed docking results", "status":"Attach CLI reports and queue sealed analysis", "scope":"Reuse existing scores and poses. Compare E094/E095/E096 by receptor; preserve missing results. Ask to attach your final report.json, then analyze it. No redocking or affinity claim."},
+    {"name":"Block evaluation with PLANTS", "status":"Sampling, preparation, docking and block analysis adapters", "scope":"Frozen E094/E095/E096 blocks, shared conformer panels, adopted receptors and SPORES preparation. Completion comes from each run receipt. Sampling and docking require an explicit request; status checks reuse existing work."},
     {"name": "PDB pocket-state prerequisite", "status": "Pocket grid clustering and explicit adoption implemented; target validation ongoing", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
     {"name":"Automatic structure workflow chains", "status":"Persistent coordinator; workstation acceptance pending", "scope":"Explicitly requested continuation from an existing task through consensus, recommendation and optional budget delivery. Pause/resume future stages, preserve source IDs, block failed or uncertain dispatch. Current scientific tasks remain separately controlled."},
     {"name":"Domain research agent", "status":"Bounded multi-step tool loop; live-provider benchmark pending", "scope":"Natural-language requests can inspect owned task reports, query the configured molecule registry, search Europe PMC abstracts and compose existing workflows/PyMOL tools. Tool traces are persisted; queued tasks remain asynchronous."},
@@ -323,7 +324,7 @@ def screening_summary(job):
     from .project_context import ensure_within
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
-    block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze'} and s.get('status')=='complete']
+    block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze','block_import_analysis'} and s.get('status')=='complete']
     if block_steps:
         child=read_json(ensure_within(Path(block_steps[-1]['result']['report']),Path(job['plan']).parent)) or {}
         return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','receptors','sites','limitations') if k in child}
@@ -612,7 +613,9 @@ class ChatAgent:
                     steps=[dict(tool=row.get('step',{}).get('tool','answer'),purpose=row.get('step',{}).get('purpose',''),
                                 status=row.get('status','complete'),error=row.get('error'),evidence_id=row.get('evidence_id')) for row in trace.get('steps',[])]))
         from .structure_chains import rows
-        return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,
+        from .block_results import handle
+        attachments = handle(self, sid, {'operation': 'list'})['attachments'] if sid else []
+        return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,docking_results=attachments,
                     compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
 
     def review_action(self,sid,decision):
@@ -662,6 +665,15 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command in {'/dock_attach', '/dock_results', '/dock_analyze'}:
+                from .block_results import handle
+                rest = text.strip()[len(command):].strip()
+                args = {'operation': {'/dock_attach': 'attach', '/dock_results': 'list', '/dock_analyze': 'analyze'}[command]}
+                if command == '/dock_attach': args['report'] = rest
+                if command == '/dock_analyze': args['attachment_id'] = rest
+                answer = json.dumps(handle(self, sid, args), indent=2)
+                self.message(sid, 'assistant', answer)
+                return answer
             if command=='/agent' or (not command.startswith('/') and command!='pymol_agent' and self.router is None):
                 from .domain_agent import run
                 request=text.strip()[len(command):].strip() if command=='/agent' else text

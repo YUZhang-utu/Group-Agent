@@ -2415,3 +2415,65 @@ User confirmed workstation recovery: 100 scored, zero failed jobs, first gate pa
 
 ## 2026-10-02: E097 running-docking continuity saved
 User requested a checkpoint while docking is running. Saved to_human/20261002_AIDD_E097_DOCKING_RUNNING_HANDOFF.md, superseded the earlier implementation handoff and updated research-state.yaml. Confirmed evidence: first 100 real scores recovered with no failures, complete three-receptor preparation, 273873 unique conformers, 8445 jobs; last explicit full-run progress 145/8445. User has not confirmed whether the proposed 20-worker migration was performed. Next session must inspect actual running process/output/log before any change, preserve completed receipts, and avoid duplicate Chat dispatch. No workstation process or data was changed in this checkpoint.
+
+## 2026-10-05: E097 completion receipt and MEDCHEM Chat integration
+
+User supplied plants-parallel20 final block_plants_run receipt: complete, 8445 jobs
+and attempts, zero failed jobs, 821619 scores, first-job gate passed. This supersedes
+the running checkpoint; remote hashes/poses have not been inspected here. Preparation
+ligand_chemistry_reviewed was false and remains an explicit limitation.
+
+Implemented E098 in the existing Chat: MEDCHEM Agent branding with the supplied
+med.png, explicit RDKit cyclic-peptide illustrations, hover/focus/click coverage and
+draft-only prompt starters. Added session-owned CLI report adoption, literal-path
+provider tool routing, idempotent attachment/analysis and sealed background statistics
+without invoking PLANTS. Analysis checks report digests, Project ownership, source
+output locks, original output hashes, preparation/sample bindings and score counts.
+The frozen block_plants implementation and production block memberships are unchanged.
+
+Protocol: experiments/E098-medchem-chat.md. Full local suite: 743 passed, 6 skipped;
+nine new adoption tests cover mocked-provider routing and actual background Python
+execution. Browser checks passed at 1440x1100 and 390x844, with visual inspection;
+English guard and JavaScript syntax passed. HTTP test dependencies were reused from
+existing local packages in an isolated ignored folder; no scientific backend upgraded.
+Local update package and handoff prepared. No Git push, remote deployment, real panel
+analysis, N-E rescoring, affinity or retrieval-recall validation performed.
+
+## 2026-10-05: reference-led minimal molecular masthead
+
+User requested the supplied refer.png composition, no left hero copy or molecule
+captions, an aqueous upper/nonpolar lower background, a cyclic-peptide D in MEDCHEM,
+noncanonical macrocycles and a hidden right task panel. Implemented a schematic
+water/hydrocarbon SVG field, six explicit illustrative RDKit-valid peptide graphs
+and a constrained 2D D letterform. These are artwork, not measured solvation,
+identified library hits or synthesis evidence. Existing med.png remains unchanged.
+
+Removed redundant introductory copy and widened Chat. Results are hidden by default,
+with hover preview, click pin, keyboard/Escape, close/outside click and touch controls.
+Existing task/attachment/viewer logic is retained. Desktop/mobile browser checks and
+visual inspection pass; ten Chat/API tests, JavaScript syntax and English guard pass.
+No scientific backend or workstation data changed, no external engines or model API
+called. Prepared cumulative E099 package accepting original and prior E098 source
+hashes; deployment is still pending. See to_human/20261005_MEDCHEM_VISUAL_REFRESH.md.
+
+## 2026-10-05: Helvetica interface typography
+
+User requested Helvetica, moderately sized black text with slightly stronger weight,
+while preserving the designed MEDCHEM identity. Updated only interface typography
+and light primary fills for black-label contrast. Helvetica-first system stack uses
+Arial/Liberation Sans where Helvetica is absent; no proprietary font is distributed.
+Removed UI monospace styling, tightened letter spacing, retained the wordmark and
+molecule SVGs, and verified desktop/mobile interactions and layout. No scientific
+execution or backend change. E100 cumulative delivery and updated preview prepared;
+workstation deployment remains pending.
+
+
+## 2026-10-05: approved Git delivery
+
+User approved the final interface and requested synchronization for a workstation
+pull. Prepared the tested E098 result-adoption integration, E099 molecular artwork,
+E100 typography and continuation instructions as one feature-branch delivery.
+Excluded old build outputs, earlier unrelated reports and generated delivery ZIPs.
+Remote branch is an ancestor of the local continuity checkpoint; no merge is needed.
+Actual workstation pull/restart
+and real block analysis remain pending; preserve the completed 8445-job output.

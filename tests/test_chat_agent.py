@@ -121,7 +121,7 @@ def test_http_token_origin_and_assets(tmp_path):
     base=f"http://127.0.0.1:{server.server_port}"
     try:
         with urlopen(base+"/") as r:
-            assert b"AIDD Workbench" in r.read()
+            assert b"MEDCHEM Agent" in r.read()
             assert "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
         with pytest.raises(HTTPError) as err:urlopen(base+"/api/state")
         assert err.value.code==401
@@ -136,7 +136,7 @@ def test_http_token_origin_and_assets(tmp_path):
         assert "WEE1" in result['message']
         assert "Glide preparation/execution adapter; workstation validation pending" in result['message']
         assert "Block evaluation with PLANTS" in result['message']
-        assert "live PLANTS acceptance pending" in result['message']
+        assert "Completion comes from each run receipt" in result['message']
         with urlopen(Request(base+'/api/state?session='+sid,headers={'Authorization':'Bearer fixture-token'})) as r:
             state=json.load(r)
             assert len(state['messages'])==2 and not state['tasks']

@@ -69,7 +69,7 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
         model = dict(provider="offline-fixture", model="fixture-not-a-live-LLM", fixture_sha256=ev.sha(response_file))
     else:
         plan, model = chat_plan(prompt, strict_json(Path(llm_profile).read_text(encoding="utf-8")))
-        if any(set(s["params"]) & {'source_run','receptor_run'} for s in plan["steps"]):
+        if any(set(s["params"]) & {'source_run','receptor_run','attachment_id'} for s in plan["steps"]):
             raise ValueError("Use separate chat evidence/selection/export actions for prior tasks")
     chemistry_prompt = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
     for step in plan['steps']:
@@ -159,6 +159,11 @@ def load_runtime(path):
 
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
+    if step['action'] == 'block_import_analysis':
+        from .block_results import analyze_attachment
+        output = directory / 'blocks'
+        result = analyze_attachment(execution.parent.parent.parent, step['params'], output)
+        return dict(status=result['kind'], report=str(output / 'report.json'), comparisons=result['comparisons'])
     action, params = step["action"], step["params"]
     if action=='receptor_assess':
         from .structure_diversity import run as diversity
@@ -398,7 +403,8 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
     evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page','block_plants_prepare','block_plants_run','block_analyze','plants_receptors'} for s in plan["steps"])
-    cfg, config_inputs = ({}, []) if evidence_only else load_runtime(runtime)
+    attachment_only = bool(plan['steps']) and all(s['action'] == 'block_import_analysis' for s in plan['steps'])
+    cfg, config_inputs = ({}, []) if evidence_only or attachment_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
     execution.mkdir(exist_ok=True)
@@ -421,6 +427,10 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
+                if step['action'] == 'block_import_analysis':
+                    attachment = ensure_within(root / 'block-results' / (step['params']['attachment_id'] + '.json'), root)
+                    source = ensure_within(Path(ev.read(attachment)['report']), root)
+                    dependencies.extend([attachment, source])
                 for ref in ("protein_step", "input_step", "sample_step", "prepared_step", "docking_step", "adoption_step"):
                     if ref in step["params"]:
                         parent = execution / step["params"][ref]

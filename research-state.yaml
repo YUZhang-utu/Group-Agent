@@ -32,7 +32,7 @@ audit_summary_recovery:
   storage_root_cause: unconfirmed_free_space_available_quota_query_denied
 objective: Build a local-first, resumable AIDD workflow beginning with batch MOL2 macrocycle library ingestion.
 stage: ligand_comparison_and_similarity_search
-current_experiment: E066-chat-structure-review
+current_experiment: E098-medchem-chat
 domain_agent:
   structure_chain:
     experiment: E073
@@ -1158,7 +1158,7 @@ e096_diagnostic_received_20261002:
   repartition_requested: false
 
 e097_block_evaluation:
-  status: workstation_docking_running_user_confirmed
+  status: workstation_docking_complete_user_receipt_received
   schemes: [E094, E095, E096]
   conformers_per_regular_block: 100
   expected_sampling_slots: 276100
@@ -1171,11 +1171,11 @@ e097_block_evaluation:
   actual_pdb_reference: 6Y4Q_in_completed_workstation_assessment
   llm_integration: typed_plans_owned_chat_and_domain_workflow_dispatch
   local_related_tests: 85_passed
-  live_engines: SPORES_three_receptors_complete_PLANTS_first_100_scores_verified_full_run_ongoing
+  live_engines: SPORES_three_receptors_complete_PLANTS_8445_jobs_821619_scores_user_receipt
   full_library_sampling: not_run_locally
   ne_rescoring: pose_identity_handoff_only_model_not_run
   guide: to_human/E097_BLOCK_PLANTS_EVALUATION.md
-  handoff: to_human/20261002_AIDD_E097_DOCKING_RUNNING_HANDOFF.md
+  handoff: to_human/20261005_MEDCHEM_CHAT_HANDOFF.md
 
 
 e097_docking_running_checkpoint_20261002:
@@ -1199,3 +1199,63 @@ e097_docking_running_checkpoint_20261002:
   next_action: inspect_actual_process_output_workers_and_matching_log_before_any_mutation
   do_not: duplicate_launch_resample_repartition_or_pull_into_active_checkout
   pending: full_panel_completion_block_analysis_NE_handoff_and_CLI_agent_result_registration
+
+
+medchem_chat_e098:
+  date: 2026-10-05
+  status: implemented_local_validation_workstation_deployment_pending
+  handoff: to_human/20261005_MEDCHEM_CHAT_HANDOFF.md
+  brand: MEDCHEM_Agent
+  icon_source: D:/agent/med.png
+  completed_cli_adoption: session_owned_report_digest_no_engine_dispatch
+  analysis: queued_existing_adapter_full_output_seals_and_sample_bindings
+  live_provider_acceptance: pending
+  workstation_analysis: not_run_here
+  publication: git_branch_delivery_authorized
+  local_regression: 743_passed_6_skipped
+  adoption_tests: 9_passed
+  browser_validation: desktop_mobile_hover_focus_click_assets_sessions_passed
+  delivery: to_human/MEDCHEM_E098_UPDATE.zip
+
+e097_completion_receipt_20261005:
+  evidence: user_pasted_aggregate_fields_remote_artifacts_not_independently_inspected
+  report: /mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution/plants-parallel20/report.json
+  kind: block_plants_run
+  status: complete
+  jobs: 8445
+  attempted_jobs: 8445
+  failed_jobs: 0
+  scored: 821619
+  first_job_gate: passed
+  ligand_chemistry_reviewed_in_preparation: false
+  next_action: deploy_Chat_update_attach_final_report_queue_block_analysis_no_redocking
+
+medchem_visual_refresh:
+  date: 2026-10-05
+  status: local_ui_verified_workstation_deployment_pending
+  reference: D:/agent/refer.png
+  handoff: to_human/20261005_MEDCHEM_VISUAL_REFRESH.md
+  delivery: to_human/MEDCHEM_E099_UI_UPDATE.zip
+  masthead: schematic_aqueous_nonpolar_fields_with_cyclic_peptide_D
+  task_panel: collapsed_hover_preview_click_pin_keyboard_touch
+  illustrated_peptides: six_noncanonical_examples_plus_wordmark
+  verification: desktop_mobile_touch_browser_passed_10_Chat_API_tests_passed
+  scientific_execution: none_this_revision
+
+medchem_typography:
+  date: 2026-10-05
+  status: local_verified_workstation_deployment_pending
+  family: Helvetica_first_system_stack_Arial_Liberation_Sans_fallback
+  body: 15px_weight_500_black
+  emphasis: weight_600
+  wordmark: unchanged
+  preview: data/e100-ui/desktop.png
+  delivery: to_human/MEDCHEM_E100_TYPOGRAPHY_UPDATE.zip
+
+
+medchem_git_delivery:
+  date: 2026-10-05
+  branch: feature/structure-guided-chat
+  user_authorization: sync_to_remote_for_workstation_pull
+  workstation: pull_and_restart_pending
+  next: attach_completed_plants_parallel20_report_then_analyze_existing_scores

@@ -13,6 +13,7 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 ACTION_FIELDS = {
+    "block_import_analysis": ({"attachment_id", "attachment_sha256"}, set()),
     "protein_from_pdb": ({"pdb_id"}, {"entity_id"}),
     "receptor_assess": ({"protein_step", "reference_pdb"}, {"reference_query", "target_chain", "maximum_representatives", "coverage_fraction"}),
     "plants_receptors": (set(), {"source_run", "adoption_step"}),
@@ -175,6 +176,10 @@ def validate_plan(plan):
         if action=='block_sample':
             from .block_sampling import validate_options
             validate_options(params)
+        if action == 'block_import_analysis':
+            for key, size in (('attachment_id', 24), ('attachment_sha256', 64)):
+                if not isinstance(params[key], str) or not re.fullmatch('[a-f0-9]{' + str(size) + '}', params[key]):
+                    raise ValueError('Invalid docking attachment identity')
         block_refs={'plants_receptors':('adoption_step','pocket_adopt'),
                     'block_plants_prepare':('sample_step','block_sample'),
                     'block_plants_run':('prepared_step','block_plants_prepare'),

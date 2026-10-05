@@ -32,6 +32,9 @@ def make_server(agent, port=8765, token=None):
         def do_GET(self):
             path = urlsplit(self.path)
             assets = {"/":("chat.html","text/html"),"/chat.js":("chat.js","text/javascript"),"/chat.css":("chat.css","text/css")}
+            assets['/med.png'] = ('med.png', 'image/png')
+            assets.update({f'/peptide-{i}.svg': (f'peptide-{i}.svg', 'image/svg+xml') for i in range(1, 7)})
+            assets.update({f'/{name}.svg': (f'{name}.svg', 'image/svg+xml') for name in ('peptide-d', 'solvent-field')})
             if path.path in assets:
                 name, mime = assets[path.path]
                 self.send(200,(Path(__file__).parent / "web" / name).read_bytes(),mime); return
@@ -76,6 +79,9 @@ def make_server(agent, port=8765, token=None):
                 if not isinstance(body,dict): raise ValueError("Expected JSON object")
                 if self.path == "/api/session": result={"session":agent.new_session()}
                 elif self.path == "/api/import": result={"task":agent.attach(body["session"],body["plan"])}
+                elif self.path == '/api/block-results':
+                    from .block_results import handle
+                    result = handle(agent, body['session'], body['arguments'])
                 elif self.path == "/api/message":
                     result={"message":agent.ask(body["session"],body["text"],body.get("provider","deepseek"))}
                 else: self.send(404,{"error":"Not found"}); return
