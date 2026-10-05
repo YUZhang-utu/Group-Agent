@@ -178,8 +178,11 @@ def receptor_structure(pdb, mol2):
 
 def environment():
     import torch
-    return dict(python=sys.version, packages={dist.metadata['Name']: dist.version
-                for dist in importlib.metadata.distributions()}, gpu=torch.cuda.get_device_name(0),
+    names = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
+    # A system-site-packages venv can expose both base and overlay metadata.
+    # Resolve the first active distribution rather than overwriting with the last.
+    return dict(python=sys.version, packages={name: importlib.metadata.version(name)
+                for name in names if name}, gpu=torch.cuda.get_device_name(0),
                 cuda=torch.version.cuda)
 
 

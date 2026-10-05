@@ -8,6 +8,8 @@ import subprocess
 import sys
 import venv
 
+CHEMISTRY_PINS = {'numpy': '1.26.4', 'mdanalysis': '2.7.0', 'prolif': '1.1.0'}
+
 
 def package_constraints():
     values = {}
@@ -15,6 +17,9 @@ def package_constraints():
         name = dist.metadata['Name']
         if name:
             values[name.lower().replace('_', '-')] = dist.version
+    # Python 3.9 MDAnalysis wheels predate the NumPy 2 ABI. Override these
+    # packages in the overlay only; never change the base environment.
+    values.update(CHEMISTRY_PINS)
     return [f'{key}=={value}' for key, value in sorted(values.items())]
 
 
@@ -24,6 +29,8 @@ def main():
     parser.add_argument('--source-profile', default='/mnt/local/hand/yuzhang/aidd/tools/equiscore/profile.json')
     args = parser.parse_args()
     if os.name != 'posix': raise RuntimeError('This setup targets the Linux workstation')
+    if not (3, 9) <= sys.version_info[:2] <= (3, 12):
+        raise RuntimeError('The pinned chemistry overlay requires Python 3.9 through 3.12')
     root = Path(__file__).resolve().parents[1]
     worker = root / 'scripts/equiscore_worker.py'
     env = os.environ.copy(); env['DGLBACKEND'] = 'pytorch'
@@ -45,10 +52,11 @@ def main():
     python = venv_path / 'bin/python'
     if not python.exists():
         venv.EnvBuilder(system_site_packages=True, with_pip=True).create(venv_path)
-    # Pin every visible base distribution. Pip can add missing dependencies only;
-    # conflicts fail instead of replacing Torch, DGL, NumPy or RDKit.
+    # Preserve base versions except the explicitly pinned chemistry overlay.
+    # The venv interpreter installs locally; base Torch/DGL/RDKit remain inherited.
     subprocess.run([str(python), '-m', 'pip', '--isolated', 'install', '--constraint', str(constraints),
-                    'prolif==1.1.0', 'lmdb', 'prefetch-generator', 'biopython', 'scikit-learn'], check=True, env=env)
+                    *[f'{name}=={version}' for name, version in CHEMISTRY_PINS.items()],
+                    'lmdb', 'prefetch-generator', 'biopython', 'scikit-learn'], check=True, env=env)
     profile['python'] = str(python)  # Do not resolve the venv's interpreter symlink.
     target = prefix / 'profile.json'
     if target.exists() and json.loads(target.read_text()) != profile:

@@ -2601,3 +2601,18 @@ DGL historical message-function alias, interpreter-symlink preservation, and
 official-example chemistry/graph/model forward preflight. No remote install or
 new predictions claimed. Local focused tests: 32 passed. Actual DGL GPU support
 and modern RDKit/legacy ProLIF compatibility await the workstation setup receipt.
+
+## 2026-10-05: repair Python 3.9 chemistry overlay ABI mismatch
+
+Workstation setup reached model imports after its GPU gates, then failed in
+MDAnalysis._cutil with NumPy dtype size mismatch (96 versus 88). Official release
+notes confirm MDAnalysis 2.8 builds against NumPy 2 but drops Python 3.9. Pin
+NumPy 1.26.4, MDAnalysis 2.7.0 and ProLIF 1.1.0 in the managed overlay; preserve
+base Torch/DGL/RDKit versions and all original environment files. Setup can repair
+the failed managed overlay in place. Correct environment receipts to resolve the
+active metadata version when base and overlay distributions both exist.
+Focused engineering regression: 33 passed. An attempted isolated local chemistry
+installation could not run because local Python is 3.13 and NumPy 1.26 has no
+matching wheel; no local chemistry or GPU preflight success is claimed. Added a
+clear Python 3.9-3.12 setup guard. Actual workstation chemistry preflight and pilot
+remain pending. References are recorded in the setup guide.

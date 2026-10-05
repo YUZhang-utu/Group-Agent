@@ -24,10 +24,22 @@ This first runs actual Torch/DGL CUDA kernels, without downloads. If that gate
 fails, send its traceback; the base environment is untouched. DGL's cu121 tag
 does not establish Blackwell compatibility. If it passes, a dedicated venv with
 system-site-packages reuses base Torch/DGL/RDKit and adds ProLIF 1.1 plus missing
-dependencies. Constraints freeze every visible base package version; conflicts
-fail rather than upgrading or downgrading the working stack. No base packages
+dependencies. Constraints preserve the GPU stack and RDKit versions. The overlay
+explicitly uses NumPy 1.26.4, MDAnalysis 2.7.0 and ProLIF 1.1.0: Python 3.9 cannot
+use MDAnalysis 2.8's NumPy-2-compatible wheels, and the older wheel fails with
+NumPy 2's ABI. These three packages may shadow base versions inside the dedicated
+venv only; other conflicts fail rather than changing the working stack. No base packages
 are installed, removed or replaced. The setup then runs the official example
 through pocket extraction, ProLIF, graph creation and model inference.
+
+If the previous setup failed importing MDAnalysis with `numpy.dtype size changed`,
+pull the corrected script and rerun the same setup command from the original
+dl4s interpreter. The script repairs its managed overlay in place and repeats
+all preflight gates; do not run pip in the original dl4s environment. This
+repair is not a completed pilot. Python 3.9 through 3.12 is required for the
+pinned chemistry recipe. Sources:
+https://numpy.org/doc/stable/user/troubleshooting-importerror.html and
+https://www.mdanalysis.org/2024/11/22/release-2.8.0/.
 
 After it prints "Ready for a new pilot":
 

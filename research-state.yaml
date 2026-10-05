@@ -1317,7 +1317,7 @@ rescoring_literature_review:
 
 equiscore_e103:
   date: 2026-10-05
-  status: dl4s_reuse_adapter_ready_DGL_GPU_and_chemistry_preflight_pending
+  status: DGL_GPU_gate_passed_numpy_ABI_overlay_repair_workstation_retry_pending
   protocol: experiments/E103-equiscore-rescoring.md
   guide: to_human/20261005_EQUISCORE_SETUP.md
   install: scripts/install_equiscore.sh
@@ -1331,9 +1331,10 @@ equiscore_e103:
   chat_dispatch: not_registered_yet
   live_installation: not_run
   real_inference: not_run
-  focused_tests: 32_passed
+  focused_tests: 33_passed
   user_verified_python: /home/y/yuzhang/envs/dl4s/bin/python
   user_verified_torch: 2.7.0+cu128
-  user_DGL: 2.5.0+cu121_not_GPU_verified
+  user_DGL: 2.5.0+cu121_GPU_gate_passed_before_chemistry_import_failure
+  chemistry_overlay: numpy_1.26.4_MDAnalysis_2.7.0_ProLIF_1.1.0
   failed_legacy_pilot: 96_model_failed_no_kernel_image
   full_regression: 780_passed_6_skipped

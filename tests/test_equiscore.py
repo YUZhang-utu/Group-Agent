@@ -270,6 +270,7 @@ def test_existing_environment_setup_stops_before_install_on_gpu_failure(tmp_path
     setup = importlib.util.module_from_spec(spec); spec.loader.exec_module(setup)
     monkeypatch.setattr(setup, 'os', SimpleNamespace(name='posix', environ=os.environ, path=os.path))
     monkeypatch.setattr(setup.sys, 'argv', ['setup', '--prefix', str(tmp_path / 'overlay')])
+    monkeypatch.setattr(setup.sys, 'version_info', (3, 9, 23))
     calls = []
     def fail(command, **kwargs):
         calls.append(command)
@@ -279,3 +280,17 @@ def test_existing_environment_setup_stops_before_install_on_gpu_failure(tmp_path
         setup.main()
     assert len(calls) == 1 and calls[0][-1] == '--gpu-check'
     assert not (tmp_path / 'overlay').exists()
+
+
+def test_overlay_constraints_fix_numpy_abi_without_changing_gpu_stack(monkeypatch):
+    filename = Path(__file__).resolve().parents[1] / 'scripts/setup_equiscore_existing.py'
+    spec = importlib.util.spec_from_file_location('setup_equiscore_existing', filename)
+    setup = importlib.util.module_from_spec(spec); spec.loader.exec_module(setup)
+    versions = {'numpy': '2.0.2', 'MDAnalysis': '2.7.0', 'torch': '2.7.0+cu128',
+                'dgl': '2.5.0+cu121', 'rdkit': '2025.9.2', 'pandas': '2.2.3'}
+    monkeypatch.setattr(setup.importlib.metadata, 'distributions', lambda: [
+        SimpleNamespace(metadata={'Name': key}, version=value) for key, value in versions.items()])
+    constraints = set(setup.package_constraints())
+    assert {'numpy==1.26.4', 'mdanalysis==2.7.0', 'prolif==1.1.0'} <= constraints
+    assert {'torch==2.7.0+cu128', 'dgl==2.5.0+cu121', 'rdkit==2025.9.2', 'pandas==2.2.3'} <= constraints
+    assert 'numpy==2.0.2' not in constraints
