@@ -2529,3 +2529,35 @@ passed on 838 maintained files. User provided the same error summary rather than
 the trace, so the precise remote rejected arguments remain unconfirmed. Publish
 the tested repair to the existing feature branch; check task status before server
 restart and use the read-only receipt listing before any new submission.
+
+## 2026-10-05: user-reported Top-N completion and rescoring literature selection
+
+User pasted a complete block_analyze report: 8283 ranked scheme/block/receptor
+groups, molecule-level Top-10, no new model execution. The E095/7NA2_A leader
+work-87f26357d1177ffd794707d5 has Top-10 mean -93.17528; the user also provided
+five distinct molecule/CID/pose references from it. These are remote user receipts,
+not independent local artifact inspection. The next request is literature review:
+user declined GNINA and requested strong journal-published rescoring candidates
+for manual inspection. Checked publishers and author repositories and saved the
+shortlist. EquiScore/SCORCH2 lead the project-fit reading order, with GenScore,
+RTMScore, DeepRLI and separately marked peptide/affinity candidates. No model was
+installed, selected automatically or run. Existing ChemPLP ranking is unchanged.
+
+## 2026-10-05: E103 EquiScore selected; installer and terminal adapter delivered
+
+User explicitly selected EquiScore and reported that it is not installed. Wrote
+E103 protocol before inference. Inspected the official implementation and froze
+commit 8b2a9289cf7d181fa49de6ac6712260e8c500c4a and screening checkpoint hash.
+Added a separate Linux Conda environment recipe, strict checkpoint/CUDA preflight,
+deterministic technical pilot, full saved-pose worker with identity-preserving
+failure receipts, and independent higher-is-better Top-10 molecule ranking.
+Added rank-change and Top-10 overlap comparisons against a ChemPLP baseline on
+the same samples. No new docking or affinity inference is dispatched.
+
+Engineering results: 21 focused tests passed; full suite 780 passed, 6 skipped
+in 82.84 seconds. Bash syntax and installer help checks passed; English guard
+passed 848 maintained files before this documentation update. A final focused
+check passed after the partial-resume receipt fix. These are local fixtures,
+not EquiScore predictions. Live Linux installation, real 96-pair pilot and full
+821619-pair evaluation remain pending on the workstation. Natural-language Chat
+dispatch is not registered yet; terminal commands are in the E103 setup guide.

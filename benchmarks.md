@@ -327,3 +327,12 @@ each molecule represented by its best in-block conformer, separately per recepto
 Top-5 and custom-N summaries are available; whole-block means are not ranking
 criteria. This is a descriptive sampled-tail statistic, separate from E101's
 held-out equal-budget routing and experimental-label enrichment endpoints.
+
+E103 technical acceptance: strict screening-weight load, CUDA graph kernels,
+sealed source/pose identities, receptor frame agreement, unchanged ligand graph
+and heavy coordinates, explicit null failures, and 96/96 pilot pairs for the
+three-receptor workstation panel. This gate is not a scientific accuracy test.
+Full inference yields independent EquiScore Top-10 molecule ranks, ChemPLP rank
+changes and Top-10 molecule overlap. No label-free overlap is called EF1.
+Engineering checks: 21 focused tests; regression 780 passed, 6 skipped. Linux
+environment installation and real GPU pilot still require workstation receipts.

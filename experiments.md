@@ -1799,3 +1799,14 @@ molecules with best in-block conformer per molecule. Implemented separate
 scheme/receptor ranks, Top-5 views and explicit insufficient/incomplete states.
 Focused 56-test engineering regression passed; no new scientific run. See
 to_human/20261005_TOP_N_BLOCK_RANKING.md for existing Chat and CLI entry points.
+
+## E103: EquiScore technical pilot and independent block rescoring
+
+Protocol: experiments/E103-equiscore-rescoring.md. User selected the public model.
+Installation and terminal adapters are implemented. Pilot selects 32 CIDs by
+fixed hash order against all receptors, independently of ChemPLP. Successful
+pilot is required for full saved-pose scoring. Rank blocks using the mean of
+the ten highest EquiScore values for distinct molecules, choosing each molecule's
+best in-block conformer. Model ranking is independent of the ChemPLP shortlist.
+Local engineering suite: 780 passed, 6 skipped. Workstation installation and
+scientific inference: not run. No confirmatory model-quality conclusion exists.

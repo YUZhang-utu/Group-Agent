@@ -1,0 +1,15 @@
+# Dedicated Python 3.9 / Linux x86_64 / PyTorch 1.11 CUDA 11.3 environment.
+# ProLIF 1.x is required by upstream to_dataframe(return_atoms=True).
+dgl-cu113==0.9.1
+numpy==1.23.5
+scipy==1.10.1
+pandas==1.5.3
+scikit-learn==1.2.2
+rdkit-pypi==2022.9.5
+prolif==1.1.0
+MDAnalysis==2.4.3
+biopython==1.81
+networkx==2.8.8
+lmdb==1.4.1
+prefetch-generator==1.0.3
+tqdm==4.66.5

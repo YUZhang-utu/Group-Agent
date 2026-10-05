@@ -107,3 +107,22 @@ gate is a project design, not an established physical continuum test.
   https://www.biorxiv.org/content/10.64898/2026.08.20.746104v2.
   Pose-quality benchmark and grouped validation are relevant; this is not a
   benchmark of experimental affinity predictions and is not a deployed model here.
+
+## Published rescoring shortlist, 2026-10-05
+
+User requested journal-published rescoring models for manual selection and declined
+the earlier GNINA-first recommendation. Full titles, primary links, code links,
+publication dates and limitations are in
+to_human/20261005_RESCORING_MODEL_SHORTLIST.md.
+
+- EquiScore, Nature Machine Intelligence (2024), doi:10.1038/s42256-024-00849-z.
+- SCORCH2, Advanced Science (2025), doi:10.1002/advs.202508318.
+- GenScore, Chemical Science (2023), doi:10.1039/D3SC02044D.
+- RTMScore, Journal of Medicinal Chemistry (2022), doi:10.1021/acs.jmedchem.2c00991.
+- DeepRLI, Digital Discovery (2025), doi:10.1039/D4DD00403E.
+- DeepPpIScore, Acta Pharmacologica Sinica (2026 issue, online 2025),
+  doi:10.1038/s41401-025-01659-8; peptide-specific applicability remains unverified.
+- E-CloudBind, Nature Communications (2026), doi:10.1038/s41467-026-74196-5;
+  affinity regression evidence is not equivalent to pose/enrichment evidence.
+
+This is a project-fit reading order, not a measured accuracy leaderboard.

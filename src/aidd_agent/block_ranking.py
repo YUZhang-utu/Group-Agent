@@ -34,9 +34,12 @@ def add_rankings(source, output, *, top_n=10, ranking_unit='molecule'):
     signature = json.loads((output / 'signature.json').read_text(encoding='utf-8'))
     if signature.get('sha256') != sha(source):
         raise ValueError('Analysis does not match source report')
-    # Do not silently use lower-is-better for a different model.
-    if run.get('score') not in {'chemplp', 'ChemPLP', 'ChemPLP TOTAL_SCORE (lower is better)'}:
-        raise ValueError('This ranking adapter requires ChemPLP scores')
+    if run.get('score') in {'chemplp', 'ChemPLP', 'ChemPLP TOTAL_SCORE (lower is better)'}:
+        score_name, better, direction = 'ChemPLP', 'lower', 1
+    elif run.get('kind') == 'block_equiscore_run' and run.get('score') == 'EquiScore' and run.get('better') == 'higher':
+        score_name, better, direction = 'EquiScore', 'higher', -1
+    else:
+        raise ValueError('Unsupported score or scoring direction')
     for name in ('block_scores.csv', 'block_summary.csv'):
         if sha(output / name) != report['output_hashes'][name]:
             raise ValueError('Analysis score table changed')
@@ -48,7 +51,7 @@ def add_rankings(source, output, *, top_n=10, ranking_unit='molecule'):
     groups = defaultdict(lambda: dict(seen=set(), units=set(), scored=set(), best={}))
     retained = max(10, top_n)
     def order(row):
-        return row['score'], row['molecule_id'], row['cid']
+        return direction * row['score'], row['molecule_id'], row['cid']
     with (output / 'block_scores.csv').open(encoding='utf-8', newline='') as stream:
         for row in csv.DictReader(stream):
             key = row['scheme'], row['block_id'], row['receptor']
@@ -68,6 +71,8 @@ def add_rankings(source, output, *, top_n=10, ranking_unit='molecule'):
             row['score'] = float(row['score'])
             if not math.isfinite(row['score']):
                 raise ValueError('Nonfinite successful score')
+            if score_name == 'EquiScore' and not 0 <= row['score'] <= 1:
+                raise ValueError('EquiScore probability is outside [0,1]')
             row['molecule_id'] = mid
             group['scored'].add(unit)
             best = group['best']
@@ -100,7 +105,7 @@ def add_rankings(source, output, *, top_n=10, ranking_unit='molecule'):
         if row['status'] == 'eligible':
             partitions[row['scheme'], row['receptor'], row['top_n']].append(row)
     for rows in partitions.values():
-        for rank, row in enumerate(sorted(rows, key=lambda r: (r['top_n_mean'], r['block_id'])), 1):
+        for rank, row in enumerate(sorted(rows, key=lambda r: (direction * r['top_n_mean'], r['block_id'])), 1):
             row['rank'] = rank
     dbpath = output / 'block_ranking.sqlite'
     with closing(sqlite3.connect(dbpath)) as db:
@@ -121,15 +126,15 @@ def add_rankings(source, output, *, top_n=10, ranking_unit='molecule'):
             if rows:
                 writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
                 writer.writeheader(); writer.writerows(rows)
-    report['ranking'] = dict(**config, score='ChemPLP', better='lower',
+    report['ranking'] = dict(**config, score=score_name, better=better,
         available_top_n=sorted({5, 10, top_n}), retained_candidates=retained,
         group_by=['scheme', 'receptor'], source_report_sha256=sha(source),
-        implementation_sha256=sha(Path(__file__)), source_root=str(source.parent.resolve()),
+        implementation_sha256=sha(Path(__file__)), source_root=str(Path(run.get('source_report', source)).resolve().parent),
         ranked_blocks=sum(r['rank'] is not None and r['top_n'] == top_n for r in ranking_rows),
         leaders=[r for r in ranking_rows if r['rank'] == 1 and r['top_n'] == top_n],
-        model_executed=False)
+        model_executed=bool(run.get('model_executed', False)))
     review = [f'# Top-{top_n} block prioritization', '',
-        f'Primary score: mean of the best {top_n} {ranking_unit} scores per block and receptor; lower ChemPLP is better.',
+        f'Primary score: mean of the best {top_n} {ranking_unit} scores per block and receptor; {better} {score_name} is better.',
         'The whole-block mean is diagnostic only and does not determine this ranking.',
         'Molecule mode selects the best in-block conformer per molecule. Ties use molecule/CID and block ID.',
         'Top-5 and Top-10 summaries are available. Incomplete panels and insufficient candidates are unranked.',
@@ -176,14 +181,14 @@ def inspect(report_path, *, operation='ranks', scheme=None, receptor=None,
         if operation == 'ranks':
             rows = [dict(r) for r in db.execute('SELECT * FROM rankings WHERE scheme=? AND receptor=? AND top_n=? AND rank IS NOT NULL ORDER BY rank LIMIT ?', (scheme, receptor, n, limit))]
             excluded = [dict(r) for r in db.execute('SELECT status,count(*) AS blocks FROM rankings WHERE scheme=? AND receptor=? AND top_n=? AND rank IS NULL GROUP BY status', (scheme, receptor, n))]
-            return dict(status='complete', score='ChemPLP', better='lower', ranking_unit=ranking['ranking_unit'], top_n=n, blocks=rows, excluded=excluded)
+            return dict(status='complete', score=ranking['score'], better=ranking['better'], ranking_unit=ranking['ranking_unit'], top_n=n, blocks=rows, excluded=excluded)
         if not isinstance(block_id, str) or not block_id:
             raise ValueError('Choose a block_id from ranks')
         block = db.execute('SELECT * FROM rankings WHERE scheme=? AND receptor=? AND top_n=? AND block_id=?', (scheme, receptor, n, block_id)).fetchone()
         if block is None:
             raise ValueError('Unknown block')
         rows = [dict(r) for r in db.execute('SELECT * FROM candidates WHERE scheme=? AND receptor=? AND block_id=? ORDER BY candidate_rank LIMIT ?', (scheme, receptor, block_id, min(limit, ranking['retained_candidates'])))]
-    return dict(status='complete', score='ChemPLP', better='lower', ranking_unit=ranking['ranking_unit'], block=dict(block), candidates=rows,
+    return dict(status='complete', score=ranking['score'], better=ranking['better'], ranking_unit=ranking['ranking_unit'], block=dict(block), candidates=rows,
                 source_root=ranking['source_root'], retained_candidates=ranking['retained_candidates'],
                 message='Saved pose references only; no new docking or affinity inference.')
 

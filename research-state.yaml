@@ -1265,7 +1265,7 @@ block_rescoring_e101:
   status: protocol_and_internal_contract_only
   protocol: experiments/E101-block-rescoring-evaluation.md
   user_model: N-E_user_owned_code_pending
-  public_baseline_candidate: GNINA_score_only
+  public_baseline_candidate: EquiScore_user_selected_20261005
   secondary_candidate: PIGNet2
   optional_affinity: Boltz2_eligible_subset_only_applicability_audit_pending
   contract: src/aidd_agent/rescoring_contract.py
@@ -1278,7 +1278,7 @@ block_rescoring_e101:
 
 block_ranking_e102:
   date: 2026-10-05
-  status: implemented_local_validation_workstation_execution_pending
+  status: workstation_complete_per_user_pasted_report
   user_confirmed: distinct_molecules_top10_best_in_block_conformer
   primary: arithmetic_mean_of_best_10_distinct_molecule_ChemPLP_scores
   secondary: top5_mean
@@ -1290,7 +1290,7 @@ block_ranking_e102:
   guide: to_human/20261005_TOP_N_BLOCK_RANKING.md
   focused_tests: 56_passed
   model_inference: not_run_N_E_code_pending
-  workstation_winning_blocks: not_yet_computed
+  workstation_winning_blocks: user_reported_8283_scheme_block_receptor_rankings
   full_regression: 768_passed_6_skipped
   english_content_guard: 838_files_passed
   delivery_branch: feature/structure-guided-chat
@@ -1305,3 +1305,31 @@ block_planner_recovery:
   automatic_resubmission: false
   focused_tests: 24_passed
   full_regression: 771_passed_6_skipped
+
+rescoring_literature_review:
+  date: 2026-10-05
+  status: user_selected_EquiScore
+  report: to_human/20261005_RESCORING_MODEL_SHORTLIST.md
+  primary: [EquiScore, SCORCH2, GenScore, RTMScore, DeepRLI]
+  peptide_candidate: DeepPpIScore_noncanonical_support_unverified
+  affinity_side_candidate: E-CloudBind
+  models_installed_or_run: false
+
+equiscore_e103:
+  date: 2026-10-05
+  status: installation_and_terminal_adapter_implemented_workstation_pilot_pending
+  protocol: experiments/E103-equiscore-rescoring.md
+  guide: to_human/20261005_EQUISCORE_SETUP.md
+  install: scripts/install_equiscore.sh
+  launcher: scripts/run_e103_equiscore.sh
+  upstream_commit: 8b2a9289cf7d181fa49de6ac6712260e8c500c4a
+  checkpoint: save_model_screen.pt
+  direction: higher_is_better_softmax_class1
+  pilot: deterministic_32_CIDs_all_receptors_independent_of_ChemPLP
+  full: all_saved_poses_no_redocking_successful_pilot_required
+  block_ranking: top10_distinct_molecules_best_in_block_conformer
+  chat_dispatch: not_registered_yet
+  live_installation: not_run
+  real_inference: not_run
+  focused_tests: 21_passed
+  full_regression: 780_passed_6_skipped
