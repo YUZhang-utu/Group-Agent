@@ -25,6 +25,65 @@ TOOLS = {
 }
 
 
+TOOL_ARGUMENTS = {
+    'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
+    'structure_chain': {'operation', 'task_id', 'goal', 'reference', 'budget', 'chain_id'},
+    'structure_workflow': {'task_id'},
+    'tasks': set(), 'task_report': {'task_id', 'step_id', 'pointer', 'offset', 'limit'},
+    'read_artifact': {'artifact_id', 'pointer', 'offset', 'limit'},
+    'viewer_read': {'artifact_id', 'pointer', 'offset', 'limit'},
+    'library_status': set(), 'molecule_lookup': {'molecule_id', 'source_name', 'limit'},
+    'literature_search': {'query', 'limit'}, 'viewer_status': set(), 'workflow': {'decision'},
+}
+
+BLOCK_OPERATIONS = {
+    'list': (set(), set()),
+    'attach': ({'report'}, set()),
+    'analyze': ({'attachment_id'}, {'top_n', 'ranking_unit'}),
+    'ranks': ({'task_id'}, {'scheme', 'receptor', 'top_n', 'limit'}),
+    'top': ({'task_id', 'scheme', 'receptor', 'block_id'}, {'top_n', 'limit'}),
+}
+
+
+def argument_contracts():
+    """Expose the same field definitions used by execution, not prose alone."""
+    return dict(version='top-n-arguments-v1',
+        tools={name: dict(allowed_fields=sorted(fields), additional_fields=False)
+               for name, fields in TOOL_ARGUMENTS.items()},
+        block_results=dict(default_operation='list', operations={
+            name: dict(required_fields=sorted(required),
+                       allowed_fields=sorted(required | optional | {'operation'}))
+            for name, (required, optional) in BLOCK_OPERATIONS.items()},
+            examples=[dict(operation='attach', report='/exact/user/supplied/report.json'),
+                      dict(operation='analyze', attachment_id='RETURNED_ATTACHMENT_ID', top_n=10, ranking_unit='molecule'),
+                      dict(operation='ranks', task_id='RETURNED_ANALYSIS_TASK_ID'),
+                      dict(operation='top', task_id='RETURNED_ANALYSIS_TASK_ID', scheme='RETURNED_SCHEME',
+                           receptor='RETURNED_RECEPTOR', block_id='RETURNED_BLOCK_ID', limit=5)],
+            constraints=dict(top_n='integer 1..100', ranking_unit=['molecule', 'conformer'], limit='integer 1..100'),
+            instruction='Replace example identifiers with returned evidence. One operation per call. Do not send future-stage fields to attach.'))
+
+
+def validate_arguments(name, args):
+    if name not in TOOL_ARGUMENTS:
+        raise ValueError('Unknown tool ' + str(name) + '; available tools: ' + ', '.join(sorted(TOOL_ARGUMENTS)))
+    if not isinstance(args, dict):
+        raise ValueError(name + ' arguments must be an object')
+    allowed, required, label = TOOL_ARGUMENTS[name], set(), name
+    if name == 'block_results':
+        operation = args.get('operation', 'list')
+        if not isinstance(operation, str) or operation not in BLOCK_OPERATIONS:
+            raise ValueError('block_results.operation must be one of: ' + ', '.join(BLOCK_OPERATIONS))
+        required, optional = BLOCK_OPERATIONS[operation]
+        allowed = required | optional | {'operation'}
+        label += '.' + operation
+    extra, missing = set(args) - allowed, required - set(args)
+    if extra or missing:
+        raise ValueError(label + ' invalid arguments: unexpected=' + ','.join(sorted(extra)) +
+                         '; missing=' + ','.join(sorted(missing)) +
+                         '; allowed=' + ','.join(sorted(allowed)) +
+                         '. Repair this operation using the argument contract; do not dispatch a different stage.')
+
+
 def bounded(value, depth=0):
     if depth>8:return {'truncated': True, 'reason': 'depth; read a narrower JSON pointer'}
     if isinstance(value,dict):
@@ -104,16 +163,7 @@ class DomainTools:
     def call(self,name,args):
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
-        if not isinstance(args,dict):raise ValueError('Tool arguments must be an object')
-        allowed={
-            'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
-            'structure_chain':{'operation','task_id','goal','reference','budget','chain_id'},
-            'structure_workflow':{'task_id'},
-            'tasks':set(),'task_report':{'task_id','step_id','pointer','offset','limit'},
-            'read_artifact':{'artifact_id','pointer','offset','limit'},'viewer_read':{'artifact_id','pointer','offset','limit'},
-            'library_status':set(),'molecule_lookup':{'molecule_id','source_name','limit'},
-            'literature_search':{'query','limit'},'viewer_status':set(),'workflow':{'decision'}}
-        if name not in allowed or set(args)-allowed[name]:raise ValueError('Unknown tool or arguments')
+        validate_arguments(name, args)
         if name == 'block_results':
             if args.get('operation') == 'attach' and (not isinstance(args.get('report'), str) or args['report'] not in self.request):
                 raise ValueError('Ask for the exact report path in the current user message; do not guess a path')

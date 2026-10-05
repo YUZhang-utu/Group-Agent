@@ -1294,3 +1294,14 @@ block_ranking_e102:
   full_regression: 768_passed_6_skipped
   english_content_guard: 838_files_passed
   delivery_branch: feature/structure-guided-chat
+
+block_planner_recovery:
+  date: 2026-10-05
+  status: local_fix_verified_remote_trace_pending
+  reported_error: Unknown_tool_or_arguments_then_step_time_limit
+  argument_contract_version: top-n-arguments-v1
+  fixes: operation_specific_fields_actionable_errors_immediate_queue_receipt
+  recovery_entrypoint: /dock_results
+  automatic_resubmission: false
+  focused_tests: 24_passed
+  full_regression: 771_passed_6_skipped

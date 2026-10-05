@@ -179,3 +179,31 @@ def test_owned_top_n_inspection_and_changed_options(completed):
     assert handle(app, sid, args)['reused']
     changed = handle(app, sid, dict(args, top_n=5))
     assert changed['tasks'][0]['id'] != task
+
+
+def test_repair_attach_arguments_then_return_queue_receipt_without_more_planning(completed):
+    app, sid, project, source = completed
+    calls=[]
+    def planner(prompt, profile, **kwargs):
+        context=json.loads(prompt);calls.append(context)
+        assert kwargs['capabilities']['argument_contracts']['version']=='top-n-arguments-v1'
+        if len(calls)==1:
+            arguments=dict(operation='attach', report=str(source), top_n=10)
+        elif len(calls)==2:
+            assert 'unexpected=top_n' in context['previous_error']
+            arguments=dict(operation='attach', report=str(source))
+        elif len(calls)==3:
+            identifier=context['evidence'][-1]['result']['attachment']['id']
+            arguments=dict(operation='analyze', attachment_id=identifier, top_n=10, ranking_unit='molecule')
+        else:
+            raise AssertionError('A queued analysis must return its receipt without another planner call')
+        return dict(kind='tool', tool='block_results', arguments=arguments, purpose='Adopt and rank saved results'), {}
+    app.domain_planner=planner
+    reply=app.ask(sid,'Attach and rank the existing report '+str(source),'deepseek')
+    assert len(calls)==3 and len(app.jobs(sid))==1
+    job=app.jobs(sid)[0]
+    assert job['id'] in reply and 'queued' in reply
+    listing=json.loads(app.ask(sid,'/dock_results','deepseek'))
+    assert listing['analysis_tasks'][0]['id']==job['id']
+    assert listing['argument_contract_version']=='top-n-arguments-v1'
+    assert handle(app,app.new_session(),dict(operation='list'))['analysis_tasks']==[]

@@ -158,3 +158,35 @@ def test_invalid_plans_do_not_bypass_time_budget(tmp_path,monkeypatch):
     assert len(calls)==1
     assert 'step/time limit' in result and 'do not resubmit' in result
     assert not app.jobs(sid)
+
+
+def test_operation_contracts_report_exact_fields_and_repair(tmp_path):
+    from aidd_agent.domain_tools import argument_contracts, validate_arguments
+    contract=argument_contracts()['block_results']['operations']['attach']
+    assert contract['allowed_fields']==['operation','report']
+    with pytest.raises(ValueError,match='unexpected=ranking_unit,top_n'):
+        validate_arguments('block_results',dict(operation='attach',report='/report.json',top_n=10,ranking_unit='molecule'))
+    with pytest.raises(ValueError,match='missing=attachment_id'):
+        validate_arguments('block_results',dict(operation='analyze'))
+    seen=[]
+    app=ChatAgent(tmp_path,start=False,domain_planner=scripted([
+        tool('block_results',operation='list',top_n=10),
+        tool('block_results',operation='list'),answer('No attached results yet.', ['E2'])],seen))
+    sid=app.new_session();app.ask(sid,'Inspect attached results only','deepseek')
+    assert 'block_results.list invalid arguments' in seen[1]['previous_error']
+    assert 'allowed=operation' in seen[1]['previous_error']
+    assert seen[2]['evidence'][-1]['result']['analysis_tasks']==[]
+    assert not app.jobs(sid)
+
+
+def test_identical_invalid_call_stops_without_exhausting_ten_steps(tmp_path):
+    seen=[]
+    app=ChatAgent(tmp_path,start=False,domain_planner=scripted([
+        tool('tasks',limit=5),tool('tasks',limit=5)],seen))
+    sid=app.new_session()
+    result=app.ask(sid,'Inspect tasks','deepseek')
+    assert len(seen)==2
+    assert 'same tool call failed twice' in result
+    assert 'unexpected=limit' in result
+    assert 'step/time limit' not in result
+    assert not app.jobs(sid)

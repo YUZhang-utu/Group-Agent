@@ -78,3 +78,26 @@ CLI verifies saved docking output seals and does not execute a model. Large
 pose collections may take time to hash. Remote result values have not been
 inspected locally; the workstation must execute this analysis or the Chat task
 before any actual winning block IDs can be reported.
+
+## Recovery from a planner argument error
+
+Before restarting, use `/status` to check the current task; let queued/running
+work finish rather than interrupting it. After updating, restart the Chat server
+process, not only the browser. Run
+`/dock_results` first. The response now includes `analysis_tasks` with IDs/status
+and `argument_contract_version: top-n-arguments-v1`. An old response without this
+version indicates the server has not loaded this recovery revision.
+
+- If an analysis task is queued/running, inspect `/status TASK_ID`; do not submit
+  another analysis. Completed tasks can be inspected with `/block_ranks TASK_ID`.
+- If only an attachment exists, use `/dock_analyze ATTACHMENT_ID 10 molecule`.
+- If neither exists, attach the exact original final PLANTS report with
+  `/dock_attach /absolute/path/to/report.json`, then analyze its returned ID.
+
+The planner receives machine-readable operation-specific field contracts.
+Unknown fields are rejected with their exact names and allowed alternatives;
+they are not silently ignored or translated. Successfully queued block analysis
+returns its task receipt without another planner turn. Identical repeated tool
+failures stop after two occurrences while retaining the trace and prior receipts.
+The actual workstation error arguments require its Agent trace; local tests
+demonstrate recovery behavior but do not establish which field failed remotely.

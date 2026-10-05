@@ -6,7 +6,7 @@ import time
 import uuid
 import sqlite3
 
-from .domain_tools import DomainTools, TOOLS
+from .domain_tools import DomainTools, TOOLS, argument_contracts
 from .prompt_plan import chat_plan
 from .pymol_bridge import write_json
 
@@ -33,6 +33,15 @@ Return ONE JSON object per turn, either:
 {"kind":"tool","tool":"tasks","arguments":{},"purpose":"Locate existing results"}
 or {"kind":"answer","answer":"Grounded English response","evidence_ids":["E1"]}.
 Use only the exposed tools and workflow contract. A tool error is evidence to
+repair the exact named operation using capabilities.argument_contracts. Fields
+are operation-specific: attach takes report; analyze takes attachment_id, top_n
+and ranking_unit; ranks/top take task_id and returned group/block identifiers.
+Do not put top_n, ranking_unit or later-stage instructions in attach arguments.
+Do not guess alternate field names or repeat a rejected argument unchanged.
+For recovery from an interrupted prior reply, inspect tasks and block_results
+list first. Its analysis_tasks receipts identify previously submitted analyses.
+Do not interpret missing Chat attachments as proof that terminal docking failed.
+Use one operation per call. A tool error is evidence to
 revise your next action, not proof the task succeeded. Do not repeat a dispatched
 operation that may still be running. Queued, pending, failed and complete differ.
 Submitting a scientific job ends this turn's computation dispatch phase; report its
@@ -132,7 +141,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
     audit=dict(id=identifier,status='running',request=request,steps=[],started=time.time(),
                validation='Tool execution traces; no live-provider quality or scientific superiority claim')
     write_json(path,audit)
-    evidence=[];mutations=set();waiting=False;last_error=None;answer=None
+    evidence=[];mutations=set();waiting=False;last_error=None;answer=None;failed_calls={}
     def save():write_json(path,audit)
     try:
         for iteration in range(max_steps):
@@ -144,7 +153,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             try:
                 step,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
                     system_prompt=SYSTEM+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
-                    capabilities=dict(tools=TOOLS,workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=100000)
+                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=100000)
                 step=validate_step(step)
                 if step['kind']=='answer':
                     known={row['id'] for row in evidence if row['status']=='complete'}
@@ -180,6 +189,16 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
+            if name == 'block_results' and args.get('operation') == 'analyze' and record['status'] == 'complete' and pending(result):
+                task_ids=', '.join(str(task['id']) for task in result.get('tasks', []))
+                answer='Block analysis is ' + result['status'] + '. Task ID: ' + task_ids + '. Existing docking outputs will be verified and ranked; no docking was submitted. Inspect /status TASK_ID before requesting results. After completion, use /block_ranks TASK_ID to discover groups and /block_top TASK_ID SCHEME RECEPTOR BLOCK_ID to inspect Top-5 candidates.'
+                audit.update(status='pending', answer=answer, evidence_ids=[row['id']]);save();break
+            if record['status'] == 'failed':
+                failed_key=json.dumps([name,args,record.get('error')],sort_keys=True)
+                failed_calls[failed_key]=failed_calls.get(failed_key,0)+1
+                if failed_calls[failed_key] >= 2:
+                    answer='Stopped after the same tool call failed twice. '+record.get('error','The tool returned a failure receipt.')+' Inspect /status and /dock_results before retrying; previously submitted tasks are unchanged.'
+                    audit.update(status='pending' if waiting else 'incomplete', answer=answer);save();break
             if time.time()-audit['started']>180:break
         if answer is None:
             audit['status']='pending' if waiting else 'incomplete'

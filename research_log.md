@@ -2510,3 +2510,22 @@ English-content guard passed on 838 maintained files and diff whitespace checks
 passed. Source docking/sampling modules remain unchanged. Prepare delivery on
 the existing feature/structure-guided-chat branch; workstation ranking remains
 pending and no model predictions have been fabricated.
+
+## 2026-10-05: block analysis planner argument recovery
+
+User reported a step/time-limit answer ending in `Unknown tool or arguments`.
+The workstation trace has been requested; exact failing arguments and previously
+submitted jobs are not locally known. Code inspection confirmed the generic
+validator hid offending field names and the planner received only prose field
+descriptions. Added shared operation-specific argument contracts, actionable
+missing/extra-field errors, immediate queued-analysis receipts and termination
+after two identical failed calls. `/dock_results` now lists owned analysis tasks
+and a contract version marker. No work is resubmitted automatically. Focused
+regression: 24 passed, including bad attach arguments repaired before one queued
+analysis, no extra planner call after submission, and cross-session isolation.
+
+Final recovery regression: 771 passed, 6 skipped in 77.71 seconds; English guard
+passed on 838 maintained files. User provided the same error summary rather than
+the trace, so the precise remote rejected arguments remain unconfirmed. Publish
+the tested repair to the existing feature branch; check task status before server
+restart and use the read-only receipt listing before any new submission.

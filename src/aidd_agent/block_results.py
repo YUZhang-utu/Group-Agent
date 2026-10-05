@@ -76,7 +76,11 @@ def handle(app, sid, args):
         raise ValueError('Choose attach, list, analyze, ranks or top')
     if operation == 'list':
         rows = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(root.glob('*.json'))]
-        return dict(attachments=[r for r in rows if r.get('session') == sid])
+        owned = [r for r in rows if r.get('session') == sid]
+        ids = {r['id'] for r in owned}
+        jobs = [j for j in app.jobs(sid) if any(identifier in (j.get('request') or '') for identifier in ids)]
+        return dict(attachments=owned, analysis_tasks=[{k: j.get(k) for k in ('id', 'status', 'request', 'report', 'error')} for j in jobs],
+                    argument_contract_version='top-n-arguments-v1')
     with app.lock:
         root.mkdir(exist_ok=True)
         if operation == 'attach':
