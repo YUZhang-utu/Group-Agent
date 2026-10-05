@@ -327,7 +327,7 @@ def screening_summary(job):
     block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze','block_import_analysis'} and s.get('status')=='complete']
     if block_steps:
         child=read_json(ensure_within(Path(block_steps[-1]['result']['report']),Path(job['plan']).parent)) or {}
-        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','receptors','sites','limitations') if k in child}
+        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','ranking','receptors','sites','limitations') if k in child}
     for step in report.get("steps", {}).values():
         if step.get('action') in {'pocket_states','receptor_assess','pocket_adopt'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
@@ -403,6 +403,8 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind') == 'block_analyze' and summary.get('ranking'):
+        return json.dumps(summary, indent=2) + '\nBlocks are ranked by the best N candidate scores, not the whole-block mean. Ask for leading blocks by scheme/receptor, then their Top-5 molecules and saved poses. ChemPLP priorities are not measured affinity.'
     if summary.get('kind') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze'}:
         return json.dumps(summary,indent=2)+'\nUse natural language to request the next block evaluation stage. Docking scores do not establish affinity or search recall.'
     if summary.get('kind')=='pocket_states':
@@ -665,12 +667,28 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command in {'/dock_attach', '/dock_results', '/dock_analyze'}:
+            if command in {'/dock_attach', '/dock_results', '/dock_analyze', '/block_ranks', '/block_top'}:
                 from .block_results import handle
                 rest = text.strip()[len(command):].strip()
-                args = {'operation': {'/dock_attach': 'attach', '/dock_results': 'list', '/dock_analyze': 'analyze'}[command]}
+                args = {'operation': {'/dock_attach': 'attach', '/dock_results': 'list', '/dock_analyze': 'analyze', '/block_ranks': 'ranks', '/block_top': 'top'}[command]}
+                if command in {'/block_ranks', '/block_top'}:
+                    fields = rest.split()
+                    valid = (1, 3, 4) if command == '/block_ranks' else (4, 5)
+                    if len(fields) not in valid:
+                        raise ValueError('Use /block_ranks TASK_ID [SCHEME RECEPTOR [TOP_N]] or /block_top TASK_ID SCHEME RECEPTOR BLOCK_ID [LIMIT]')
+                    args['task_id'] = fields[0]
+                    if len(fields) >= 3: args.update(scheme=fields[1], receptor=fields[2])
+                    if command == '/block_ranks' and len(fields) == 4: args['top_n'] = int(fields[3])
+                    if command == '/block_top': args['block_id'] = fields[3]
+                    if command == '/block_top' and len(fields) == 5: args['limit'] = int(fields[4])
                 if command == '/dock_attach': args['report'] = rest
-                if command == '/dock_analyze': args['attachment_id'] = rest
+                if command == '/dock_analyze':
+                    fields = rest.split()
+                    if not 1 <= len(fields) <= 3:
+                        raise ValueError('Use /dock_analyze ATTACHMENT_ID [TOP_N] [molecule|conformer]')
+                    args['attachment_id'] = fields[0]
+                    if len(fields) > 1: args['top_n'] = int(fields[1])
+                    if len(fields) > 2: args['ranking_unit'] = fields[2]
                 answer = json.dumps(handle(self, sid, args), indent=2)
                 self.message(sid, 'assistant', answer)
                 return answer

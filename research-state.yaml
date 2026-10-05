@@ -1259,3 +1259,38 @@ medchem_git_delivery:
   user_authorization: sync_to_remote_for_workstation_pull
   workstation: pull_and_restart_pending
   next: attach_completed_plants_parallel20_report_then_analyze_existing_scores
+
+block_rescoring_e101:
+  date: 2026-10-05
+  status: protocol_and_internal_contract_only
+  protocol: experiments/E101-block-rescoring-evaluation.md
+  user_model: N-E_user_owned_code_pending
+  public_baseline_candidate: GNINA_score_only
+  secondary_candidate: PIGNet2
+  optional_affinity: Boltz2_eligible_subset_only_applicability_audit_pending
+  contract: src/aidd_agent/rescoring_contract.py
+  contract_tests: 12_passed
+  chat_execution_adapter: not_implemented
+  scientific_inference: not_run
+  experimental_labels: availability_not_established
+  primary_block_endpoint: held_out_score_tail_recall_at_equal_compute_budget
+  labeled_endpoints: EF1_EF5_BEDROC20
+
+block_ranking_e102:
+  date: 2026-10-05
+  status: implemented_local_validation_workstation_execution_pending
+  user_confirmed: distinct_molecules_top10_best_in_block_conformer
+  primary: arithmetic_mean_of_best_10_distinct_molecule_ChemPLP_scores
+  secondary: top5_mean
+  custom_top_n: 1_to_100
+  grouping: separate_scheme_and_receptor
+  missing_policy: no_primary_rank_for_incomplete_or_insufficient_panels
+  whole_block_mean: diagnostic_only
+  candidate_view: top5_molecule_CID_score_pose_file_and_index
+  guide: to_human/20261005_TOP_N_BLOCK_RANKING.md
+  focused_tests: 56_passed
+  model_inference: not_run_N_E_code_pending
+  workstation_winning_blocks: not_yet_computed
+  full_regression: 768_passed_6_skipped
+  english_content_guard: 838_files_passed
+  delivery_branch: feature/structure-guided-chat

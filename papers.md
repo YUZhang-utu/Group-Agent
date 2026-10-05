@@ -82,3 +82,28 @@ U. von Luxburg et al., Clustering: Science or Art?, PMLR27 (2012):
 https://proceedings.mlr.press/v27/luxburg12a.html
 Cluster evaluation depends on task context. Our proposed PDB pocket evidence
 gate is a project design, not an established physical continuum test.
+
+## E101 scoring and early-recognition sources (checked 2026-10-05)
+
+- GNINA 1.3: https://pmc.ncbi.nlm.nih.gov/articles/PMC11874439/;
+  official code https://github.com/gnina/gnina. Candidate for unchanged-pose
+  scoring; CNNscore and CNNaffinity are distinct signals. Macrocycle validation
+  on our chemical domain remains unperformed.
+- PIGNet2: https://github.com/mseok/PIGNet2. Official structure-based affinity
+  and virtual-screening implementation; optional second baseline, not established
+  as superior on this library.
+- Boltz-2 official affinity guidance:
+  https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md.
+  Small-molecule ligand chain only; maximum 128 atoms using its RemoveHs counting
+  convention, with use significantly above 56 discouraged. Library applicability
+  requires inspection, not extrapolation from general small-molecule benchmarks.
+- Truchon and Bayly, 2007, doi:10.1021/ci600426e:
+  https://pubmed.ncbi.nlm.nih.gov/17288412/. Early recognition, EF cutoff
+  limitations and BEDROC motivate multiple prespecified enrichment endpoints.
+- DeepPpIScore: https://www.nature.com/articles/s41401-025-01659-8.
+  Protein-peptide scoring research candidate. Noncanonical macrocycle support
+  has not been verified; peptide specificity alone does not establish suitability.
+- Cyclic-complex confidence/rescoring preprint:
+  https://www.biorxiv.org/content/10.64898/2026.08.20.746104v2.
+  Pose-quality benchmark and grouped validation are relevant; this is not a
+  benchmark of experimental affinity predictions and is not a deployed model here.

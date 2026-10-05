@@ -309,3 +309,21 @@ Local 12-panel median speedup: 1.8646 (kernel only). seed_budget_audit freezes
 molecule IDs before eight replays and reports all stored conformers including
 zero-survivor cases. Largest-budget top-rank overlap is an engineering search
 metric within the ANN pool, not independent activity or full-library recall.
+
+## E101 block and rescoring endpoints
+
+See experiments/E101-block-rescoring-evaluation.md. Compare schemes on common,
+molecule-disjoint held-out candidates at equal conformer/receptor budgets and
+measured cost. Primary label-free endpoint is named-reference score-tail recall
+versus cost, not active recovery. Report membership/sampling bias and coverage.
+With frozen experimental labels: EF1%, EF5%, BEDROC alpha=20, top-k hits/recall;
+secondary PR-AUC and ROC-AUC. Deduplicate molecules, never label unknowns inactive,
+retain failure counts and bootstrap paired molecule clusters. Affinity evaluation
+requires assay-aware Ki/Kd labels and separate continuous-error metrics. No
+metrics were computed on the remote E097 run in this local planning revision.
+
+E102 user-selected block-priority statistic: Top-10 distinct-molecule mean, with
+each molecule represented by its best in-block conformer, separately per receptor.
+Top-5 and custom-N summaries are available; whole-block means are not ranking
+criteria. This is a descriptive sampled-tail statistic, separate from E101's
+held-out equal-budget routing and experimental-label enrichment endpoints.

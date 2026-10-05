@@ -56,6 +56,8 @@ def test_attach_queue_analyze_preserves_source_and_never_calls_engine(completed,
     assert child['ligand_chemistry_reviewed'] is True
     assert all(r['estimate_status'] == 'complete_panel' for r in child['comparisons'])
     assert 'block_summary.csv' in child['outputs']
+    assert child['ranking']['ranking_unit'] == 'molecule'
+    assert child['ranking']['top_n'] == 10
     assert screening_summary(job)['kind'] == 'block_analyze'
 
 
@@ -151,3 +153,29 @@ def test_real_background_executor_runs_analysis_without_engine(completed):
     final = app.task(sid, job['id'])
     assert final['status'] == 'complete', app.snapshot(sid)
     assert screening_summary(final)['kind'] == 'block_analyze'
+
+
+def test_owned_top_n_inspection_and_changed_options(completed):
+    app, sid, project, source = completed
+    row = handle(app, sid, dict(operation='attach', report=str(source)))['attachment']
+    args = dict(operation='analyze', attachment_id=row['id'], top_n=2)
+    queued = handle(app, sid, args)
+    task = queued['tasks'][0]['id']
+    app.execute(app.task(sid, task))
+    tools = DomainTools(app, sid, 'Show the best blocks and their top five molecules', 'deepseek')
+    groups = tools.call('block_results', dict(operation='ranks', task_id=task))
+    assert groups['status'] == 'select_group'
+    group = groups['groups'][0]
+    ranks = tools.call('block_results', dict(operation='ranks', task_id=task, **group))
+    assert ranks['blocks'] and ranks['top_n'] == 2
+    top_args = dict(operation='top', task_id=task, **group, block_id=ranks['blocks'][0]['block_id'])
+    top = tools.call('block_results', top_args)
+    assert len(top['candidates']) == len({r['molecule_id'] for r in top['candidates']})
+    assert top['candidates'][0]['score'] <= top['candidates'][-1]['score']
+    answer = json.loads(app.ask(sid, f'/block_ranks {task}', 'deepseek'))
+    assert answer['groups'] == groups['groups']
+    with pytest.raises(ValueError):
+        handle(app, app.new_session(), top_args)
+    assert handle(app, sid, args)['reused']
+    changed = handle(app, sid, dict(args, top_n=5))
+    assert changed['tasks'][0]['id'] != task

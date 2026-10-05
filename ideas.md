@@ -78,3 +78,12 @@ volume on placed candidate poses and report pocket occupancy separately. Do not
 label ligand extents a receptor collision test. A precomputed batch-readable
 invariant index may reduce repeated I/O, but selectivity must first be measured
 under explicit scientifically interpretable criteria.
+
+## E101: independent scoring for block routing
+
+Hypothesis: a public pose-dependent scorer and the user's N-E model improve
+held-out candidate recovery over ChemPLP alone at the same total compute cost.
+Test first on representative chemistry/score ranges, not docking leaders only.
+Reject improvement claims based only on same-score agreement or more sampled
+blocks. Boltz-2 requires a library size/applicability audit before inclusion.
+Protocol: experiments/E101-block-rescoring-evaluation.md.

@@ -54,8 +54,26 @@ def handle(app, sid, args):
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     root = project / 'block-results'
     operation = args.get('operation', 'list')
+    if operation in {'ranks', 'top'}:
+        from .block_ranking import inspect
+        job = app.task(sid, args['task_id'])
+        if job['status'] != 'complete':
+            return dict(status=job['status'], message='Wait for the analysis task to complete')
+        report_path = ensure_within(Path(job['report']), project)
+        parent = json.loads(report_path.read_text(encoding='utf-8'))
+        reports = []
+        if parent.get('kind') == 'block_analyze':
+            reports.append(report_path)
+        for step in parent.get('steps', {}).values():
+            result = step.get('result', {})
+            if result.get('status') == 'block_analyze' and result.get('report'):
+                reports.append(ensure_within(Path(result['report']), report_path.parent))
+        if len(reports) != 1:
+            raise ValueError('Select a task containing exactly one completed block analysis')
+        return inspect(reports[0], **{k: v for k, v in args.items() if k in
+            {'operation', 'scheme', 'receptor', 'block_id', 'top_n', 'limit'}})
     if operation not in {'attach', 'list', 'analyze'}:
-        raise ValueError('Choose attach, list or analyze')
+        raise ValueError('Choose attach, list, analyze, ranks or top')
     if operation == 'list':
         rows = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(root.glob('*.json'))]
         return dict(attachments=[r for r in rows if r.get('session') == sid])
@@ -77,13 +95,15 @@ def handle(app, sid, args):
         row = selected[0]
         if sha(Path(row['report'])) != row['report_sha256']:
             raise ValueError('Source report changed; attach its final version before analysis')
-        title = 'Analyze attached docking ' + row['id']
+        from .block_ranking import options
+        ranking_options = options(args.get('top_n', 10), args.get('ranking_unit', 'molecule'))
+        title = 'Top-N v1 analyze attached docking ' + row['id'] + ' ' + json.dumps(ranking_options, sort_keys=True)
         existing = [j for j in app.jobs(sid) if j['request'] == title]
-        if existing:
+        if existing and existing[-1]['status'] in {'queued', 'running', 'complete'}:
             job = existing[-1]
             return dict(status=job['status'], tasks=[dict(id=job['id'], status=job['status'])], reused=True)
         plan = dict(version=1, summary=title, clarifications=[], steps=[dict(id='analysis',
-                    action='block_import_analysis', params=dict(attachment_id=row['id'], attachment_sha256=sha(root / (row['id'] + '.json'))))])
+                    action='block_import_analysis', params=dict(attachment_id=row['id'], attachment_sha256=sha(root / (row['id'] + '.json')), **ranking_options))])
         path = create_plan(Path(ctx['db']), ctx['user_id'], ctx['project_id'], title, local_plan=plan)
         jid = uuid.uuid4().hex[:16]
         with app.connect() as db:
@@ -131,9 +151,11 @@ def analyze_attachment(project, params, output):
             raise ValueError('Score table does not match report counters')
         print(f"Checking {len(report['output_hashes']):,} original output seals and analyzing saved scores. Large panels may require substantial file I/O.", flush=True)
         result = analyze(source, output)
+        from .block_ranking import add_rankings
+        result = add_rankings(source, output, top_n=params.get('top_n', 10), ranking_unit=params.get('ranking_unit', 'molecule'))
         if sha(source) != digest:
             raise ValueError('Docking report changed during analysis')
-        result['outputs'] = {name: str(output / name) for name in ('block_summary.csv', 'block_scores.csv', 'review.md')}
+        result.setdefault('outputs', {}).update({name: str(output / name) for name in ('block_summary.csv', 'block_scores.csv', 'review.md')})
         result['source_report'] = str(source)
         result['source_report_sha256'] = digest
         result['verification'] = 'Original docking output seals, preparation and sampling bindings checked; engine not invoked.'

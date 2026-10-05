@@ -223,7 +223,10 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
                 if not profile: raise Blocked('Prepare adopted pocket representatives with SPORES, then select the receptor task')
                 result=prepare(source,profile,output)
             elif action=='block_plants_run': result=run(source,output)
-            else: result=analyze(source,output)
+            else:
+                result=analyze(source,output)
+                from .block_ranking import add_rankings
+                result=add_rankings(source,output)
         if result['status']!='complete': raise RuntimeError('PLANTS panel is partial; inspect blocks/report.json and resume failed jobs')
         return dict(status=result['kind'],report=str(output/'report.json'),
                     slots=result.get('slots'),unique_conformers=result.get('unique_conformers'),

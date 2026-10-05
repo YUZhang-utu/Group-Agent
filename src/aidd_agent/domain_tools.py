@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
-    'block_results': 'Adopt completed CLI PLANTS docking without rerunning it. operation list (default); attach requires the exact user-supplied report path inside the active Project; analyze requires attachment_id and queues existing block statistics with full output-hash verification. Partial panels remain partial, never affinity. Reuse returned task IDs.',
+    'block_results': 'Completed CLI PLANTS results without redocking. operation list (default); attach: exact user-supplied report path in active Project. analyze: attachment_id, optional top_n (1..100, default 10), ranking_unit (molecule default, or conformer). Queues sealed Top-N mean rankings, never whole-block-mean ranking; includes Top-5/10. molecule mode uses best in-block conformer per molecule. ranks: task_id, optional scheme/receptor (omit to discover groups), top_n, limit (default 5). top: task_id, scheme, receptor, block_id, optional limit (default 5), top_n. Returns saved candidates/poses. Rank within scheme/receptor only; incomplete or insufficient panels are unranked. Scores are ChemPLP, not rescoring or affinity. Reuse task IDs.',
     'structure_chain': 'Persist explicitly authorized automatic continuation from an existing diversity/consensus/recommendation/design task. operation start requires task_id, goal recommendation or budget, optional reference {reference_query,target_chain,maximum_templates}, budget settings. Other operations: status, pause/resume/cancel with chain_id. Controls continuation, not the current scientific task. No automatic recovery of uncertain dispatch.',
     'structure_workflow': 'Inspect PDB/diversity/consensus/library stages, source branches, real reference proposals and next supported intents. Arguments: optional task_id. Read-only; call before continuing this workflow.',
     'tasks': 'List current-session task IDs, state and report availability. Arguments: {}.',
@@ -106,7 +106,7 @@ class DomainTools:
         from .project_context import ensure_within
         if not isinstance(args,dict):raise ValueError('Tool arguments must be an object')
         allowed={
-            'block_results': {'operation', 'report', 'attachment_id'},
+            'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
             'structure_chain':{'operation','task_id','goal','reference','budget','chain_id'},
             'structure_workflow':{'task_id'},
             'tasks':set(),'task_report':{'task_id','step_id','pointer','offset','limit'},

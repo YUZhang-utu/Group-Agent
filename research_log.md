@@ -2477,3 +2477,36 @@ Excluded old build outputs, earlier unrelated reports and generated delivery ZIP
 Remote branch is an ancestor of the local continuity checkpoint; no merge is needed.
 Actual workstation pull/restart
 and real block analysis remain pending; preserve the completed 8445-job output.
+
+## 2026-10-05: E101 block comparison and rescoring design
+
+User requested rescoring, affinity prediction and early enrichment evaluation,
+and clarified that N-E is a user-owned model whose code will follow. Recorded
+E101 before scientific execution. Reserved a typed pose-scoring contract with
+provenance, explicit signal/direction, complete result coverage and null failures;
+12 local invariant tests passed. No model or Chat execution adapter is installed.
+Primary-source review favors GNINA as a first public pose-scoring baseline, with
+PIGNet2 optional. Boltz-2's documented small-molecule/size limitations preclude
+assuming general applicability to this macrocycle library. Experimental label
+availability remains unknown. Equal-budget, molecule-disjoint routing evaluation
+and EF1/EF5/BEDROC20 on genuinely labeled panels are separate endpoints. No new
+docking/inference or scientific accuracy claim; E097 receipt remains user-reported.
+
+## 2026-10-05: E102 Top-N block ranking requested and implemented
+
+User replaced whole-block mean prioritization with Top-10/Top-5 means and
+confirmed ten distinct molecules, each represented by its best in-block conformer.
+Implemented sealed Top-N ranking/candidate artifacts, bounded Chat ranks/top
+queries, custom N, provider-independent commands and an offline analysis CLI.
+Preserved the original block_plants.py implementation and completed docking seals.
+Incomplete/undersized panels remain unranked; receptor/scheme scores stay separate.
+The focused 56-test regression passed, including deduplication, contrary whole-mean
+ordering, session ownership and no engine dispatch. Full regression is running.
+This implementation still uses ChemPLP; no N-E/public rescoring model was run.
+Actual workstation block IDs/means remain unavailable locally.
+
+E102 final local verification: full suite 768 passed, 6 skipped in 75.04 seconds;
+English-content guard passed on 838 maintained files and diff whitespace checks
+passed. Source docking/sampling modules remain unchanged. Prepare delivery on
+the existing feature/structure-guided-chat branch; workstation ranking remains
+pending and no model predictions have been fabricated.

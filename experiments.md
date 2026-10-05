@@ -1782,3 +1782,20 @@ E095 local outcome: exploratory fixtures confirm bounded subdivision, rare-tail 
 Hypothesis: residue-anchored directed spatial moments of actual typed feature centers and side-chain atom clouds distinguish geometry omitted by E095 composition summaries. Reuse verified 69D broad properties; add actual backbone shape and signed typed spatial moments for same, next, next-two and opposite residues. Invariant to proper rigid transforms and directed cyclic origin; no reflection or reversal alignment. Preserve source chemistry/state. Extract raw-source verified regular conformers with resumable batches; fail closed on identity/chemistry mismatch. Repartition original E094 parents (not E095 children), child floor max(5000,20 percent of original parent), cap four. MID-disjoint internal fit/check uses source molecule identity; global scaling remains exploratory and reference recall is pending. Tests: rigid invariance, cyclic origin invariance, spatial movement and reflection sensitivity, actual MOL2 record provenance, partial resume, no missing CIDs, cache/source hash binding, full membership conservation, cap/floor and joint group weights. No completion-by-tomorrow or exhaustive-geometry uniqueness claim.
 
 E096 local exploratory outcome: 35 relevant tests passed. Verified source-record MOL2 roundtrip (fixture writer required explicit H atoms), invariant rigid/cyclic/atom-order behavior, nonzero geometry response to side-chain motion/reflection, small admitted cycles, serial/parallel equality, resumable batch commit and source-hash rejection. Spatial cache and block membership validation pass on local fixtures. Full workstation runtime and scientific utility remain pending.
+
+## E101: block routing, rescoring and affinity evaluation
+
+Protocol: experiments/E101-block-rescoring-evaluation.md. Separate descriptive
+ChemPLP analysis, held-out equal-budget block routing and experimental-label
+enrichment. N-E code pending; GNINA is the first public baseline candidate,
+PIGNet2 optional, Boltz-2 restricted to an audited eligible subset. Typed internal
+contract validation passed 12 local tests. These are engineering checks, not a
+scientific experiment. No model inference, measured EF or affinity result exists.
+
+## E102: distinct-molecule Top-N block means
+
+Protocol: experiments/E102-top-n-block-ranking.md. User confirmed Top-10 different
+molecules with best in-block conformer per molecule. Implemented separate
+scheme/receptor ranks, Top-5 views and explicit insufficient/incomplete states.
+Focused 56-test engineering regression passed; no new scientific run. See
+to_human/20261005_TOP_N_BLOCK_RANKING.md for existing Chat and CLI entry points.

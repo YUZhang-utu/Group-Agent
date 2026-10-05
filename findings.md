@@ -605,3 +605,13 @@ provider/workstation acceptance remain pending.
 ## E094: identity classes versus usable work blocks
 
 Fragmentation can be removed at the execution layer without forcing new chemical equivalences. A minimum-population pool allocator preserves original identities and E091 membership states while preventing small independent regular blocks. Side-chain summaries can refine large pools only with complete per-conformer property coverage and the same minimum-child population. Actual local steric proxies are included; exact sequence matching and pocket-clash inference are not implied. Source profiling remains the expensive full-library step; E091 profiles cover only a subset. Real small-source and interrupted-resume checks passed, with workstation acceptance pending.
+
+## E101 planning: scoring evidence is not affinity validation
+
+The completed docking receipt enables an initial descriptive comparison, pending
+sealed workstation analysis. Different block counts produced unequal sampling
+budgets, so scheme means do not establish routing superiority. N-E is user-owned
+and awaiting code. A public GNINA baseline is proposed, not yet executed. Boltz-2
+documentation does not support assuming reliable affinity for arbitrary large
+noncanonical macrocycles. Biological EF requires experimental labels; label-free
+score-tail recovery answers a different question. No model superiority is found.
