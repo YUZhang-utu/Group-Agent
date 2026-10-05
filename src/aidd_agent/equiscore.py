@@ -27,7 +27,9 @@ def load_profile(path):
         raise ValueError('EquiScore profile requires python and repository; optional receptor_pdbs')
     for key in ('python', 'repository'):
         item = Path(config[key])
-        config[key] = str((item if item.is_absolute() else path.parent / item).resolve())
+        item = item if item.is_absolute() else path.parent / item
+        # A venv Python symlink must retain its venv path to load overlay packages.
+        config[key] = os.path.abspath(item) if key == 'python' else str(item.resolve())
     if not isinstance(config.get('receptor_pdbs', {}), dict):
         raise ValueError('receptor_pdbs must map receptor IDs to PDB paths')
     config['receptor_pdbs'] = {key: str((Path(value) if Path(value).is_absolute() else path.parent / value).resolve())

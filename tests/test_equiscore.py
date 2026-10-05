@@ -226,3 +226,56 @@ def test_screening_checkpoint_keeps_keys_expected_by_model(worker_module):
     model = Mock(); model.state_dict.return_value = {'mu': 0, 'dev': 1}
     assert worker_module.load_screening_state(model, {'model': {'mu': 7, 'dev': 8}}) == []
     model.load_state_dict.assert_called_once_with({'mu': 7, 'dev': 8}, strict=True)
+
+
+@pytest.mark.parametrize('modern', [True, False])
+def test_pinned_checkpoint_loading_across_torch_defaults(worker_module, tmp_path, monkeypatch, modern):
+    path = tmp_path / 'weights.pt'; path.write_bytes(b'fixture checkpoint')
+    monkeypatch.setattr(worker_module, 'WEIGHT_SHA', sha(path))
+    calls = []
+    def new_load(filename, map_location=None, weights_only=True):
+        calls.append((filename, map_location, weights_only)); return {'model': {}}
+    def old_load(filename, map_location=None):
+        calls.append((filename, map_location)); return {'model': {}}
+    torch = SimpleNamespace(load=new_load if modern else old_load)
+    assert worker_module.read_checkpoint(torch, path) == {'model': {}}
+    assert calls == [(str(path), 'cpu', False)] if modern else calls == [(str(path), 'cpu')]
+    path.write_bytes(b'changed checkpoint')
+    with pytest.raises(ValueError, match='hash mismatch'): worker_module.read_checkpoint(torch, path)
+    assert len(calls) == 1
+
+
+def test_profile_preserves_python_symlink_path(tmp_path, monkeypatch):
+    repo = tmp_path / 'repo'; repo.mkdir()
+    weights = repo / 'workdir/official_weight/save_model_screen.pt'
+    weights.parent.mkdir(parents=True); weights.write_bytes(b'fixture checkpoint')
+    monkeypatch.setattr(es, 'WEIGHT_SHA', sha(weights))
+    monkeypatch.setattr(es.subprocess, 'run', lambda *a, **k: SimpleNamespace(stdout=es.COMMIT, returncode=0))
+    interpreter = tmp_path / 'overlay/bin/python'
+    original_resolve = Path.resolve
+    def resolve(path, *args, **kwargs):
+        if path == interpreter: return tmp_path / 'base/bin/python'
+        return original_resolve(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'resolve', resolve)
+    profile = tmp_path / 'profile.json'
+    save(profile, dict(python=str(interpreter), repository=str(repo)))
+    config, _, _ = es.load_profile(profile)
+    assert config['python'] == str(interpreter)
+
+
+def test_existing_environment_setup_stops_before_install_on_gpu_failure(tmp_path, monkeypatch):
+    import os
+    filename = Path(__file__).resolve().parents[1] / 'scripts/setup_equiscore_existing.py'
+    spec = importlib.util.spec_from_file_location('setup_equiscore_existing', filename)
+    setup = importlib.util.module_from_spec(spec); spec.loader.exec_module(setup)
+    monkeypatch.setattr(setup, 'os', SimpleNamespace(name='posix', environ=os.environ, path=os.path))
+    monkeypatch.setattr(setup.sys, 'argv', ['setup', '--prefix', str(tmp_path / 'overlay')])
+    calls = []
+    def fail(command, **kwargs):
+        calls.append(command)
+        raise RuntimeError('DGL CUDA fixture failure')
+    monkeypatch.setattr(setup.subprocess, 'run', fail)
+    with pytest.raises(RuntimeError, match='DGL CUDA fixture'):
+        setup.main()
+    assert len(calls) == 1 and calls[0][-1] == '--gpu-check'
+    assert not (tmp_path / 'overlay').exists()

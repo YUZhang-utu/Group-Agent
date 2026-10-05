@@ -8,6 +8,44 @@ registered. Do not interpret an existing ChemPLP Chat report as model execution.
 
 ## Install on the Linux GPU workstation
 
+### RTX 5090: reuse the verified workstation environment
+
+The user verified `/home/y/yuzhang/envs/dl4s/bin/python` with Torch 2.7.0+cu128
+and a successful CUDA matrix multiplication on RTX 5090. DGL is 2.5.0+cu121,
+RDKit is 2025.9.2, and ProLIF is absent. The original Torch 1.11/CUDA 11.3 pilot
+failed for all 96 pairs with "no kernel image". Use the existing-environment
+setup, not the legacy installer below, for this workstation:
+
+```bash
+/home/y/yuzhang/envs/dl4s/bin/python scripts/setup_equiscore_existing.py
+```
+
+This first runs actual Torch/DGL CUDA kernels, without downloads. If that gate
+fails, send its traceback; the base environment is untouched. DGL's cu121 tag
+does not establish Blackwell compatibility. If it passes, a dedicated venv with
+system-site-packages reuses base Torch/DGL/RDKit and adds ProLIF 1.1 plus missing
+dependencies. Constraints freeze every visible base package version; conflicts
+fail rather than upgrading or downgrading the working stack. No base packages
+are installed, removed or replaced. The setup then runs the official example
+through pocket extraction, ProLIF, graph creation and model inference.
+
+After it prints "Ready for a new pilot":
+
+```bash
+export EQUISCORE_PROFILE=/mnt/local/hand/yuzhang/aidd/tools/equiscore-dl4s/profile.json
+export EQUISCORE_OUTPUT=/mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution/equiscore-v3
+bash scripts/run_e103_equiscore.sh pilot
+```
+
+Keep those exports for full/analyze. Live DGL and chemistry compatibility remain
+pending; local fixture tests do not establish them. The adapter explicitly loads
+the hash-pinned legacy checkpoint under Torch 2.7's changed serialization default
+and maps DGL's historical src_mul_edge spelling to u_mul_e when needed. Original
+upstream source files and model weights are unchanged. ProLIF 2.x is not silently
+substituted because its fingerprint API and interaction definitions differ.
+
+### Legacy GPU environment recipe
+
 From the existing repository and AIDD environment:
 
 ```bash

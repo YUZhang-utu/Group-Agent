@@ -1,19 +1,49 @@
-"""Isolated Python 3.9 EquiScore worker; only consumes coordinator-created jobs."""
+"""Profile-selected EquiScore worker; only consumes coordinator-created jobs."""
 import argparse
 from contextlib import closing
 from functools import lru_cache
 import hashlib
 import io
 import importlib.metadata
+import inspect
 import json
 from pathlib import Path
 import pickle
 import sqlite3
 import sys
 import time
+import tempfile
 
 
 WEIGHT_SHA = 'd4367bb73686b2363e238abb778fab55e2924458ec1ced561072bd82f711695d'
+
+
+def gpu_check():
+    """Check actual PyTorch and DGL kernels before attempting a pose panel."""
+    import torch
+    import dgl
+    import dgl.function as fn
+    from dgl.nn.functional import edge_softmax
+    if not torch.cuda.is_available(): raise RuntimeError('CUDA is unavailable')
+    x = torch.ones((8, 8), device='cuda:0')
+    assert bool(torch.isfinite(x @ x).all())
+    graph = dgl.graph(([0, 1], [1, 0])).to('cuda:0')
+    graph.ndata['x'] = torch.ones((2, 8), device='cuda:0')
+    graph.edata['w'] = edge_softmax(graph, torch.ones((2, 1), device='cuda:0'))
+    graph.update_all(fn.u_mul_e('x', 'w', 'm'), fn.sum('m', 'y'))
+    assert bool(torch.isfinite(graph.ndata['y']).all())
+    torch.cuda.synchronize()
+    return dict(torch=torch.__version__, dgl=dgl.__version__, cuda=torch.version.cuda,
+                gpu=torch.cuda.get_device_name(0), python=sys.executable, gpu_kernels='passed')
+
+
+def read_checkpoint(torch, path):
+    # The exact official file is hash-verified before allowing legacy unpickling.
+    if sha(path) != WEIGHT_SHA: raise ValueError('Official checkpoint hash mismatch')
+    kwargs = dict(map_location='cpu')
+    if 'weights_only' in inspect.signature(torch.load).parameters:
+        kwargs['weights_only'] = False
+    return torch.load(str(path), **kwargs)
 
 
 def sha(path):
@@ -50,6 +80,10 @@ def load_model(profile):
     import torch
     import numpy as np
     import random
+    import dgl.function as fn
+    if not hasattr(fn, 'src_mul_edge'):
+        # Historical DGL spelling for the same native built-in operation.
+        fn.src_mul_edge = fn.u_mul_e
     # Match upstream import order: dataset and utils have a circular dependency.
     import utils.utils
     from utils.parsing import parse_train_args
@@ -67,7 +101,7 @@ def load_model(profile):
     random.seed(42); np.random.seed(42); torch.manual_seed(42)
     torch.cuda.manual_seed_all(42)
     model = EquiScore(args)
-    checkpoint = torch.load(str(weights), map_location='cpu')
+    checkpoint = read_checkpoint(torch, weights)
     load_screening_state(model, checkpoint)
     model = model.to('cuda:0').eval()
     return model, args
@@ -190,6 +224,7 @@ def run(job_path):
     job = json.loads(job_path.read_text())
     for name, digest in job['input_hashes'].items():
         if sha(name) != digest: raise ValueError('Worker input changed: ' + name)
+    print(json.dumps(gpu_check()), flush=True)
     model, args = load_model(job['profile'])
     import torch
     from dataset.dataset import ESDataset
@@ -246,22 +281,37 @@ def run(job_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--job')
-    parser.add_argument('--doctor', help='Profile JSON to check without scientific inference')
+    parser.add_argument('--doctor', help='Profile JSON for GPU and official-example preflight; no project poses')
+    parser.add_argument('--gpu-check', action='store_true', help='Read-only Torch/DGL CUDA operation test')
     args = parser.parse_args()
-    if args.doctor:
+    if args.gpu_check:
+        print(json.dumps(gpu_check(), indent=2))
+    elif args.doctor:
         profile = json.loads(Path(args.doctor).read_text())
-        load_model(profile)
+        print(json.dumps(gpu_check()), flush=True)
+        model, model_args = load_model(profile)
         import torch, dgl, rdkit, prolif
-        import dgl.function as fn
-        # Exercise CUDA kernels, not just driver discovery or checkpoint loading.
-        graph = dgl.graph(([0, 1], [1, 0])).to('cuda:0')
-        graph.ndata['x'] = torch.ones((2, 8), device='cuda:0')
-        graph.update_all(fn.copy_u('x', 'm'), fn.sum('m', 'y'))
-        assert bool(torch.isfinite(graph.ndata['y']).all())
-        assert bool(torch.isfinite(torch.ones((8, 8), device='cuda:0') @ torch.ones((8, 8), device='cuda:0')).all())
+        from rdkit import Chem
+        from Bio.PDB import PDBParser
+        from dataset.dataset import ESDataset
+        sample = Path(profile['repository']) / 'data/sample_data'
+        ligand = next(m for m in Chem.SDMolSupplier(str(sample / 'sample_compounds.sdf')) if m is not None)
+        structure = PDBParser(QUIET=True).get_structure('official-example', str(sample / 'sample_protein.pdb'))
+        with tempfile.TemporaryDirectory(prefix='equiscore-doctor-') as temp:
+            pair = Path(temp) / 'official-example.pkl'
+            make_pair(ligand, structure, pair)
+            dataset = ESDataset([str(pair)], model_args, temp, False)
+            graph = dataset[0]
+            if graph is None: raise ValueError('Official example graph failed')
+            g, full_g, _ = dataset.collate([graph])
+            with torch.no_grad():
+                result = model(g.to('cuda:0'), full_g.to('cuda:0'))
+            if tuple(result.shape) != (1, 2) or not bool(torch.isfinite(result).all()):
+                raise ValueError('Official example forward pass failed')
         torch.cuda.synchronize()
         print(json.dumps(dict(status='ready', checkpoint_loaded_strictly=True,
             cuda_graph_smoke_passed=True,
+            official_example_forward_passed=True,
             torch=torch.__version__, dgl=dgl.__version__, rdkit=rdkit.__version__,
             prolif=prolif.__version__, gpu=torch.cuda.get_device_name(0))))
     elif args.job: run(args.job)

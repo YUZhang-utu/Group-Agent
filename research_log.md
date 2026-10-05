@@ -2587,3 +2587,17 @@ Focused engineering regression: 28 passed, including known-extra filtering,
 unknown-extra rejection, strict-error propagation and preserving keys if expected
 by the model. No local Torch/CUDA inference claimed. Workstation acceptance needs
 a fresh sealed pilot directory; preserve the failed directory and installed env.
+
+## 2026-10-05: Blackwell failure; adopt the user's working Torch environment
+
+User reports 96/96 model_failed with CUDA no-kernel-image under Torch 1.11/cu113.
+The user's dl4s interpreter passes CUDA matrix multiplication on RTX 5090 with
+Torch 2.7.0+cu128; DGL 2.5.0+cu121 is installed but not GPU verified. Added a
+read-only DGL kernel gate followed by a system-site-packages venv overlay and
+base-version constraints, preserving the working environment. ProLIF 1.1 is
+kept for the official legacy feature API. Inspected its wheel metadata/source.
+Added hash-gated explicit checkpoint deserialization for Torch's new defaults,
+DGL historical message-function alias, interpreter-symlink preservation, and
+official-example chemistry/graph/model forward preflight. No remote install or
+new predictions claimed. Local focused tests: 32 passed. Actual DGL GPU support
+and modern RDKit/legacy ProLIF compatibility await the workstation setup receipt.
