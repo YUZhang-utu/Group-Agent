@@ -15,7 +15,7 @@ async function refresh(){if(polling)return;polling=true;try{const state=await ap
 $('new').onclick=()=>newSession().catch(e=>$('error').textContent=e.message);$('compose').onsubmit=e=>{e.preventDefault();if($('prompt').value.trim())send($('prompt').value);};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('compose').requestSubmit();}};
 refresh();setInterval(refresh,2000);
 
-$('attach').onclick=async()=>{try{if(!session)await newSession();if($('attachment-kind').value==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};
+$('attach').onclick=async()=>{try{if(!session)await newSession();if($('attachment-kind').value==='equiscore')await api('/api/block-campaign',{session,arguments:{operation:'import',report:$('existing').value.trim()}});else if($('attachment-kind').value==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};
 
 function renderViewer(viewer){
 if(!viewer||(!viewer.connected&&!viewer.latest))return;
@@ -52,7 +52,8 @@ $('tasks').prepend(card);
 
 // Examples fill the composer; only Send submits a request.
 for(const button of document.querySelectorAll('[data-prompt]'))button.onclick=()=>{$('prompt').value=button.dataset.prompt;$('prompt').focus();};
-$('attachment-kind').onchange=()=>{const docking=$('attachment-kind').value==='docking';$('existing-label').textContent=docking?'PLANTS report.json path':'Existing plan.json path';$('existing').placeholder=docking?'/project/runs/.../plants-final/report.json':'/project/runs/PROMPT-.../plan.json';};
+$('attachment-kind').append(new Option('Completed EquiScore analysis','equiscore'));
+$('attachment-kind').onchange=()=>{const kind=$('attachment-kind').value;$('existing-label').textContent=kind==='equiscore'?'EquiScore analysis report.json path':kind==='docking'?'PLANTS report.json path':'Existing plan.json path';$('existing').placeholder=kind==='equiscore'?'/project/runs/.../equiscore-analysis/report.json':kind==='docking'?'/project/runs/.../plants-final/report.json':'/project/runs/PROMPT-.../plan.json';};
 const coverage=$('coverage-menu');let coveragePinned=false;
 coverage.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')coverage.open=true;});
 coverage.addEventListener('pointerleave',()=>{if(!coveragePinned&&!coverage.contains(document.activeElement))coverage.open=false;});
@@ -77,3 +78,42 @@ resultsMenu.querySelector('summary').addEventListener('click',event=>{event.prev
 resultsMenu.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeResults(true);}});
 $('close-results').onclick=()=>closeResults(true);
 document.addEventListener('pointerdown',event=>{if(!resultsMenu.contains(event.target))closeResults();});
+
+// Explicit controls use the same owned tool contract as research chat.
+const campaignPanel=node('details',undefined,'attach-menu');
+campaignPanel.append(node('summary','Leading blocks to 3D search'));
+const campaignFields={};
+function campaignField(key,label,options){
+  const control=node(options?'select':'input');control.id='campaign-'+key;
+  if(options)for(const [value,text] of options)control.append(new Option(text,value));
+  const caption=node('label',label);caption.htmlFor=control.id;
+  campaignPanel.append(caption,control);campaignFields[key]=control;return control;
+}
+campaignField('task_id','Imported analysis task',[]);
+campaignField('query_task_id','Confirmed MDM2 query task',[]);
+campaignField('scheme','Partition',[['E094','E094'],['E095','E095'],['E096','E096']]);
+campaignField('receptor','Receptor',[['1RV1_B','1RV1_B'],['7NA2_A','7NA2_A'],['5J7F_A','5J7F_A']]);
+campaignField('method','Block selection',[['union','Union of both scores'],['intersection','Shared leading blocks'],['equiscore','EquiScore'],['chemplp','ChemPLP']]);
+campaignField('blocks','Leading blocks per score',[['5','Top 5'],['10','Top 10']]);
+const conformerInput=campaignField('conformers','Conformers to export (multiple per molecule allowed)');
+conformerInput.type='number';conformerInput.min='1';conformerInput.max='1000000';conformerInput.value='100000';
+const campaignOutput=node('pre');campaignOutput.setAttribute('aria-live','polite');
+async function campaignCall(arguments_){if(!session)await newSession();return api('/api/block-campaign',{session,arguments:arguments_});}
+function campaignButton(label,callback){const button=node('button',label);button.type='button';button.onclick=async()=>{button.disabled=true;try{await callback();}catch(e){campaignOutput.textContent=e.message;}finally{button.disabled=false;}};campaignPanel.append(button);}
+campaignButton('Load saved analyses and queries',async()=>{
+  const data=await campaignCall({operation:'list'});
+  campaignFields.task_id.replaceChildren(new Option('Select an imported analysis',''));
+  campaignFields.query_task_id.replaceChildren(new Option('Select the confirmed query',''));
+  for(const task of data.tasks.filter(t=>t.status==='complete'&&t.request.startsWith('Import saved EquiScore')))
+    campaignFields.task_id.append(new Option(task.id,task.id));
+  for(const query of data.query_tasks)campaignFields.query_task_id.append(new Option(query.task_id+' / '+query.kind,query.task_id));
+  campaignOutput.textContent=JSON.stringify(data,null,2);
+});
+function campaignSelection(operation){return {operation,task_id:campaignFields.task_id.value,scheme:campaignFields.scheme.value,receptor:campaignFields.receptor.value,method:campaignFields.method.value,blocks:Number(campaignFields.blocks.value)};}
+campaignButton('Preview leading blocks',async()=>{campaignOutput.textContent=JSON.stringify(await campaignCall(campaignSelection('preview')),null,2);});
+campaignButton('Search and dock conformers',async()=>{
+  const args={...campaignSelection('start'),query_task_id:campaignFields.query_task_id.value,conformers:Number(conformerInput.value),dock:true};
+  campaignOutput.textContent=JSON.stringify(await campaignCall(args),null,2);await refresh();
+});
+campaignPanel.append(node('p','Blocks: mean of Top-10 distinct molecules. Search budget: conformers across the selected blocks. Docking uses the selected receptor.','attach-note'),campaignOutput);
+$('docking-results').before(campaignPanel);

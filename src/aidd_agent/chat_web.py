@@ -82,6 +82,9 @@ def make_server(agent, port=8765, token=None):
                 elif self.path == '/api/block-results':
                     from .block_results import handle
                     result = handle(agent, body['session'], body['arguments'])
+                elif self.path == '/api/block-campaign':
+                    from .block_campaign import handle
+                    result = handle(agent, body['session'], body['arguments'])
                 elif self.path == "/api/message":
                     result={"message":agent.ask(body["session"],body["text"],body.get("provider","deepseek"))}
                 else: self.send(404,{"error":"Not found"}); return

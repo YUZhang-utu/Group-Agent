@@ -2644,3 +2644,23 @@ successful pilot from the unconfirmed full launch. The background full-plus-
 analysis command has been given to the user, but no launch or completion receipt
 was supplied. Next session must inspect before resubmitting. No executable code
 or environment changed while saving this record.
+
+
+## 2026-10-06: EquiScore full-run status check resumed
+Read the 20261005 handoff, state, findings, E103 protocol and launcher. User reports that yesterday's task appears completed. This Windows session has no configured workstation connection or full-run receipts available; full inference and final comparison artifacts remain unverified. No docking, inference, installation or analysis was resubmitted. Next obtain compact summaries of equiscore-v3/equiscore-full/report.json and equiscore-analysis/report.json plus final rank_comparison.csv presence/hash. Preserve the working pilot environment and code seals.
+
+
+## 2026-10-06: full EquiScore and block analysis completed per user receipt
+User supplied full-run summary: complete, scope full, 821619 pairs/scored, zero failed pairs, worker exit 0, elapsed 50634.678872253746 seconds (14 h 3 min 54.68 s). Analysis: complete, EquiScore higher-is-better, Top-10 molecule ranking, 8283 block records. User confirms block_rankings.csv, block_top_candidates.csv, rank_comparison.csv and ranking_review.md exist. Saved the exact summary in data/20261006_equiscore_full_user_receipt.json. Remote file hashes and individual values have not been independently inspected. Next inspect leading blocks/candidates and model comparisons; no repeated inference or docking. Technical completion is not affinity or experimental enrichment validation.
+
+
+## 2026-10-06 leading-block inspection tool prepared
+User requested Top-5/Top-10 inspection and identification of leading blocks. Added standalone scripts/review_equiscore_leaders.py to verify saved result seals and export group-specific block priorities, candidate IDs/pose references, ChemPLP comparisons and Top-5 versus Top-10 mean sensitivity. Five synthetic boundary tests passed; English guard passed (852 maintained files). No remote result tables are available locally yet; no scientific inference or pose inspection was performed. Transfer/run the standalone tool on the workstation and return its small review ZIP.
+
+Validation follow-up: 38 focused block-ranking, EquiScore and leader-review tests passed under the repository .venv with src on sys.path. The default interpreter lacked the installed project/RDKit and could not collect the broader tests; no dependencies or scoring environment were changed. English guard passed on 853 maintained files.
+
+## 2026-10-06: E104 Agent block-search continuation
+
+User requested recording terminal EquiScore results in Chat and connecting leading-block 3D search to docking. User clarified that the 100000 budget counts conformers, allowing multiple per molecule, and selected the existing confirmed MDM2 query. Implemented asynchronous sealed full-analysis import, per-group dual-score selection, block-only source-to-artifact mapping, existing contact-first refinement with conformer RRF, original-chemistry export and inherited PLANTS receptor/site/engine. Added shared tool/API/UI controls and explicit request receipt reuse. Thirteen new fixture tests passed; related block/chat regression (92 tests before the final added prompt test) and domain/planner/budget regression (45 tests) passed. New plus domain tests passed together (26 tests). Initial background-test failures were caused by missing inherited PYTHONPATH in the local test invocation and resolved by exporting src to child processes; no workstation environment was changed. A newly introduced planner variable-placement error was found and fixed by domain regression tests. Real workstation mapping, query selection and large search remain pending; no heavy computation was submitted from this session. Guide: to_human/20261006_BLOCK_SEARCH_AGENT.md.
+
+E104 final acceptance on local fixtures: 139 combined regression tests passed. The additional real-subprocess start test caught a pre-existing-style exception identity problem under python -m; moving Blocked to a shared module preserves accurate blocked status. Imported completion is published after both scoring views are ready. JavaScript syntax and English-content guard passed. Remote real-library search and query/membership compatibility remain pending. User said to continue; proceeding to Git commit/push, preserving existing scientific outputs.

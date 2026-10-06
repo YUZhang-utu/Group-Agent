@@ -1,11 +1,22 @@
 project: aidd-macrocycle-agent
 latest_continuation:
-  saved: 2026-10-05
-  handoff: to_human/20261005_AIDD_AGENT_HANDOFF.md
-  current: EquiScore_workstation_pilot_96_of_96_complete
-  next: inspect_full_run_process_logs_and_receipts_before_any_submission
-  full_launch: command_provided_user_execution_not_confirmed
-  preserve: successful_pilot_code_profile_environment_and_original_PLANTS_outputs
+  saved: 2026-10-06
+  handoff: to_human/20261006_BLOCK_SEARCH_AGENT.md
+  current: full_EquiScore_complete_user_receipt_leader_bundle_verified_E104_integration_implemented
+  next: pull_restart_original_Chat_import_existing_analysis_select_confirmed_MDM2_query_and_accept_real_search
+  full_launch: completed_821619_of_821619_zero_failures_user_receipt
+  preserve: successful_EquiScore_environment_and_original_PLANTS_and_full_analysis_outputs
+block_search_continuation:
+  experiment: E104
+  status: local_fixture_validation_passed_workstation_acceptance_pending
+  default_delivery: 100000_conformers_multiple_per_molecule_allowed
+  block_statistic: mean_best_10_distinct_molecules_best_in_block_conformer
+  query: existing_confirmed_MDM2_consensus_task_user_selected_in_UI
+  selection: per_scheme_receptor_EquiScore_ChemPLP_union_or_intersection_Top5_or_Top10
+  search_scope: selected_block_members_only_contact_first_existing_engine
+  docking: selected_original_reviewed_receptor_original_engine_hash_required
+  imported_scoring: no_repeated_EquiScore_or_PLANTS_execution
+  biological_validation: not_run
 pdb_pocket_project_prerequisite:
   status: E093_receptor_advice_local_validation_passed
   guide: to_human/PDB_POCKET_PROJECT_PREREQUISITE.md
@@ -1324,7 +1335,7 @@ rescoring_literature_review:
 
 equiscore_e103:
   date: 2026-10-05
-  status: workstation_pilot_complete_per_user_receipt_full_pending
+  status: workstation_full_and_analysis_complete_per_user_receipt
   protocol: experiments/E103-equiscore-rescoring.md
   guide: to_human/20261005_EQUISCORE_SETUP.md
   install: scripts/setup_equiscore_existing.py
@@ -1337,12 +1348,12 @@ equiscore_e103:
   block_ranking: top10_distinct_molecules_best_in_block_conformer
   chat_dispatch: not_registered_yet
   live_installation: preflight_ready_per_user_receipt
-  real_inference: pilot_96_of_96_scored_zero_failures_per_user_receipt
+  real_inference: full_821619_of_821619_scored_zero_failures_per_user_receipt
   pilot_elapsed_seconds: 12.190821549855173
   pilot_output_parent: /mnt/local/hand/yuzhang/aidd/e097-chat-workspace/users/workstation/projects/prj-adf8a1b9f4f8-prompt-aidd/runs/PROMPT-1d4f82d50d294925/execution/equiscore-v3
   pilot_source_sha256: e5a9487d23469ec4846021014a617ee5791af1f6688ec677b0509fe4ffd4dd39
   pilot_scores_sha256: 26945b9ce30e3bf70716c0073a464ed980d918f178ff014ea9a03dabfb89b71c
-  full_run_status: background_full_then_analysis_command_provided_launch_not_confirmed
+  full_run_status: complete_821619_scored_zero_failures_per_user_receipt
   focused_tests: 33_passed
   user_verified_python: /home/y/yuzhang/envs/dl4s/bin/python
   user_verified_torch: 2.7.0+cu128
@@ -1350,3 +1361,28 @@ equiscore_e103:
   chemistry_overlay: numpy_1.26.4_MDAnalysis_2.7.0_ProLIF_1.1.0
   failed_legacy_pilot: 96_model_failed_no_kernel_image
   full_regression: 780_passed_6_skipped
+
+equiscore_full_acceptance_20261006:
+  evidence: data/20261006_equiscore_full_user_receipt.json
+  evidence_origin: user_pasted_workstation_summary
+  full_status: complete
+  pairs: 821619
+  scored: 821619
+  failed_pairs: 0
+  elapsed_seconds: 50634.678872253746
+  analysis_status: complete
+  ranked_blocks: 8283
+  ranking_unit: molecule
+  top_n: 10
+  next: inspect_saved_rankings_candidates_and_ChemPLP_comparison_then_integrate_Chat
+  independent_artifact_verification: pending
+
+equiscore_leader_review_20261006:
+  script: scripts/review_equiscore_leaders.py
+  guide: to_human/20261006_EQUISCORE_LEADERS_REVIEW.md
+  primary_top_n: 10
+  default_leading_blocks_per_group: 10
+  retained_molecules_per_leading_block: 10
+  focused_tests: 38_passed
+  workstation_review_bundle: pending_user_execution_and_return
+  model_or_docking_resubmitted: false

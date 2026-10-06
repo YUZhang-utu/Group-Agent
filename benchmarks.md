@@ -337,3 +337,12 @@ changes and Top-10 molecule overlap. No label-free overlap is called EF1.
 Final compatibility-focused checks: 33 passed; earlier full regression 780 passed,
 6 skipped. User supplied a successful real pilot receipt: 96/96 scored, zero
 failures. Full-panel scoring and analysis still require workstation receipts.
+
+E104 software acceptance (2026-10-06): 139 related tests passed, including 14 new
+campaign tests. Criteria: owned report/query adoption; sealed, model-specific
+Top-10 molecule block rankings; union/intersection scope; exact source-record
+mapping; conformer-preserving search/export; no outside-block fill; distinct
+conformer/molecule/pair counters; original PLANTS receptor/engine inheritance;
+queued receipt reuse and blocked-state correctness. Fixtures included six
+conformers from three molecules with explicit 99994 shortfall. No independent
+MDM2 retrieval recall, model superiority or experimental enrichment is claimed.

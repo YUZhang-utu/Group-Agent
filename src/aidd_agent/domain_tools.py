@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'block_campaign': 'Adopt completed full EquiScore analysis into this conversation without inference. import: exact user-supplied analysis report.json path. list: campaign tasks and existing confirmed consensus query tasks. ranks/top: task_id plus optional score EquiScore or ChemPLP and scheme/receptor/block_id as appropriate. preview: task_id, scheme, receptor, optional method union/intersection/equiscore/chemplp and blocks 5 or 10; blocks are ranked by mean of Top-10 distinct molecules. start: same selection plus query_task_id, optional conformers (default 100000), dock (default true). Reuses the confirmed MDM2 query; retrieves CONFORMERS only inside leading blocks, permits multiple conformers per molecule, then docks against the selected receptor. Choose an explicit existing query task; never use WEE1 defaults. Call start only when search/docking is requested; reuse returned task ID. Ranking and search are exploratory, not affinity or experimental enrichment.',
     'block_results': 'Completed CLI PLANTS results without redocking. operation list (default); attach: exact user-supplied report path in active Project. analyze: attachment_id, optional top_n (1..100, default 10), ranking_unit (molecule default, or conformer). Queues sealed Top-N mean rankings, never whole-block-mean ranking; includes Top-5/10. molecule mode uses best in-block conformer per molecule. ranks: task_id, optional scheme/receptor (omit to discover groups), top_n, limit (default 5). top: task_id, scheme, receptor, block_id, optional limit (default 5), top_n. Returns saved candidates/poses. Rank within scheme/receptor only; incomplete or insufficient panels are unranked. Scores are ChemPLP, not rescoring or affinity. Reuse task IDs.',
     'structure_chain': 'Persist explicitly authorized automatic continuation from an existing diversity/consensus/recommendation/design task. operation start requires task_id, goal recommendation or budget, optional reference {reference_query,target_chain,maximum_templates}, budget settings. Other operations: status, pause/resume/cancel with chain_id. Controls continuation, not the current scientific task. No automatic recovery of uncertain dispatch.',
     'structure_workflow': 'Inspect PDB/diversity/consensus/library stages, source branches, real reference proposals and next supported intents. Arguments: optional task_id. Read-only; call before continuing this workflow.',
@@ -26,6 +27,7 @@ TOOLS = {
 
 
 TOOL_ARGUMENTS = {
+    'block_campaign': {'operation','report','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock'},
     'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
     'structure_chain': {'operation', 'task_id', 'goal', 'reference', 'budget', 'chain_id'},
     'structure_workflow': {'task_id'},
@@ -47,7 +49,9 @@ BLOCK_OPERATIONS = {
 
 def argument_contracts():
     """Expose the same field definitions used by execution, not prose alone."""
+    from .block_campaign import OPERATIONS
     return dict(version='top-n-arguments-v1',
+        block_campaign={name:dict(required_fields=sorted(req),allowed_fields=sorted(req|opt|{'operation'})) for name,(req,opt) in OPERATIONS.items()},
         tools={name: dict(allowed_fields=sorted(fields), additional_fields=False)
                for name, fields in TOOL_ARGUMENTS.items()},
         block_results=dict(default_operation='list', operations={
@@ -64,6 +68,10 @@ def argument_contracts():
 
 
 def validate_arguments(name, args):
+    if name == 'block_campaign':
+        from .block_campaign import validate
+        validate(args)
+        return
     if name not in TOOL_ARGUMENTS:
         raise ValueError('Unknown tool ' + str(name) + '; available tools: ' + ', '.join(sorted(TOOL_ARGUMENTS)))
     if not isinstance(args, dict):
@@ -164,6 +172,11 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name == 'block_campaign':
+            if args.get('operation') == 'import' and (not isinstance(args.get('report'),str) or args['report'] not in self.request):
+                raise ValueError('Ask for the exact analysis report path in the current user message')
+            from .block_campaign import handle
+            return handle(self.app,self.sid,args)
         if name == 'block_results':
             if args.get('operation') == 'attach' and (not isinstance(args.get('report'), str) or args['report'] not in self.request):
                 raise ValueError('Ask for the exact report path in the current user message; do not guess a path')

@@ -628,3 +628,18 @@ predictive improvement remain unknown. Resume from
 to_human/20261005_AIDD_AGENT_HANDOFF.md; inspect existing task/process receipts
 before submitting work. EquiScore Chat dispatch and the user's N-E model remain
 pending. No experimental enrichment or affinity-validation claim is supported.
+
+
+## 2026-10-06: full EquiScore and block analysis completed per user receipt
+User supplied full-run summary: complete, scope full, 821619 pairs/scored, zero failed pairs, worker exit 0, elapsed 50634.678872253746 seconds (14 h 3 min 54.68 s). Analysis: complete, EquiScore higher-is-better, Top-10 molecule ranking, 8283 block records. User confirms block_rankings.csv, block_top_candidates.csv, rank_comparison.csv and ranking_review.md exist. Saved the exact summary in data/20261006_equiscore_full_user_receipt.json. Remote file hashes and individual values have not been independently inspected. Next inspect leading blocks/candidates and model comparisons; no repeated inference or docking. Technical completion is not affinity or experimental enrichment validation.
+
+## E104 continuation, 2026-10-06
+
+The completed EquiScore panel can now be adopted into the owning conversation
+without repeated scoring. Leading-block selection supports either scoring method
+or their union/intersection within a scheme/receptor. Follow-up search retains
+source conformers rather than collapsing by molecule, matching the user's
+100000-conformer requirement. Source membership and record-hash mapping constrain
+the existing 3D engine; the original reviewed PLANTS setup is inherited for the
+selected receptor. Local fixtures verify software behavior only. Real-library
+identity coverage and workstation search/docking completion remain unverified.

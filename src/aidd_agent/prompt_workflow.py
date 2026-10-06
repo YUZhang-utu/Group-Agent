@@ -27,8 +27,7 @@ from .workflow_skills import skills_for_plan
 from .prediction import validate_af3_installation
 
 
-class Blocked(RuntimeError):
-    pass
+from .workflow_errors import Blocked
 
 
 @contextmanager
@@ -159,6 +158,11 @@ def load_runtime(path):
 
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
+    if step['action'] in {'block_adopt_scores', 'block_search_dock'}:
+        from .block_campaign import execute
+        output = directory / 'blocks'
+        result = execute(step['action'], step['params'], output, execution, cfg, allow_compute)
+        return dict(status=result['kind'], report=str(output/'report.json'))
     if step['action'] == 'block_import_analysis':
         from .block_results import analyze_attachment
         output = directory / 'blocks'
@@ -406,7 +410,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
     evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page','block_plants_prepare','block_plants_run','block_analyze','plants_receptors'} for s in plan["steps"])
-    attachment_only = bool(plan['steps']) and all(s['action'] == 'block_import_analysis' for s in plan['steps'])
+    attachment_only = bool(plan['steps']) and all(s['action'] in {'block_import_analysis','block_adopt_scores'} for s in plan['steps'])
     cfg, config_inputs = ({}, []) if evidence_only or attachment_only else load_runtime(runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
@@ -430,6 +434,13 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
+                if step['action'] in {'block_adopt_scores','block_search_dock'}:
+                    entry = ensure_within(root/'block-campaigns'/(step['params']['request_id']+'.json'), root)
+                    request = ev.read(entry)
+                    dependencies.append(entry)
+                    for field in ('report','analysis','query'):
+                        if field in request:
+                            dependencies.append(ensure_within(Path(request[field]), root))
                 if step['action'] == 'block_import_analysis':
                     attachment = ensure_within(root / 'block-results' / (step['params']['attachment_id'] + '.json'), root)
                     source = ensure_within(Path(ev.read(attachment)['report']), root)

@@ -19,6 +19,7 @@ from .language_policy import contains_han
 from .target_pocket_policy import TARGET_POCKET_POLICY
 
 WORKFLOWS = [
+    dict(name='Leading blocks to conformer search',status='Owned EquiScore import and search/docking adapters; workstation acceptance pending',scope='Reuse full EquiScore and ChemPLP Top-10 molecule block rankings. Choose per-receptor leading blocks, an existing MDM2 query and a conformer budget (default 100,000, multiple conformers per molecule). Search stays inside the selected blocks; task receipts preserve counts and saved PLANTS poses.'),
     {"name":"Completed docking results", "status":"Attach CLI reports and queue sealed analysis", "scope":"Reuse existing scores and poses. Compare E094/E095/E096 by receptor; preserve missing results. Ask to attach your final report.json, then analyze it. No redocking or affinity claim."},
     {"name":"Block evaluation with PLANTS", "status":"Sampling, preparation, docking and block analysis adapters", "scope":"Frozen E094/E095/E096 blocks, shared conformer panels, adopted receptors and SPORES preparation. Completion comes from each run receipt. Sampling and docking require an explicit request; status checks reuse existing work."},
     {"name": "PDB pocket-state prerequisite", "status": "Pocket grid clustering and explicit adoption implemented; target validation ongoing", "scope": "New target projects require pocket shape/chemical-state clustering and user-adopted experimental representatives before state-specific interaction consensus. Ligand diversity is not a substitute."},
@@ -324,10 +325,10 @@ def screening_summary(job):
     from .project_context import ensure_within
     report = read_json(job["report"]) if job.get("report") else None
     if not report or not job.get("plan"): return {}
-    block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze','block_import_analysis'} and s.get('status')=='complete']
+    block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze','block_import_analysis','block_adopt_scores','block_search_dock'} and s.get('status')=='complete']
     if block_steps:
         child=read_json(ensure_within(Path(block_steps[-1]['result']['report']),Path(job['plan']).parent)) or {}
-        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','ranking','receptors','sites','limitations') if k in child}
+        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','ranking','receptors','sites','limitations','selection','requested_conformers','searched_conformers','ranked_conformers','exported_conformers','unique_molecules','shortfall','planned_pairs','candidate_unit','outputs','adoption') if k in child}
     for step in report.get("steps", {}).values():
         if step.get('action') in {'pocket_states','receptor_assess','pocket_adopt'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
@@ -403,6 +404,8 @@ def screening_summary(job):
 
 
 def screening_feedback(summary):
+    if summary.get('kind') == 'block_search_dock':
+        return json.dumps(summary,indent=2)+'\nCandidate budget counts conformers, allowing multiple per molecule. Search and docking priorities are exploratory; inspect shortfall and failed jobs before interpretation.'
     if summary.get('kind') == 'block_analyze' and summary.get('ranking'):
         return json.dumps(summary, indent=2) + '\nBlocks are ranked by the best N candidate scores, not the whole-block mean. Ask for leading blocks by scheme/receptor, then their Top-5 molecules and saved poses. ChemPLP priorities are not measured affinity.'
     if summary.get('kind') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze'}:
@@ -667,6 +670,15 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command == '/block_campaign':
+                from .block_campaign import handle
+                try:
+                    result = handle(self, sid, json.loads(text.strip()[len(command):].strip() or '{}'))
+                    answer = json.dumps(result, indent=2)
+                except (ValueError, KeyError, OSError) as exc:
+                    answer = 'Block campaign: ' + str(exc)
+                self.message(sid, 'assistant', answer)
+                return answer
             if command in {'/dock_attach', '/dock_results', '/dock_analyze', '/block_ranks', '/block_top'}:
                 from .block_results import handle
                 rest = text.strip()[len(command):].strip()

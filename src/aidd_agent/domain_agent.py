@@ -26,6 +26,16 @@ redock an existing panel to make it appear in Chat. Ask for its final report pat
 missing. Analysis is queued; use tasks/task_report/read_artifact for results and
 per-scheme, per-receptor comparisons. Report-only adoption is not full seal verification.
 ChemPLP is not binding affinity; N-E rescoring is not implemented by this tool.
+For already completed EquiScore full analysis, use block_campaign import, not
+block_results analyze. Import queues verification and records the existing ranks;
+it does not repeat model inference. block_campaign list discovers owned query
+tasks and imported analyses. Use preview to compare union/intersection or either
+model's leading blocks within one scheme/receptor. start consumes the chosen
+analysis task and confirmed MDM2 query task. The default 100000 budget counts
+CONFORMERS, allows multiple conformers per molecule, and covers the selected
+block union, not each block separately. Keep Top-10 DISTINCT-MOLECULE block means.
+An explicit request to search and dock authorizes both stages; never launch it
+for a status/ranking question. If several query tasks exist, ask which one to use.
 Understand the objective, inspect evidence, choose a tool, inspect its result, then
 continue until you can answer or identify a concrete missing input. Do not merely
 classify the user's sentence. Resolve follow-ups using conversation and real IDs.
@@ -165,6 +175,8 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             last_error=None;name=step['tool'];args=step['arguments']
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
+                if name == 'block_campaign' and args.get('operation') in {'import','start'} and waiting:
+                    raise ValueError('An operation is pending; inspect its task before submitting another campaign')
                 if name == 'block_results' and args.get('operation') == 'analyze' and waiting:
                     raise ValueError('An operation is pending; inspect its task rather than dispatching another analysis')
                 if name=='structure_chain' and args.get('operation','status')!='status':
@@ -189,6 +201,12 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
+            if name == 'block_campaign' and args.get('operation') in {'import','start'} and record['status'] == 'complete' and pending(result):
+                answer='Block campaign is '+result['status']+'. Task ID: '+str(result['task_id'])+'. '
+                answer+=('Existing EquiScore and ChemPLP rankings will be verified and recorded without inference or docking.' if args['operation']=='import' else
+                         'The selected blocks will be searched using the saved MDM2 query. The budget counts conformers, allowing multiple per molecule; docking runs only if requested. Shortfall and actual pair counts are reported.')
+                answer+=' Inspect /status '+str(result['task_id'])+' before requesting results; do not resubmit.'
+                audit.update(status='pending',answer=answer);save();break
             if name == 'block_results' and args.get('operation') == 'analyze' and record['status'] == 'complete' and pending(result):
                 task_ids=', '.join(str(task['id']) for task in result.get('tasks', []))
                 answer='Block analysis is ' + result['status'] + '. Task ID: ' + task_ids + '. Existing docking outputs will be verified and ranked; no docking was submitted. Inspect /status TASK_ID before requesting results. After completion, use /block_ranks TASK_ID to discover groups and /block_top TASK_ID SCHEME RECEPTOR BLOCK_ID to inspect Top-5 candidates.'
