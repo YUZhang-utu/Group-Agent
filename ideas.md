@@ -87,3 +87,8 @@ Test first on representative chemistry/score ranges, not docking leaders only.
 Reject improvement claims based only on same-score agreement or more sampled
 blocks. Boltz-2 requires a library size/applicability audit before inclusion.
 Protocol: experiments/E101-block-rescoring-evaluation.md.
+
+
+## E105: macrocycle-aware allocation
+
+Test whether backbone plus side-chain spatial partitions predict unseen target-specific high-score regions better than property-only tranches, random allocation and molecular active learning. Measure Top-10 tail-mean stability independently; do not assume superiority over whole-block means. Protocol: experiments/E105-macrocycle-block-search-benchmark.md.

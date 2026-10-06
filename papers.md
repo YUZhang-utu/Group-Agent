@@ -126,3 +126,8 @@ to_human/20261005_RESCORING_MODEL_SHORTLIST.md.
   affinity regression evidence is not equivalent to pose/enrichment evidence.
 
 This is a project-fit reading order, not a measured accuracy leaderboard.
+
+
+## E105 allocation-method novelty review (2026-10-06)
+
+Closest precedent: AdaptiveFlow, Nature Biotechnology (1 September 2026), https://doi.org/10.1038/s41587-026-03217-x. Also compare MolPAL, Chemical Science (2021), https://doi.org/10.1039/D0SC06805E, and contextualize hierarchical synthon screening, Nature (2022), https://doi.org/10.1038/s41586-021-04220-9. Notes: literature/e105/. Block prescreening is established; macrocycle-specific advantages remain hypotheses.

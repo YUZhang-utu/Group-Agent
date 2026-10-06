@@ -1813,3 +1813,8 @@ checks: 33 passed. Workstation preflight and technical pilot now passed per user
 receipt (96/96 scored, zero failures, 12.190821549855173 seconds). Full-run and
 analysis launch command was provided; execution/completion is unconfirmed.
 No confirmatory model-quality conclusion exists.
+
+
+## E105: cross-target block-search benchmark
+
+Proposed, not executed. Frozen library, query, docking and molecule-held-out splits; full reference calculations on a tractable library; equal total budgets across partitions, random/property baselines and active learning. MDM2 is development only. Protocol: experiments/E105-macrocycle-block-search-benchmark.md.
