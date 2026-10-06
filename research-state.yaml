@@ -1396,12 +1396,3 @@ block_search_config_recovery_20261006:
   recovery: explicit_idempotent_retry_config_before_scientific_artifacts
   local_tests: 66_passed
   workstation_retry: pending
-
-macrocycle_publication_e105:
-  date: 2026-10-06
-  status: proposed_protocol_no_experiments_launched
-  protocol: experiments/E105-macrocycle-block-search-benchmark.md
-  closest_precedent: AdaptiveFlow_Nature_Biotechnology_2026
-  development_target: MDM2
-  independent_test_targets: pending_structure_activity_assay_audit
-  next: confirm_current_campaign_status_then_freeze_tractable_reference_benchmark

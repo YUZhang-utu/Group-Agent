@@ -643,8 +643,3 @@ source conformers rather than collapsing by molecule, matching the user's
 the existing 3D engine; the original reviewed PLANTS setup is inherited for the
 selected receptor. Local fixtures verify software behavior only. Real-library
 identity coverage and workstation search/docking completion remain unverified.
-
-
-## Publication hypothesis, 2026-10-06
-
-AdaptiveFlow is a close published precedent for partition-based prescreening. The promising question is whether macrocycle-specific backbone/side-chain spatial partitioning improves held-out cost-recall tradeoffs and prospective hit yield. Current three MDM2 receptor states constitute one target; sampled block scores and successful execution do not establish this claim. E105 defines a proposed cross-target benchmark and experimental validation path.

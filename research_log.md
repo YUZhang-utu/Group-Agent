@@ -2680,8 +2680,3 @@ User supplied task f0656f4d2c584dc4 blocked before search: runtime contains sear
 ## 2026-10-06: empty executor-directory retry correction
 
 User retry was rejected as containing scientific artifacts. Code inspection found execute_step creates campaign/blocks before the missing-runtime check; the previous test omitted that real directory layout. Retry now permits only the known empty blocks directory while rejecting nested files, other entries and completed campaign stage receipts. Added regressions for the real layout and both artifact guards. Campaign and prompt workflow tests: 39 passed; English guard: 868 files passed. No workstation files deleted and no scientific task submitted locally.
-
-
-## 2026-10-06: E105 publication-direction bootstrap
-
-User proposed cross-target comparisons, unpartitioned full-library search and eventual experimental validation. Applied autoresearch for a bounded literature/protocol pass; no scheduler capability was used and no background scientific run was launched. Found close AdaptiveFlow precedent (Nature Biotechnology, 1 September 2026), plus MolPAL and hierarchical synthon screening. Wrote E105 with molecule-held-out evaluation, full-reference versus workflow-overlap distinction, cost accounting including pilot/rescoring, E094/E095/E096 and property/random/active-learning baselines, and prospective assay controls. Current production budget remains 100000 conformers. New workstation search status is unconfirmed; latest known receipt was blocked. This is a proposed research direction, not a novelty or efficacy finding.

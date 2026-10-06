@@ -346,6 +346,3 @@ conformer/molecule/pair counters; original PLANTS receptor/engine inheritance;
 queued receipt reuse and blocked-state correctness. Fixtures included six
 conformers from three molecules with explicit 99994 shortfall. No independent
 MDM2 retrieval recall, model superiority or experimental enrichment is claimed.
-
-
-E105 proposed endpoints: held-out distinct-molecule docking Top-1% recall versus total cost, computational Top-K recovery, diversity and repeated-sampling stability. Experimental EF1% requires real activity labels. Include pilot docking/rescoring and online search costs; distinguish full-library 3D workflow overlap from exhaustive docking truth. No new benchmark results.
