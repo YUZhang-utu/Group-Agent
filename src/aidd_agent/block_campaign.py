@@ -13,7 +13,9 @@ from .project_context import ensure_within
 
 OPERATIONS = {
     'list': (set(), set()),
-    'import': ({'report'}, set()),
+    'discover': (set(), set()),
+    'import': (set(), {'report','candidate_id'}),
+    'import_query': (set(), {'report','candidate_id'}),
     'ranks': ({'task_id'}, {'scheme', 'receptor', 'limit', 'score'}),
     'top': ({'task_id', 'scheme', 'receptor', 'block_id'}, {'limit', 'score'}),
     'preview': ({'task_id', 'scheme', 'receptor'}, {'method', 'blocks'}),
@@ -32,6 +34,13 @@ def validate(args):
     if not required <= args.keys() or set(args) - required - optional - {'operation'}:
         raise ValueError('Invalid ' + op + ' arguments; required: ' + ', '.join(sorted(required)) +
                          '; optional: ' + ', '.join(sorted(optional)))
+    if op in {'import','import_query'}:
+        if ('report' in args)+('candidate_id' in args) != 1:
+            raise ValueError('Supply either the exact report path or a discovered candidate_id')
+        if 'report' in args and (not isinstance(args['report'],str) or not args['report'].strip()):
+            raise ValueError('Supply a report path')
+        if 'candidate_id' in args and (not isinstance(args['candidate_id'],str) or not re.fullmatch('[a-f0-9]{24}',args['candidate_id'])):
+            raise ValueError('Use a discovered candidate_id')
     for key in ('task_id', 'query_task_id'):
         if key in args and (not isinstance(args[key], str) or not re.fullmatch('[a-f0-9]{16}', args[key])):
             raise ValueError('Use an existing conversation task ID for ' + key)
@@ -115,7 +124,8 @@ def queue(app, sid, project, request, action):
     entry = root / (key + '.json')
     if not entry.exists():
         save(entry, request)
-    title = ('Import saved EquiScore analysis ' if action == 'block_adopt_scores' else
+    title = ('Import saved multi-cocrystal query ' if action == 'block_adopt_query' else
+             'Import saved EquiScore analysis ' if action == 'block_adopt_scores' else
              'Search leading blocks and dock conformers ' if request.get('dock') else
              'Search leading blocks for conformers ') + key
     matches = [j for j in app.jobs(sid) if j['request'] == title]
@@ -140,6 +150,9 @@ def handle(app, sid, args):
     app.session(sid)
     ctx = app.context
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
+    if op == 'discover':
+        from .block_saved_inputs import discover
+        return discover(app,sid,project)
     if op == 'list':
         tasks = app.jobs(sid)
         queries = []
@@ -153,10 +166,17 @@ def handle(app, sid, args):
             except (ValueError, OSError, KeyError):
                 continue
         return dict(tasks=[{k:j.get(k) for k in ('id','status','request','report','error')}
-                           for j in tasks if 'leading blocks' in j['request'] or 'Import saved EquiScore' in j['request']],
-                    query_tasks=queries, candidate_unit='conformer', default_conformers=100000)
+                           for j in tasks if 'leading blocks' in j['request'] or j['request'].startswith('Import saved ')],
+                    query_tasks=queries, candidate_unit='conformer', default_conformers=100000,
+                    recovery='If inputs are missing here, call discover to locate original CLI analysis and multi-cocrystal query packages before asking for a task ID.')
+    if op == 'import_query':
+        from .block_saved_inputs import resolve, query_header
+        path, _ = query_header(resolve(args,sid,project,'query'))
+        with app.lock:
+            return queue(app,sid,project,dict(session=sid,saved_query=str(path),saved_query_sha256=sha(path)), 'block_adopt_query')
     if op == 'import':
-        path, _ = analysis_header(args['report'], project)
+        from .block_saved_inputs import resolve
+        path, _ = analysis_header(resolve(args,sid,project,'scores'), project)
         with app.lock:
             return queue(app, sid, project, dict(session=sid, report=str(path), report_sha256=sha(path)), 'block_adopt_scores')
     path, _ = owned_report(app, sid, args['task_id'], project, {'block_analyze'})
@@ -189,11 +209,14 @@ def execute(action, params, output, execution, cfg, allow_compute):
     output.mkdir(parents=True, exist_ok=True)
     if action == 'block_adopt_scores':
         return adopt(request, output, project)
+    if action == 'block_adopt_query':
+        from .block_saved_inputs import adopt_query
+        return adopt_query(request,output)
     from .prompt_workflow import Blocked
     if not allow_compute:
         raise Blocked('Enable --allow-compute for the requested block search and docking')
     from .screening_selection import upstream
-    query, _ = upstream(execution, request['query_run'], ('consensus_design','consensus_recommend'))
+    query, _ = upstream(execution, request['query_run'], ('consensus_design','consensus_recommend','block_adopt_query'))
     if query.resolve() != Path(request['query']).resolve() or sha(query) != request['query_sha256']:
         raise ValueError('Selected query receipt changed')
     path, _ = analysis_header(request['analysis'], project)

@@ -342,7 +342,7 @@ def screening_summary(job):
         if step.get('action') in {'consensus_budget','budget_page'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             return {k:child[k] for k in ('kind','status','target','ranked_molecules','exported_molecules','requested_molecules','start_rank','end_rank','shortfall','review_required','outputs','limitations','ranking') if k in child}
-        if step.get('action') in {'structure_consensus','pocket_consensus','consensus_recommend','consensus_design','consensus_funnel'} and step.get('status')=='complete':
+        if step.get('action') in {'structure_consensus','pocket_consensus','consensus_recommend','consensus_design','consensus_funnel','block_adopt_query'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
             summary={k:child[k] for k in ('kind','status','readiness','recommendation','design','proposed_template_ids','reference',
                 'matching_molecules','pose_records','template_reports','template_selection','outputs','independent_active_validation',

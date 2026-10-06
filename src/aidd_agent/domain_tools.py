@@ -27,7 +27,7 @@ TOOLS = {
 
 
 TOOL_ARGUMENTS = {
-    'block_campaign': {'operation','report','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock'},
+    'block_campaign': {'operation','report','candidate_id','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock'},
     'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
     'structure_chain': {'operation', 'task_id', 'goal', 'reference', 'budget', 'chain_id'},
     'structure_workflow': {'task_id'},
@@ -45,6 +45,11 @@ BLOCK_OPERATIONS = {
     'ranks': ({'task_id'}, {'scheme', 'receptor', 'top_n', 'limit'}),
     'top': ({'task_id', 'scheme', 'receptor', 'block_id'}, {'top_n', 'limit'}),
 }
+
+TOOLS['block_campaign'] += (' Recovery: discover locates saved CLI scores and original multi-cocrystal query packages. '
+    'import accepts report OR discovered candidate_id. import_query accepts report OR a query candidate_id, '
+    'and records the original ligand references, coordinates and constraints without rebuilding them. '
+    'Always try discover when list is empty; do not demand an old Chat task ID for a CLI query.')
 
 
 def argument_contracts():
@@ -173,8 +178,8 @@ class DomainTools:
         from .project_context import ensure_within
         validate_arguments(name, args)
         if name == 'block_campaign':
-            if args.get('operation') == 'import' and (not isinstance(args.get('report'),str) or args['report'] not in self.request):
-                raise ValueError('Ask for the exact analysis report path in the current user message')
+            if args.get('operation') in {'import','import_query'} and 'report' in args and (not isinstance(args.get('report'),str) or args['report'] not in self.request):
+                raise ValueError('Ask for the exact analysis or query report path in the current user message, or use a discovered candidate_id')
             from .block_campaign import handle
             return handle(self.app,self.sid,args)
         if name == 'block_results':

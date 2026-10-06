@@ -1,7 +1,7 @@
 """Compact planner routing, paired with repository-discoverable Codex skills."""
 
 WORKFLOW_SKILLS = (
-    {"name": "aidd-block-evaluation", "actions": ["receptor_assess", "plants_receptors", "protein_from_pdb", "block_sample", "block_plants_prepare", "block_plants_run", "block_analyze", "block_import_analysis", "block_adopt_scores", "block_search_dock"],
+    {"name": "aidd-block-evaluation", "actions": ["receptor_assess", "plants_receptors", "protein_from_pdb", "block_sample", "block_plants_prepare", "block_plants_run", "block_analyze", "block_import_analysis", "block_adopt_scores", "block_adopt_query", "block_search_dock"],
      "description": "Seeded E094/E095/E096 panels and shared PLANTS jobs. Adopt completed CLI EquiScore/ChemPLP results without inference. Owned leading-block continuation uses a confirmed MDM2 query and a conformer budget, then the original reviewed PLANTS setup."},
     {"name": "aidd-3d-search", "actions": ["consensus_budget", "budget_page", "search_3d", "review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"],
      "description": "Calibrated WEE1 full-library retrieval and Gaussian refinement; E031 annotations only."},

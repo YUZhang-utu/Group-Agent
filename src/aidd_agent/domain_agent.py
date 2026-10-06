@@ -36,6 +36,17 @@ CONFORMERS, allows multiple conformers per molecule, and covers the selected
 block union, not each block separately. Keep Top-10 DISTINCT-MOLECULE block means.
 An explicit request to search and dock authorizes both stages; never launch it
 for a status/ranking question. If several query tasks exist, ask which one to use.
+An empty block_campaign list is not proof that the old terminal query or scoring
+is absent. Call block_campaign discover first. It returns saved input candidate_id
+values scoped to this conversation. Use import with a scores candidate_id and
+import_query with a query candidate_id to record that existing work. import_query
+preserves the original multi-cocrystal ligand templates, aligned coordinates and
+protein/pocket constraints; it never constructs a replacement query. The original
+query ligands and the selected PLANTS receptor are distinct inputs. If several
+historical query packages are found, show their query IDs and ask which prior run
+the user means. If discovery finds none, ask for the old adopted-design/report.json
+path, not a Chat task ID that was never registered. Do not restart receptor
+assessment or generate a new query to fix missing Chat bookkeeping.
 Understand the objective, inspect evidence, choose a tool, inspect its result, then
 continue until you can answer or identify a concrete missing input. Do not merely
 classify the user's sentence. Resolve follow-ups using conversation and real IDs.
@@ -175,7 +186,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             last_error=None;name=step['tool'];args=step['arguments']
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
-                if name == 'block_campaign' and args.get('operation') in {'import','start'} and waiting:
+                if name == 'block_campaign' and args.get('operation') in {'import','import_query','start'} and waiting:
                     raise ValueError('An operation is pending; inspect its task before submitting another campaign')
                 if name == 'block_results' and args.get('operation') == 'analyze' and waiting:
                     raise ValueError('An operation is pending; inspect its task rather than dispatching another analysis')
@@ -201,9 +212,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
-            if name == 'block_campaign' and args.get('operation') in {'import','start'} and record['status'] == 'complete' and pending(result):
+            if name == 'block_campaign' and args.get('operation') in {'import','import_query','start'} and record['status'] == 'complete' and pending(result):
                 answer='Block campaign is '+result['status']+'. Task ID: '+str(result['task_id'])+'. '
-                answer+=('Existing EquiScore and ChemPLP rankings will be verified and recorded without inference or docking.' if args['operation']=='import' else
+                answer+=('The original multi-cocrystal query will be verified and recorded without selecting new templates or running a search.' if args['operation']=='import_query' else
+                         'Existing EquiScore and ChemPLP rankings will be verified and recorded without inference or docking.' if args['operation']=='import' else
                          'The selected blocks will be searched using the saved MDM2 query. The budget counts conformers, allowing multiple per molecule; docking runs only if requested. Shortfall and actual pair counts are reported.')
                 answer+=' Inspect /status '+str(result['task_id'])+' before requesting results; do not resubmit.'
                 audit.update(status='pending',answer=answer);save();break

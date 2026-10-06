@@ -20,6 +20,47 @@ remains available.
 
 ## Import the existing result (no repeated inference)
 
+### Recover original CLI inputs from chat
+
+An empty current-session task list does not mean that terminal scores or the
+original multi-cocrystal ligand query are missing. Start with:
+
+> Find the saved EquiScore analysis and the original MDM2 multi-cocrystal ligand
+> query used for the earlier library search. Use block_campaign discover. Show
+> the actual reference ligand IDs and source paths; do not build a new query.
+
+Or use `/block_campaign {"operation":"discover"}`. Discovery checks known
+analysis layouts in this Project, completed Project tasks from other conversations,
+and adopted query packages next to the configured search library. It is bounded,
+not a full disk crawl. Its candidate IDs can be used directly in chat:
+
+```text
+/block_campaign {"operation":"import","candidate_id":"SCORES_CANDIDATE_ID"}
+/block_campaign {"operation":"import_query","candidate_id":"QUERY_CANDIDATE_ID"}
+```
+
+Replace placeholders with the returned IDs. Imports are queued; inspect their
+completion before submitting search. For an undiscovered legacy query, provide
+its exact saved `adopted-design/report.json` path. `import_query` also accepts
+that literal `report` path, including an old CLI output outside the Chat Project.
+
+E059's historical guide used `/mnt/local/hand/yuzhang/aidd/e059-budget-20260923`
+as an example run directory, and the old script defaulted to 11 templates.
+These are historical clues, not proof that those files or that exact panel are
+still present. Actual saved query IDs and file hashes determine what is reused.
+
+The query import checks original and aligned Gaussian packages and their
+manifests, original mmCIF/CCD/ligand-manifest hashes, and PDB:CCD:chain:residue
+identity. `reference_ligands.json` records the original co-crystal ligand
+references and alignment provenance. It preserves the existing template set,
+coordinates and constraints without generating a replacement query or searching
+the library. Failed template self-controls remain explicit; import does not
+declare them passed. The resulting task becomes selectable by `query_task_id`.
+
+Reference ligands are not the same input as the docking receptor. The old
+multi-ligand panel drives 3D search, while the original reviewed PLANTS receptor
+and binding site remain the downstream docking inputs.
+
 Open **Tasks & results → Attach an existing result**. Choose **Completed EquiScore
 analysis**. Supply the final analysis report:
 

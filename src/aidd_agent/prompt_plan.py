@@ -14,6 +14,7 @@ from .target_pocket_policy import TARGET_POCKET_POLICY
 
 ACTION_FIELDS = {
     "block_adopt_scores": ({"request_id", "request_sha256"}, set()),
+    "block_adopt_query": ({"request_id", "request_sha256"}, set()),
     "block_search_dock": ({"request_id", "request_sha256"}, set()),
     "block_import_analysis": ({"attachment_id", "attachment_sha256"}, {"top_n", "ranking_unit"}),
     "protein_from_pdb": ({"pdb_id"}, {"entity_id"}),
@@ -178,7 +179,7 @@ def validate_plan(plan):
         if action=='block_sample':
             from .block_sampling import validate_options
             validate_options(params)
-        if action in {'block_adopt_scores', 'block_search_dock'}:
+        if action in {'block_adopt_scores', 'block_adopt_query', 'block_search_dock'}:
             for key, size in (('request_id', 24), ('request_sha256', 64)):
                 if not isinstance(params[key], str) or not re.fullmatch('[a-f0-9]{' + str(size) + '}', params[key]):
                     raise ValueError('Invalid block campaign request identity')
