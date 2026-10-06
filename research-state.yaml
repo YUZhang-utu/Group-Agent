@@ -1348,7 +1348,7 @@ equiscore_e103:
   pilot: deterministic_32_CIDs_all_receptors_independent_of_ChemPLP
   full: all_saved_poses_no_redocking_successful_pilot_required
   block_ranking: top10_distinct_molecules_best_in_block_conformer
-  chat_dispatch: not_registered_yet
+  chat_dispatch: completed_scores_adopted_block_campaign_available
   live_installation: preflight_ready_per_user_receipt
   real_inference: full_821619_of_821619_scored_zero_failures_per_user_receipt
   pilot_elapsed_seconds: 12.190821549855173
@@ -1376,7 +1376,7 @@ equiscore_full_acceptance_20261006:
   ranked_blocks: 8283
   ranking_unit: molecule
   top_n: 10
-  next: inspect_saved_rankings_candidates_and_ChemPLP_comparison_then_integrate_Chat
+  next: inspect_already_running_leading_block_campaign_status_and_outputs
   independent_artifact_verification: pending
 
 equiscore_leader_review_20261006:
@@ -1395,4 +1395,16 @@ block_search_config_recovery_20261006:
   fix: trusted_receptor_tools_engine_fallback_original_reviewed_site_preserved
   recovery: explicit_idempotent_retry_config_before_scientific_artifacts
   local_tests: 66_passed
-  workstation_retry: pending
+  workstation_retry: user_reports_followup_task_running_new_id_not_supplied
+
+aidd_continuation_20261006:
+  handoff: to_human/20261006_AIDD_AGENT_HANDOFF.md
+  status: user_reports_existing_campaign_still_running
+  actual_phase: unverified_new_receipt_required
+  new_task_id: not_supplied
+  old_blocked_task: f0656f4d2c584dc4
+  intended_group: E095_7NA2_A
+  selection: union_EquiScore_Top5_ChemPLP_Top5
+  block_statistic: Top10_distinct_molecules_best_in_block_conformer_mean
+  delivery_budget: 100000_conformers_total_multiple_per_molecule_allowed
+  next: inspect_existing_task_without_resubmission

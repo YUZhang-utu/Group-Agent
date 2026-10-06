@@ -2680,3 +2680,8 @@ User supplied task f0656f4d2c584dc4 blocked before search: runtime contains sear
 ## 2026-10-06: empty executor-directory retry correction
 
 User retry was rejected as containing scientific artifacts. Code inspection found execute_step creates campaign/blocks before the missing-runtime check; the previous test omitted that real directory layout. Retry now permits only the known empty blocks directory while rejecting nested files, other entries and completed campaign stage receipts. Added regressions for the real layout and both artifact guards. Campaign and prompt workflow tests: 39 passed; English guard: 868 files passed. No workstation files deleted and no scientific task submitted locally.
+
+
+## 2026-10-06: operational AIDD handoff saved
+
+User reports the submitted leading-block campaign is still running and requests continuity. Saved to_human/20261006_AIDD_AGENT_HANDOFF.md with completed PLANTS/EquiScore inputs, adopted rankings, 11-template ligand query, configuration fixes, and intended E095/7NA2_A Top-5 union search followed by docking. Budget remains 100000 conformers, not unique molecules. New running task ID, actual phase and completion counters are not supplied; next action is status/receipt inspection, never duplicate submission. No scientific task launched or runtime changed while saving this handoff.
