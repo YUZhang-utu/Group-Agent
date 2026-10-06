@@ -71,3 +71,8 @@ Configuration recovery validation: 66 related tests passed, including both
 PLANTS configuration routes through synthetic search/export/docking, engine
 mismatch rejection and idempotent retry with session/artifact/status guards.
 English guard passed. Real workstation retry remains pending.
+
+Follow-up protocol: the real executor creates campaign/blocks before checking
+runtime, so the empty-directory retry guard was too strict. Permit only that
+known empty directory; reject nested files, other entries and completed stage
+receipts. Extend the retry regression to match the executor directory layout.

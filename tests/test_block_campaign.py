@@ -223,6 +223,8 @@ def test_config_retry_preserves_receipt_and_is_idempotent(tmp_path):
         save(report,dict(status='blocked',steps=dict(campaign=dict(status='blocked',
             error='Configure search.batch, block_evaluation.sampling_profile and plants_profile'))))
         with app.connect() as db: db.execute("UPDATE jobs SET status='blocked' WHERE id=?",(job['id'],))
+        # Real execute_step creates this directory even when runtime checks block.
+        (report.parent/'campaign/blocks').mkdir(parents=True)
         args=dict(operation='retry_config',task_id=job['id'])
         validate_arguments('block_campaign',args)
         retry=campaign.handle(app,sid,args)
@@ -231,7 +233,12 @@ def test_config_retry_preserves_receipt_and_is_idempotent(tmp_path):
         assert app.task(sid,job['id'])['status']=='blocked'
         with pytest.raises(ValueError): campaign.handle(app,app.new_session(),args)
         with pytest.raises(ValueError): campaign.handle(app,sid,dict(operation='retry_config',task_id=retry['task_id']))
-        (report.parent/'campaign').mkdir()
+        (report.parent/'campaign/blocks/protocol.json').write_text('{}')
+        with pytest.raises(ValueError,match='artifacts'): campaign.handle(app,sid,args)
+        (report.parent/'campaign/blocks/protocol.json').unlink()
+        (report.parent/'campaign.stage.json').write_text('{}')
+        with pytest.raises(ValueError,match='artifacts'): campaign.handle(app,sid,args)
+        (report.parent/'campaign.stage.json').unlink()
         (report.parent/'campaign/protocol.json').write_text('{}')
         with pytest.raises(ValueError,match='artifacts'): campaign.handle(app,sid,args)
         (report.parent/'campaign/protocol.json').unlink()

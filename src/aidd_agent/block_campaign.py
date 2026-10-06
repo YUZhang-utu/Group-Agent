@@ -165,7 +165,12 @@ def retry_config(app, sid, project, task_id):
              error.startswith('Missing block-search runtime configuration: '))):
         raise ValueError('Only missing runtime configuration can use retry_config')
     directory = report_path.parent/'campaign'
-    if directory.exists() and any(directory.iterdir()):
+    # execute_step creates blocks/ before run() checks runtime configuration.
+    # Only that known empty directory is scaffolding, never a scientific receipt.
+    entries = list(directory.iterdir()) if directory.exists() else []
+    artifacts = [p for p in entries if not (
+        p.name == 'blocks' and not p.is_symlink() and p.is_dir() and not any(p.iterdir()))]
+    if artifacts or (report_path.parent/'campaign.stage.json').exists():
         raise ValueError('Scientific artifacts already exist; inspect the original task instead')
     params = steps[0]['params']
     entry = ensure_within(project/'block-campaigns'/(params['request_id']+'.json'), project)

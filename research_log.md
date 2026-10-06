@@ -2675,3 +2675,8 @@ Recovery follow-up validation: 79 related tests passed across saved-input recove
 ## 2026-10-06: recover configuration-blocked leading-block search
 
 User supplied task f0656f4d2c584dc4 blocked before search: runtime contains search.batch and sampling_profile, but only receptor_tools_profile. Added fallback to its trusted PLANTS executable/scheduling while preserving original sealed receptor, pocket and search settings and enforcing the original executable hash. Added explicit session-owned retry_config for missing-configuration blocks with no scientific artifacts; fresh sealed plan, preserved original receipt and idempotent retries. User reaffirmed selected-block full search followed by docking only retained candidates. Counting remains the previously confirmed 100000 conformers, with distinct molecules reported separately. Local validation: 66 tests passed across campaign, saved-input recovery, domain agent, prompt workflow and Chat; English guard passed (868 files). These are synthetic engineering checks, not remote scientific execution. Workstation pull/restart/retry remains pending.
+
+
+## 2026-10-06: empty executor-directory retry correction
+
+User retry was rejected as containing scientific artifacts. Code inspection found execute_step creates campaign/blocks before the missing-runtime check; the previous test omitted that real directory layout. Retry now permits only the known empty blocks directory while rejecting nested files, other entries and completed campaign stage receipts. Added regressions for the real layout and both artifact guards. Campaign and prompt workflow tests: 39 passed; English guard: 868 files passed. No workstation files deleted and no scientific task submitted locally.
