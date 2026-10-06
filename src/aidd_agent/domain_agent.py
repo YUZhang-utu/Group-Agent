@@ -212,7 +212,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
-            if name == 'block_campaign' and args.get('operation') in {'import','import_query','start'} and record['status'] == 'complete' and pending(result):
+            if name == 'block_campaign' and args.get('operation') in {'import','import_query','start','retry_config'} and record['status'] == 'complete' and pending(result):
                 answer='Block campaign is '+result['status']+'. Task ID: '+str(result['task_id'])+'. '
                 answer+=('The original multi-cocrystal query will be verified and recorded without selecting new templates or running a search.' if args['operation']=='import_query' else
                          'Existing EquiScore and ChemPLP rankings will be verified and recorded without inference or docking.' if args['operation']=='import' else

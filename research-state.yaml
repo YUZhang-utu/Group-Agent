@@ -1388,3 +1388,11 @@ equiscore_leader_review_20261006:
   focused_tests: 38_passed
   workstation_review_bundle: pending_user_execution_and_return
   model_or_docking_resubmitted: false
+
+block_search_config_recovery_20261006:
+  blocked_task: f0656f4d2c584dc4
+  cause: missing_plants_profile_with_existing_receptor_tools_profile
+  fix: trusted_receptor_tools_engine_fallback_original_reviewed_site_preserved
+  recovery: explicit_idempotent_retry_config_before_scientific_artifacts
+  local_tests: 66_passed
+  workstation_retry: pending

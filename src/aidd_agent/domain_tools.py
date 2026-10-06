@@ -47,6 +47,7 @@ BLOCK_OPERATIONS = {
 }
 
 TOOLS['block_campaign'] += (' Recovery: discover locates saved CLI scores and original multi-cocrystal query packages. '
+    'retry_config with task_id explicitly creates one fresh plan for a missing-runtime-configuration blocked campaign before scientific work began; retains the original receipt. '
     'import accepts report OR discovered candidate_id. import_query accepts report OR a query candidate_id, '
     'and records the original ligand references, coordinates and constraints without rebuilding them. '
     'Always try discover when list is empty; do not demand an old Chat task ID for a CLI query.')

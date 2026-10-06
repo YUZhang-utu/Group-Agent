@@ -55,3 +55,19 @@ is published only after both EquiScore and ChemPLP views are copied.
 Final combined regression: 139 tests passed across campaign, block results,
 block ranking/evaluation, EquiScore, Chat, domain-agent, prompt workflow and
 budget-search suites. JavaScript syntax and the English-content guard passed.
+
+## Configuration-block recovery protocol (2026-10-06)
+
+User task f0656f4d2c584dc4 stopped before scientific execution: the runtime has
+search.batch and sampling_profile but only receptor_tools_profile, not a separate
+plants_profile. Test reuse of that trusted engine configuration with the sealed
+original receptor/site settings. Engine hashes must still match. Add explicit,
+idempotent retry_config for configuration-blocked campaigns only, preserving the
+old receipt and creating a new sealed plan. Reject retries after scientific
+artifacts exist, for other task types/statuses, or across conversations. Validate
+with synthetic pipeline and queue tests before delivery; no remote run implied.
+
+Configuration recovery validation: 66 related tests passed, including both
+PLANTS configuration routes through synthetic search/export/docking, engine
+mismatch rejection and idempotent retry with session/artifact/status guards.
+English guard passed. Real workstation retry remains pending.

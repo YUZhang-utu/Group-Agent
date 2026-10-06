@@ -244,7 +244,7 @@ def docking_candidates(output, selected, docking):
     return [r for r in rows if r['status']=='ok'][:10]
 
 
-def inherited_plants_profile(full, configured, receptor):
+def inherited_plants_profile(full, configured, receptor, *, receptor_tools=False):
     """Reuse the scored panel's reviewed receptor/site and engine version."""
     from .block_plants import profile_read
     plants = Path(full['source_report'])
@@ -260,7 +260,18 @@ def inherited_plants_profile(full, configured, receptor):
     saved['receptors'] = [r for r in saved['receptors'] if r['id']==receptor]
     if len(saved['receptors']) != 1:
         raise ValueError('Selected receptor is absent from the original scored panel')
-    configured = profile_read(configured)
+    if receptor_tools:
+        config_path = Path(configured).resolve()
+        tools = read(config_path)
+        executable = Path(tools['plants_executable'])
+        configured = dict(executable=str((config_path.parent/executable).resolve()),
+                          workers=tools.get('workers', saved.get('workers', 4)),
+                          timeout_seconds=tools.get('timeout_seconds', saved.get('timeout_seconds', 7200)))
+        for key, maximum in [('workers',64),('timeout_seconds',604800)]:
+            if type(configured[key]) is not int or not 1 <= configured[key] <= maximum:
+                raise ValueError('Invalid PLANTS runtime '+key)
+    else:
+        configured = profile_read(configured)
     if sha(Path(configured['executable'])) != signature['executable_sha256']:
         raise ValueError('Configured PLANTS engine differs from the original panel; review a new protocol')
     saved['executable'] = configured['executable']
@@ -278,12 +289,18 @@ def run(request, output, cfg):
     from .contact_policy import require_protein_contacts, migrate
     from .block_plants import prepare, run as dock
     search, block = cfg.get('search',{}), cfg.get('block_evaluation',{})
-    if not search.get('batch') or not block.get('sampling_profile') or not block.get('plants_profile'):
-        raise Blocked('Configure search.batch, block_evaluation.sampling_profile and plants_profile')
+    plants_config = block.get('plants_profile') or block.get('receptor_tools_profile')
+    missing = []
+    if not search.get('batch'): missing.append('search.batch')
+    if not block.get('sampling_profile'): missing.append('block_evaluation.sampling_profile')
+    if not plants_config: missing.append('block_evaluation.plants_profile or block_evaluation.receptor_tools_profile')
+    if missing:
+        raise Blocked('Missing block-search runtime configuration: '+', '.join(missing))
     batch = Path(search['batch'])
     analysis = read(request['analysis'])
     full = read(analysis['source_report'])
-    profile, inherited_inputs = inherited_plants_profile(full,block['plants_profile'],request['selection']['receptor'])
+    profile, inherited_inputs = inherited_plants_profile(full,plants_config,request['selection']['receptor'],
+                                                       receptor_tools=not bool(block.get('plants_profile')))
     if sha(Path(analysis['source_report'])) != analysis['ranking']['source_report_sha256']:
         raise ValueError('Original full score report changed')
     if full['identity']['profile_inputs'].get(full['sample_report']) != sha(Path(full['sample_report'])):
@@ -294,7 +311,7 @@ def run(request, output, cfg):
         if snapshot(record['path']) != record:
             raise ValueError('Original block population database changed')
     paths = [Path(request['analysis']),Path(request['query']),Path(full['sample_report']),
-             Path(block['sampling_profile']),Path(block['plants_profile']),
+             Path(block['sampling_profile']),Path(plants_config),
              batch/'artifacts/catalog.json',batch/'chemical/catalog.json',*inherited_inputs]
     protocol = dict(request=request,inputs=fingerprint(paths),code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))),
                     library_registry=snapshot(batch/'registry.sqlite3'),

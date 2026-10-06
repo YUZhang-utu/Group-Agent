@@ -14,7 +14,7 @@ from aidd_agent.block_sampling import sample
 from aidd_agent.chat_agent import ChatAgent
 from aidd_agent.domain_tools import DomainTools, validate_arguments, argument_contracts
 from aidd_agent.expanded_wee1 import fingerprint
-from aidd_agent.final_work_blocks import sha
+from aidd_agent.final_work_blocks import read, sha
 from aidd_agent.joint_spatial_profiles import save
 from aidd_agent.prompt_workflow import project_root, run_plan
 from test_equiscore import engine, source_panel
@@ -165,7 +165,8 @@ def test_changed_source_hash_is_rejected(tmp_path):
         search.map_artifacts(batch,database,locations['descriptors'])
 
 
-def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch):
+@pytest.mark.parametrize('use_tools',[False,True])
+def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch,use_tools):
     import aidd_agent.consensus_design  # Load SciPy before replacing the docking subprocess.
     profile,source,_,locations,batch=member_fixture(tmp_path)
     plants=plants_profile(tmp_path,source)
@@ -183,6 +184,12 @@ def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_pat
         design=dict(mandatory_anchors=[],alternative_groups=[],optional_weights={})))
     request=dict(analysis=str(analysis),query=str(query),selection=dict(scheme='E095',receptor='MDM2_fixture',block_ids=['b0']),conformers=100000,dock=True)
     cfg=dict(search=dict(batch=str(batch),workers=1,refine_chunk=64),block_evaluation=dict(sampling_profile=str(profile),plants_profile=str(plants)))
+    if use_tools:
+        tools=tmp_path/'receptor-tools.json'
+        settings=read(plants)
+        save(tools,dict(plants_executable=settings['executable'],workers=2,timeout_seconds=600))
+        cfg['block_evaluation'].pop('plants_profile')
+        cfg['block_evaluation']['receptor_tools_profile']=str(tools)
     calls=[]
     def refine(batch_,output,design,ids,workers,chunk):
         calls.append(ids.tolist());chunks(output,[pose(int(i)) for i in ids])
@@ -195,6 +202,43 @@ def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_pat
     assert result['shortfall']==99994 and result['planned_pairs']==6
     assert len(result['top_candidates'])==6
     assert search.run(request,output,cfg)==result and len(calls)==1
+    if use_tools:
+        inherited,_=search.inherited_plants_profile(read(full),tools,'MDM2_fixture',receptor_tools=True)
+        assert inherited['workers']==2 and inherited['timeout_seconds']==600
+        assert inherited['receptors'][0]['center']==settings['receptors'][0]['center']
+        changed=tmp_path/'different-engine';changed.write_text('different executable')
+        save(tools,dict(plants_executable=str(changed)))
+        with pytest.raises(ValueError,match='engine differs'):
+            search.inherited_plants_profile(read(full),tools,'MDM2_fixture',receptor_tools=True)
+
+
+def test_config_retry_preserves_receipt_and_is_idempotent(tmp_path):
+    app=ChatAgent(tmp_path/'chat',start=False)
+    try:
+        sid=app.new_session();ctx=app.context
+        project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
+        original=campaign.queue(app,sid,project,dict(session=sid,dock=True),'block_search_dock')
+        job=app.task(sid,original['task_id'])
+        report=Path(job['report']);report.parent.mkdir()
+        save(report,dict(status='blocked',steps=dict(campaign=dict(status='blocked',
+            error='Configure search.batch, block_evaluation.sampling_profile and plants_profile'))))
+        with app.connect() as db: db.execute("UPDATE jobs SET status='blocked' WHERE id=?",(job['id'],))
+        args=dict(operation='retry_config',task_id=job['id'])
+        validate_arguments('block_campaign',args)
+        retry=campaign.handle(app,sid,args)
+        assert retry['task_id']!=job['id'] and retry['status']=='queued'
+        assert campaign.handle(app,sid,args)['task_id']==retry['task_id']
+        assert app.task(sid,job['id'])['status']=='blocked'
+        with pytest.raises(ValueError): campaign.handle(app,app.new_session(),args)
+        with pytest.raises(ValueError): campaign.handle(app,sid,dict(operation='retry_config',task_id=retry['task_id']))
+        (report.parent/'campaign').mkdir()
+        (report.parent/'campaign/protocol.json').write_text('{}')
+        with pytest.raises(ValueError,match='artifacts'): campaign.handle(app,sid,args)
+        (report.parent/'campaign/protocol.json').unlink()
+        save(report,dict(status='blocked',steps=dict(campaign=dict(status='blocked',error='Review query chemistry'))))
+        with pytest.raises(ValueError,match='Only missing'): campaign.handle(app,sid,args)
+    finally:
+        app.close()
 
 
 def test_queued_import_keeps_failure_receipt_instead_of_resubmitting(imported):

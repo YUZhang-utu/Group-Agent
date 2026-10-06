@@ -143,9 +143,26 @@ conformer/receptor pairs. Distinct-molecule count is reported separately.
 Other scheme/receptor groups can be submitted as separate campaigns.
 
 Required existing runtime entries: `search.batch`, `search.workers`,
-`search.refine_chunk`, `block_evaluation.sampling_profile` and `plants_profile`.
+`search.refine_chunk`, `block_evaluation.sampling_profile` and either
+`block_evaluation.plants_profile` or `block_evaluation.receptor_tools_profile`.
+When only the latter is present, its PLANTS executable and scheduling settings
+are reused; receptor/site/search settings still come from the original sealed
+PLANTS preparation. The executable hash must match the original docking run.
 No EquiScore environment change is needed. New outputs use a fresh sealed Chat
 run, so successful old code-hashed calculations remain intact.
+
+For an old campaign blocked specifically by missing runtime configuration before
+any scientific artifacts were written, update/restart Chat and explicitly use:
+
+```text
+/block_campaign {"operation":"retry_config","task_id":"f0656f4d2c584dc4"}
+```
+
+Use the actual blocked task ID in the same conversation. This keeps the original
+receipt and creates a fresh plan with the same selection/query/candidate budget.
+Repeated identical retries return that new task. It does not rescore the saved
+panel. Other failure types or campaigns with scientific artifacts require separate
+inspection. Do not use `/resume` across code/runtime changes.
 
 These are exploratory priorities. Follow-up panels are search-selected, not
 uniform block samples; no population estimate, measured affinity or experimental

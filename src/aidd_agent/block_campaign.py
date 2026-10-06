@@ -14,6 +14,7 @@ from .project_context import ensure_within
 OPERATIONS = {
     'list': (set(), set()),
     'discover': (set(), set()),
+    'retry_config': ({'task_id'}, set()),
     'import': (set(), {'report','candidate_id'}),
     'import_query': (set(), {'report','candidate_id'}),
     'ranks': ({'task_id'}, {'scheme', 'receptor', 'limit', 'score'}),
@@ -144,12 +145,48 @@ def queue(app, sid, project, request, action):
     return dict(status='queued', task_id=jid, reused=False)
 
 
+def retry_config(app, sid, project, task_id):
+    """Create one fresh plan for an explicit retry before scientific work began."""
+    job = app.task(sid, task_id)
+    if job['status'] != 'blocked':
+        raise ValueError('retry_config requires a configuration-blocked campaign')
+    plan_path = ensure_within(Path(job['plan']).resolve(), project)
+    report_path = ensure_within(Path(job['report']).resolve(), plan_path.parent/'execution')
+    if read(plan_path.parent/'plan-seal.json')['plan_sha256'] != sha(plan_path):
+        raise ValueError('Original plan changed')
+    steps = read(plan_path)['plan']['steps']
+    if len(steps) != 1 or steps[0]['action'] != 'block_search_dock' or steps[0]['id'] != 'campaign':
+        raise ValueError('retry_config requires a block-search campaign')
+    report = read(report_path)
+    step = report.get('steps',{}).get('campaign',{})
+    error = step.get('error','')
+    if (report.get('status') != 'blocked' or step.get('status') != 'blocked' or
+        not (error == 'Configure search.batch, block_evaluation.sampling_profile and plants_profile' or
+             error.startswith('Missing block-search runtime configuration: '))):
+        raise ValueError('Only missing runtime configuration can use retry_config')
+    directory = report_path.parent/'campaign'
+    if directory.exists() and any(directory.iterdir()):
+        raise ValueError('Scientific artifacts already exist; inspect the original task instead')
+    params = steps[0]['params']
+    entry = ensure_within(project/'block-campaigns'/(params['request_id']+'.json'), project)
+    if sha(entry) != params['request_sha256']:
+        raise ValueError('Original campaign request changed')
+    request = read(entry)
+    if request.get('session') != sid:
+        raise ValueError('Campaign belongs to another conversation')
+    request['retry_of'] = task_id
+    return queue(app, sid, project, request, 'block_search_dock')
+
+
 def handle(app, sid, args):
     from .prompt_workflow import project_root
     op = validate(args)
     app.session(sid)
     ctx = app.context
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
+    if op == 'retry_config':
+        with app.lock:
+            return retry_config(app, sid, project, args['task_id'])
     if op == 'discover':
         from .block_saved_inputs import discover
         return discover(app,sid,project)
