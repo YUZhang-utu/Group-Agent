@@ -132,6 +132,60 @@ def _assignment_reference(values: np.ndarray, weights: np.ndarray) -> np.ndarray
     return result
 
 
+def _assignment_vectorized(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Identical Hungarian traversal with vectorized column updates and first ties."""
+    scores = np.asarray(values, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64)
+    if scores.ndim != 2 or weights.shape != (scores.shape[0],):
+        raise ValueError("assignment arrays have inconsistent shapes")
+    rows, real_columns = scores.shape
+    columns = real_columns + rows
+    cost = np.zeros((rows, columns), dtype=np.float64)
+    cost[:, :real_columns] = -(scores * weights[:, None])
+    u = np.zeros(rows + 1)
+    v = np.zeros(columns + 1)
+    p = np.zeros(columns + 1, dtype=np.int64)
+    way = np.zeros(columns + 1, dtype=np.int64)
+    for row in range(1, rows + 1):
+        p[0] = row
+        column0 = 0
+        minimum = np.full(columns + 1, np.inf)
+        used = np.zeros(columns + 1, dtype=np.bool_)
+        while True:
+            used[column0] = True
+            row0 = p[column0]
+            delta = np.inf
+            column1 = 0
+            available = np.flatnonzero(~used[1:]) + 1
+            current = cost[row0 - 1, available - 1] - u[row0] - v[available]
+            improved = current < minimum[available]
+            changed = available[improved]
+            minimum[changed] = current[improved]
+            way[changed] = column0
+            column1 = int(available[np.argmin(minimum[available])])
+            delta = minimum[column1]
+            occupied = np.flatnonzero(used)
+            u[p[occupied]] += delta
+            v[occupied] -= delta
+            minimum[~used] -= delta
+            column0 = column1
+            if p[column0] == 0:
+                break
+        while True:
+            column1 = way[column0]
+            p[column0] = p[column1]
+            column0 = column1
+            if column0 == 0:
+                break
+    result = np.full(rows, -1, dtype=np.int32)
+    for column in range(1, columns + 1):
+        row = int(p[column]) - 1
+        candidate = column - 1
+        if row >= 0 and candidate < real_columns and scores[row, candidate] > 0:
+            result[row] = candidate
+    return result
+
+
 _COMPILED_ASSIGNMENT = None
 
 def _maximum_weight_assignment(values, weights):
@@ -140,8 +194,10 @@ def _maximum_weight_assignment(values, weights):
     backend = os.environ.get('AIDD_ASSIGNMENT_BACKEND', 'python')
     if backend == 'python':
         return _assignment_reference(values, weights)
+    if backend == 'numpy':
+        return _assignment_vectorized(values, weights)
     if backend != 'numba':
-        raise ValueError('AIDD_ASSIGNMENT_BACKEND must be python or numba')
+        raise ValueError('AIDD_ASSIGNMENT_BACKEND must be python, numpy or numba')
     global _COMPILED_ASSIGNMENT
     if _COMPILED_ASSIGNMENT is None:
         from numba import njit

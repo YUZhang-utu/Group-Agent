@@ -167,7 +167,8 @@ def test_changed_source_hash_is_rejected(tmp_path):
 
 @pytest.mark.parametrize('use_tools',[False,True])
 @pytest.mark.parametrize('do_dock',[False,True])
-def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch,use_tools,do_dock):
+@pytest.mark.parametrize('threshold',[False,True])
+def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch,use_tools,do_dock,threshold):
     import aidd_agent.consensus_design  # Load SciPy before replacing the docking subprocess.
     profile,source,_,locations,batch=member_fixture(tmp_path)
     plants=plants_profile(tmp_path,source)
@@ -184,6 +185,12 @@ def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_pat
         templates=[dict(query_id='fixture')],anchors=[],sources=fingerprint([evidence]),
         design=dict(mandatory_anchors=[],alternative_groups=[],optional_weights={})))
     request=dict(analysis=str(analysis),query=str(query),selection=dict(scheme='E095',receptor='MDM2_fixture',block_ids=['b0']),conformers=100000,dock=True)
+    if threshold:
+        request['search_engine']='consensus-threshold-v1'
+        query_data=read(query)
+        query_data['readiness']='ready_for_consensus_funnel'
+        query_data['design'].update(minimum_score=.73,minimum_pose_score=.61,coarse_constraints={})
+        save(query,query_data)
     cfg=dict(search=dict(batch=str(batch),workers=1,refine_chunk=64),block_evaluation=dict(sampling_profile=str(profile),plants_profile=str(plants)))
     if use_tools:
         tools=tmp_path/'receptor-tools.json'
@@ -204,6 +211,9 @@ def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_pat
         monkeypatch.setattr(search,'inherited_plants_profile',forbidden)
         monkeypatch.setattr('aidd_agent.block_plants.prepare',forbidden)
     def refine(batch_,output,design,ids,workers,chunk):
+        if threshold:
+            assert design['block_search_mode']=='threshold'
+            assert design['design']['minimum_score']==.73
         calls.append(ids.tolist());chunks(output,[pose(int(i)) for i in ids])
     monkeypatch.setattr('aidd_agent.budget_screen.run_refinement',refine)
     monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',fake_plants)

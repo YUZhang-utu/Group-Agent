@@ -303,22 +303,29 @@ def search_ranked_blocks(request, output, batch, design, database, settings):
             directory.mkdir(parents=True,exist_ok=True)
             resumed = any((directory/'chunks').glob('*/*.receipt.json'))
             save(output/'progress.json',dict(stage='3d_refinement',block_id=block_id,block_rank=block['rank'],
-                 searched_conformers=searched,ranked_conformers=ranked,requested_conformers=request['conformers']))
+                 searched_conformers=searched,ranked_conformers=ranked,requested_conformers=request['conformers'],
+                 current_block_conformers=len(ids),template_count=len(design['templates']),
+                 search_mode=design.get('block_search_mode','budget')))
             started = time.perf_counter()
-            run_refinement(batch,directory,design,ids,settings['workers'],settings['refine_chunk'])
+            cache_reused = False
+            if design.get('_block_cache'):
+                from .block_refinement_cache import refine_cached
+                cache_reused = refine_cached(batch,directory,design,ids,settings,run_refinement)
+            else:
+                run_refinement(batch,directory,design,ids,settings['workers'],settings['refine_chunk'])
             roots.append(directory)
             rows, ranked = rank_conformers(output,design,database,request['conformers'],roots)
             searched += len(ids)
             history.append(dict(block_id=block_id,rank=block['rank'],searched_conformers=len(ids),
                                 cumulative_ranked_conformers=ranked,elapsed_seconds=time.perf_counter()-started,
-                                resumed_chunks=resumed))
+                                resumed_chunks=resumed,cache_reused=cache_reused))
             save(output/'search-history.json',dict(blocks=history,stop_policy='completed_block_boundary'))
             if ranked >= request['conformers']:
                 break
     return rows,ranked,searched,history
 
 
-def run(request, output, cfg):
+def run(request, output, cfg, cache_root=None):
     started = time.perf_counter()
     resumed_execution = (output/'protocol.json').exists()
     from .prompt_workflow import Blocked
@@ -355,6 +362,9 @@ def run(request, output, cfg):
              batch/'artifacts/catalog.json',batch/'chemical/catalog.json',*inherited_inputs]
     if request['dock']:
         paths.append(Path(plants_config))
+    engine = request.get('search_engine', 'legacy-budget-v1')
+    if engine not in ('legacy-budget-v1', 'consensus-threshold-v1'):
+        raise ValueError('Unknown block search engine')
     protocol = dict(request=request,inputs=fingerprint(paths),code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))),
                     library_registry=snapshot(batch/'registry.sqlite3'),
                     ranking='contact-first per-template ranks fused by conformer RRF; positive-contact tier first')
@@ -378,6 +388,16 @@ def run(request, output, cfg):
             save(design_dir/'report.json',source)
     design = read(design_dir/'report.json')
     check_hashes(design['sources'])
+    if engine == 'consensus-threshold-v1':
+        if design.get('readiness') != 'ready_for_consensus_funnel':
+            raise Blocked('Adopt a ready consensus funnel design before block search')
+        for key in ('minimum_score', 'minimum_pose_score', 'coarse_constraints'):
+            if key not in design['design']:
+                raise Blocked('Confirmed funnel design is missing '+key)
+        design = dict(design, block_search_mode='threshold', assignment_backend='numpy')
+        if cache_root is not None:
+            design['_block_cache'] = dict(root=str(cache_root), identity=dict(
+                code=protocol['code'], inputs=protocol['inputs'], library_registry=protocol['library_registry']))
     if design.get('failed_template_self_controls') or design.get('readiness') == 'needs_template_state_review':
         raise Blocked('The selected query requires template-state review before block search')
     # MDM2 is this campaign's explicit target; never use the legacy WEE1 shortcuts.
@@ -439,6 +459,12 @@ def run(request, output, cfg):
         outputs.extend(['plants-profile.json','prepare/report.json','docking/report.json','docking/scores.csv','docking_candidates.csv'])
     results['outputs'] = {n:str(output/n) for n in outputs}
     results['output_hashes'] = {n:sha(output/n) for n in outputs}
+    results['template_count'] = len(design['templates'])
+    results['template_ids'] = [t['query_id'] for t in design['templates']]
+    results['search_engine'] = engine
+    results['filter_policy'] = 'adopted_consensus_thresholds' if engine == 'consensus-threshold-v1' else 'legacy_budget_ranking'
+    results['cache_reused'] = any(h.get('cache_reused',False) for h in history)
+    results['timing_scope'] = 'execution_including_reuse_not_fresh_benchmark' if results['cache_reused'] or resumed_execution else 'fresh_execution'
     results['limitations'] = ['Block priorities and contact-first retrieval are exploratory, not affinity or experimental enrichment.',
                              'Follow-up conformers are search-selected; do not report population-weighted block estimates.',
                              'Shortfalls are retained explicitly; no outside-block conformers are added.']

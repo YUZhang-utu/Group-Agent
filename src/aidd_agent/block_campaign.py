@@ -215,13 +215,14 @@ def handle(app, sid, args):
             row = dict(task_id=job['id'],status=job['status'],scheme=selection['scheme'],
                        method=selection['method'],blocks=selection['blocks_per_method'],receptor=selection['receptor'],
                        query_sha256=request['query_sha256'],analysis_sha256=request['analysis_sha256'],
-                       requested_conformers=request['conformers'],report=job.get('report'))
+                       requested_conformers=request['conformers'],report=job.get('report'),
+                       search_engine=request.get('search_engine','legacy-budget-v1'))
             if job['status']=='complete':
                 path,_ = owned_report(app,sid,job['id'],project,{'block_search_dock'})
                 report = read(path)
                 row.update({k:report[k] for k in ('searched_conformers','ranked_conformers','exported_conformers',
                     'unique_molecules','shortfall','stop_reason','elapsed_seconds','resumed_execution',
-                    'mol2_directory','searched_blocks') if k in report})
+                    'mol2_directory','searched_blocks','template_count','template_ids','filter_policy','cache_reused','timing_scope') if k in report})
             rows.append(row)
         return dict(arms=rows,docking_requested=False,
                     limitations='Compare matching query/analysis hashes and budgets only. Resumed times are not fresh latency benchmarks; no affinity or enrichment measured.')
@@ -288,7 +289,8 @@ def handle(app, sid, args):
     run = Path(job['plan']).parent.name
     request = dict(session=sid, analysis=str(path), analysis_sha256=sha(path), selection=selection,
                    query=str(query), query_sha256=sha(query), query_run=run,
-                   conformers=args.get('conformers',100000), dock=args.get('dock',True))
+                   conformers=args.get('conformers',100000), dock=args.get('dock',True),
+                   search_engine='consensus-threshold-v1')
     if 'search_policy' in args:
         request['search_policy'] = args['search_policy']
     with app.lock:
@@ -321,7 +323,7 @@ def execute(action, params, output, execution, cfg, allow_compute):
     if select_blocks(path, selection['scheme'], selection['receptor'], selection['method'], selection['blocks_per_method']) != selection:
         raise ValueError('Block selection changed')
     from .block_conformer_search import run
-    return run(request, output, cfg)
+    return run(request, output, cfg, cache_root=project/'block-refinement-cache')
 
 
 def adopt(request, output, project):

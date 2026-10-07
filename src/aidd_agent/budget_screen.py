@@ -128,14 +128,17 @@ def collect_conformers(batch, keys):
 
 
 def make_queries(batch, design, seed_search=None):
+    mode = design.get('block_search_mode', 'budget')
+    if mode not in ('budget', 'threshold'):
+        raise ValueError('Unknown block search mode')
     queries=[]
     for template in design['templates']:
         q=dict(template,anchors=copy.deepcopy(design['anchors']),consensus_npz=design['consensus_npz'],
             artifact_catalog=str(batch/'artifacts/catalog.json'),chemical_companion=str(batch/'chemical/catalog.json'),
-            guided_design=copy.deepcopy(design['design']),selection_mode='budget',
-            condition_policy=dict(required_anchors=design['anchor_order'],match_mode='any',minimum_score=.5,
+            guided_design=copy.deepcopy(design['design']),selection_mode=mode,assignment_backend=design.get('assignment_backend', os.environ.get('AIDD_ASSIGNMENT_BACKEND', 'python')),
+            condition_policy=dict(required_anchors=design['anchor_order'],match_mode='any',minimum_score=(design['design']['minimum_score'] if mode == 'threshold' else .5),
                 coarse_constraints=design['design']['coarse_constraints']))
-        if q['guided_design'].get('exclusions'):raise ValueError('Budget mode requires an explicit exclusion-free design')
+        if mode == 'budget' and q['guided_design'].get('exclusions'):raise ValueError('Budget mode requires an explicit exclusion-free design')
         indices=sorted({a['feature_index'] for a in q['anchors']})
         for a in q['anchors']:a['score_column']=indices.index(a['feature_index'])
         if seed_search is not None:
@@ -148,6 +151,8 @@ def make_queries(batch, design, seed_search=None):
 def init_worker(queries):
     global _QUERIES, _CURRENT
     _QUERIES=queries;_CURRENT=None
+    import os
+    os.environ['AIDD_ASSIGNMENT_BACKEND'] = queries[0].get('assignment_backend', 'python')
 
 
 def refine_chunk(task):
