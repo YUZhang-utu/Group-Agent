@@ -13,6 +13,7 @@ from .project_context import ensure_within
 
 OPERATIONS = {
     'list': (set(), set()),
+    'comparison': (set(), set()),
     'discover': (set(), set()),
     'retry_config': ({'task_id'}, set()),
     'import': (set(), {'report','candidate_id'}),
@@ -21,7 +22,8 @@ OPERATIONS = {
     'top': ({'task_id', 'scheme', 'receptor', 'block_id'}, {'limit', 'score'}),
     'preview': ({'task_id', 'scheme', 'receptor'}, {'method', 'blocks'}),
     'start': ({'task_id', 'query_task_id', 'scheme', 'receptor'},
-              {'method', 'blocks', 'conformers', 'dock'}),
+              {'method', 'blocks', 'conformers', 'dock', 'search_policy'}),
+    'compare': ({'task_id', 'query_task_id', 'receptor'}, {'conformers'}),
 }
 
 
@@ -54,6 +56,10 @@ def validate(args):
             raise ValueError('Invalid ' + key)
     if type(args.get('dock', True)) is not bool:
         raise ValueError('dock must be boolean')
+    if args.get('search_policy', 'all_selected') not in {'all_selected', 'ranked_blocks_until_budget'}:
+        raise ValueError('Unknown search_policy')
+    if args.get('search_policy') == 'ranked_blocks_until_budget' and args.get('method', 'union') not in {'equiscore','chemplp'}:
+        raise ValueError('Sequential block search requires one scoring method')
     if args.get('score', 'EquiScore') not in {'EquiScore', 'ChemPLP'}:
         raise ValueError('Choose EquiScore or ChemPLP')
     if 'scheme' in args and args['scheme'] not in {'E094', 'E095', 'E096'}:
@@ -189,6 +195,36 @@ def handle(app, sid, args):
     app.session(sid)
     ctx = app.context
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
+    if op == 'comparison':
+        rows = []
+        for job in app.jobs(sid):
+            if not job['request'].startswith('Search leading blocks for conformers '):
+                continue
+            plan = ensure_within(Path(job['plan']), project)
+            steps = read(plan)['plan']['steps']
+            if len(steps)!=1 or steps[0]['action']!='block_search_dock':
+                continue
+            params = steps[0]['params']
+            entry = ensure_within(project/'block-campaigns'/(params['request_id']+'.json'),project)
+            if sha(entry)!=params['request_sha256']:
+                raise ValueError('Campaign request changed')
+            request = read(entry)
+            if request.get('session')!=sid or request.get('search_policy')!='ranked_blocks_until_budget':
+                continue
+            selection = request['selection']
+            row = dict(task_id=job['id'],status=job['status'],scheme=selection['scheme'],
+                       method=selection['method'],blocks=selection['blocks_per_method'],receptor=selection['receptor'],
+                       query_sha256=request['query_sha256'],analysis_sha256=request['analysis_sha256'],
+                       requested_conformers=request['conformers'],report=job.get('report'))
+            if job['status']=='complete':
+                path,_ = owned_report(app,sid,job['id'],project,{'block_search_dock'})
+                report = read(path)
+                row.update({k:report[k] for k in ('searched_conformers','ranked_conformers','exported_conformers',
+                    'unique_molecules','shortfall','stop_reason','elapsed_seconds','resumed_execution',
+                    'mol2_directory','searched_blocks') if k in report})
+            rows.append(row)
+        return dict(arms=rows,docking_requested=False,
+                    limitations='Compare matching query/analysis hashes and budgets only. Resumed times are not fresh latency benchmarks; no affinity or enrichment measured.')
     if op == 'retry_config':
         with app.lock:
             return retry_config(app, sid, project, args['task_id'])
@@ -223,6 +259,21 @@ def handle(app, sid, args):
             return queue(app, sid, project, dict(session=sid, report=str(path), report_sha256=sha(path)), 'block_adopt_scores')
     path, _ = owned_report(app, sid, args['task_id'], project, {'block_analyze'})
     analysis_header(path, project)
+    if op == 'compare':
+        # Validate all input selections before queuing any of the twelve arms.
+        owned_report(app, sid, args['query_task_id'], project, {'consensus_design', 'consensus_recommendation'})
+        arms = [dict(operation='start', task_id=args['task_id'], query_task_id=args['query_task_id'],
+                     scheme=scheme, receptor=args['receptor'], method=method, blocks=blocks,
+                     conformers=args.get('conformers',100000), dock=False,
+                     search_policy='ranked_blocks_until_budget')
+                for scheme in ('E094','E095','E096') for method in ('chemplp','equiscore') for blocks in (5,10)]
+        for arm in arms:
+            if not select_blocks(path,arm['scheme'],arm['receptor'],arm['method'],arm['blocks'])['block_ids']:
+                raise ValueError('Missing eligible blocks for '+arm['scheme']+'/'+arm['method'])
+        tasks = [dict(scheme=a['scheme'],method=a['method'],blocks=a['blocks'],**handle(app,sid,a)) for a in arms]
+        return dict(status='queued' if any(t['status'] in {'queued','running'} for t in tasks) else 'recorded',
+                    tasks=tasks, docking_requested=False, candidate_unit='conformer',
+                    message='Independent arms; inspect existing task IDs. Top-5 and Top-10 may stop at the same prefix.')
     if op in {'ranks', 'top'}:
         from .block_ranking import inspect
         if args.get('score') == 'ChemPLP':
@@ -238,6 +289,8 @@ def handle(app, sid, args):
     request = dict(session=sid, analysis=str(path), analysis_sha256=sha(path), selection=selection,
                    query=str(query), query_sha256=sha(query), query_run=run,
                    conformers=args.get('conformers',100000), dock=args.get('dock',True))
+    if 'search_policy' in args:
+        request['search_policy'] = args['search_policy']
     with app.lock:
         return queue(app, sid, project, request, 'block_search_dock')
 

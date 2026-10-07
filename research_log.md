@@ -2685,3 +2685,8 @@ User retry was rejected as containing scientific artifacts. Code inspection foun
 ## 2026-10-06: operational AIDD handoff saved
 
 User reports the submitted leading-block campaign is still running and requests continuity. Saved to_human/20261006_AIDD_AGENT_HANDOFF.md with completed PLANTS/EquiScore inputs, adopted rankings, 11-template ligand query, configuration fixes, and intended E095/7NA2_A Top-5 union search followed by docking. Budget remains 100000 conformers, not unique molecules. New running task ID, actual phase and completion counters are not supplied; next action is status/receipt inspection, never duplicate submission. No scientific task launched or runtime changed while saving this handoff.
+
+
+## 2026-10-07 - E105 independent search arms
+
+User reported the E095 union campaign complete (PROMPT-874365d177704bf3; 344476 searched, 100000 docked, 72859 distinct molecules, zero failed jobs). New authorized scope: compare E094/E095/E096, each scoring method independently, Top-5 and Top-10, sequential complete-block search until 100000 conformers; no docking. Added Chat compare/comparison, ordered boundary stopping, search-only configuration, original-coordinate MOL2 output paths and arm metrics. Fixed multi-task Chat receipt formatting. 74 related fixture tests and English guard passed. Workstation execution has not been launched; see E105 protocol and dated guide. No publication/novelty discussion recorded.

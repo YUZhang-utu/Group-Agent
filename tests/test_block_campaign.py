@@ -166,7 +166,8 @@ def test_changed_source_hash_is_rejected(tmp_path):
 
 
 @pytest.mark.parametrize('use_tools',[False,True])
-def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch,use_tools):
+@pytest.mark.parametrize('do_dock',[False,True])
+def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_path,monkeypatch,use_tools,do_dock):
     import aidd_agent.consensus_design  # Load SciPy before replacing the docking subprocess.
     profile,source,_,locations,batch=member_fixture(tmp_path)
     plants=plants_profile(tmp_path,source)
@@ -191,18 +192,34 @@ def test_search_to_docking_pipeline_reports_shortfall_and_reuses_receipt(tmp_pat
         cfg['block_evaluation'].pop('plants_profile')
         cfg['block_evaluation']['receptor_tools_profile']=str(tools)
     calls=[]
+    if not do_dock:
+        request['dock']=False
+        if use_tools:
+            request['search_policy']='ranked_blocks_until_budget'
+            request['selection'].update(method='equiscore',rankings={'EquiScore':[dict(block_id='b0',rank=1)]})
+        cfg['block_evaluation'].pop('plants_profile',None)
+        cfg['block_evaluation'].pop('receptor_tools_profile',None)
+        def forbidden(*args,**kwargs):
+            raise AssertionError('Search-only must not inspect or run PLANTS')
+        monkeypatch.setattr(search,'inherited_plants_profile',forbidden)
+        monkeypatch.setattr('aidd_agent.block_plants.prepare',forbidden)
     def refine(batch_,output,design,ids,workers,chunk):
         calls.append(ids.tolist());chunks(output,[pose(int(i)) for i in ids])
     monkeypatch.setattr('aidd_agent.budget_screen.run_refinement',refine)
     monkeypatch.setattr('aidd_agent.block_plants.subprocess.run',fake_plants)
     output=tmp_path/'continuation';output.mkdir()
     result=search.run(request,output,cfg)
-    assert result['status']=='complete' and result['scored']==6
+    assert result['status']=='complete'
+    if do_dock:
+        assert result['scored']==6 and len(result['top_candidates'])==6
+    else:
+        assert result['planned_pairs']==0 and result['receptors']==0 and 'scored' not in result
+        assert not (output/'docking').exists()
+        assert list(Path(result['mol2_directory']).glob('*.mol2'))
     assert result['unique_molecules']==3 and result['exported_conformers']==6
-    assert result['shortfall']==99994 and result['planned_pairs']==6
-    assert len(result['top_candidates'])==6
+    assert result['shortfall']==99994 and result['planned_pairs']==(6 if do_dock else 0)
     assert search.run(request,output,cfg)==result and len(calls)==1
-    if use_tools:
+    if use_tools and do_dock:
         inherited,_=search.inherited_plants_profile(read(full),tools,'MDM2_fixture',receptor_tools=True)
         assert inherited['workers']==2 and inherited['timeout_seconds']==600
         assert inherited['receptors'][0]['center']==settings['receptors'][0]['center']

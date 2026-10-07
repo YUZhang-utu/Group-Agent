@@ -27,7 +27,7 @@ TOOLS = {
 
 
 TOOL_ARGUMENTS = {
-    'block_campaign': {'operation','report','candidate_id','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock'},
+    'block_campaign': {'operation','report','candidate_id','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock','search_policy'},
     'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
     'structure_chain': {'operation', 'task_id', 'goal', 'reference', 'budget', 'chain_id'},
     'structure_workflow': {'task_id'},
@@ -46,6 +46,7 @@ BLOCK_OPERATIONS = {
     'top': ({'task_id', 'scheme', 'receptor', 'block_id'}, {'top_n', 'limit'}),
 }
 
+TOOLS['block_campaign'] += (' comparison: no extra arguments; inspect all owned independent-arm counters, timings, provenance and MOL2 directories. compare: task_id, query_task_id, receptor, optional conformers. Queues 12 independent search-only arms: E094/E095/E096 x chemplp/equiscore x Top-5/Top-10. No docking. Sequential whole-block search stops at the completed-block boundary once the conformer budget is met. start also accepts search_policy all_selected or ranked_blocks_until_budget; the latter requires one scoring method. For search-only always set dock=false. MOL2 exports retain original coordinates. ' )
 TOOLS['block_campaign'] += (' Recovery: discover locates saved CLI scores and original multi-cocrystal query packages. '
     'retry_config with task_id explicitly creates one fresh plan for a missing-runtime-configuration blocked campaign before scientific work began; retains the original receipt. '
     'import accepts report OR discovered candidate_id. import_query accepts report OR a query candidate_id, '

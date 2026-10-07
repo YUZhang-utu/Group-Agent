@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import sqlite3
+import time
 
 import numpy as np
 
@@ -109,7 +110,7 @@ def map_artifacts(batch, database, descriptors):
         return np.array([r[0] for r in db.execute('SELECT gid FROM member ORDER BY gid')],dtype=np.int64)
 
 
-def rank_conformers(output, design, database, count):
+def rank_conformers(output, design, database, count, chunk_roots=None):
     """Fuse per-template ranks by conformer, with no molecule collapse."""
     with sqlite3.connect(database) as members_db, sqlite3.connect(output/'ranking.sqlite') as db:
         db.executescript('''DROP TABLE IF EXISTS poses; DROP TABLE IF EXISTS template_ranks;
@@ -117,7 +118,7 @@ def rank_conformers(output, design, database, count):
             CREATE TABLE poses(gid INTEGER,template TEXT,contact REAL,gaussian REAL,payload TEXT,
                                PRIMARY KEY(gid,template));''')
         for ti, template in enumerate(design['templates']):
-            for path in sorted((output/'chunks'/f'{ti:02d}').glob('*.poses.jsonl')):
+            for path in sorted(p for root in (chunk_roots or [output]) for p in (root/'chunks'/f'{ti:02d}').glob('*.poses.jsonl')):
                 check_hashes(read(path.with_name(path.name.replace('.poses.jsonl','.receipt.json')))['files'])
                 with path.open(encoding='utf-8') as stream:
                     for line in stream:
@@ -282,7 +283,44 @@ def inherited_plants_profile(full, configured, receptor, *, receptor_tools=False
                    Path(saved['receptors'][0]['mol2']),Path(saved['executable'])]
 
 
+def search_ranked_blocks(request, output, batch, design, database, settings):
+    """Finish a whole block before testing the cumulative conformer budget."""
+    from .budget_screen import run_refinement
+    selection = request['selection']
+    method = selection['method']
+    if method not in {'chemplp','equiscore'}:
+        raise ValueError('Sequential search requires an independent scoring arm')
+    score = 'ChemPLP' if method == 'chemplp' else 'EquiScore'
+    ordered = sorted(selection['rankings'][score],key=lambda r:(r['rank'],r['block_id']))
+    if {r['block_id'] for r in ordered} != set(selection['block_ids']):
+        raise ValueError('Block priority list differs from selected membership')
+    roots, history, rows, ranked, searched = [], [], [], 0, 0
+    with readonly(database) as db:
+        for ordinal, block in enumerate(ordered,1):
+            block_id = block['block_id']
+            ids = np.array([r[0] for r in db.execute('SELECT gid FROM member WHERE block_id=? ORDER BY gid',(block_id,))],dtype=np.int64)
+            directory = output/'block-search'/f'{ordinal:02d}'
+            directory.mkdir(parents=True,exist_ok=True)
+            resumed = any((directory/'chunks').glob('*/*.receipt.json'))
+            save(output/'progress.json',dict(stage='3d_refinement',block_id=block_id,block_rank=block['rank'],
+                 searched_conformers=searched,ranked_conformers=ranked,requested_conformers=request['conformers']))
+            started = time.perf_counter()
+            run_refinement(batch,directory,design,ids,settings['workers'],settings['refine_chunk'])
+            roots.append(directory)
+            rows, ranked = rank_conformers(output,design,database,request['conformers'],roots)
+            searched += len(ids)
+            history.append(dict(block_id=block_id,rank=block['rank'],searched_conformers=len(ids),
+                                cumulative_ranked_conformers=ranked,elapsed_seconds=time.perf_counter()-started,
+                                resumed_chunks=resumed))
+            save(output/'search-history.json',dict(blocks=history,stop_policy='completed_block_boundary'))
+            if ranked >= request['conformers']:
+                break
+    return rows,ranked,searched,history
+
+
 def run(request, output, cfg):
+    started = time.perf_counter()
+    resumed_execution = (output/'protocol.json').exists()
     from .prompt_workflow import Blocked
     from .budget_screen import run_refinement
     from .consensus_design import adopt
@@ -293,14 +331,16 @@ def run(request, output, cfg):
     missing = []
     if not search.get('batch'): missing.append('search.batch')
     if not block.get('sampling_profile'): missing.append('block_evaluation.sampling_profile')
-    if not plants_config: missing.append('block_evaluation.plants_profile or block_evaluation.receptor_tools_profile')
+    if request['dock'] and not plants_config: missing.append('block_evaluation.plants_profile or block_evaluation.receptor_tools_profile')
     if missing:
         raise Blocked('Missing block-search runtime configuration: '+', '.join(missing))
     batch = Path(search['batch'])
     analysis = read(request['analysis'])
     full = read(analysis['source_report'])
-    profile, inherited_inputs = inherited_plants_profile(full,plants_config,request['selection']['receptor'],
-                                                       receptor_tools=not bool(block.get('plants_profile')))
+    profile, inherited_inputs = None, []
+    if request['dock']:
+        profile, inherited_inputs = inherited_plants_profile(full,plants_config,request['selection']['receptor'],
+                                                           receptor_tools=not bool(block.get('plants_profile')))
     if sha(Path(analysis['source_report'])) != analysis['ranking']['source_report_sha256']:
         raise ValueError('Original full score report changed')
     if full['identity']['profile_inputs'].get(full['sample_report']) != sha(Path(full['sample_report'])):
@@ -311,8 +351,10 @@ def run(request, output, cfg):
         if snapshot(record['path']) != record:
             raise ValueError('Original block population database changed')
     paths = [Path(request['analysis']),Path(request['query']),Path(full['sample_report']),
-             Path(block['sampling_profile']),Path(plants_config),
+             Path(block['sampling_profile']),
              batch/'artifacts/catalog.json',batch/'chemical/catalog.json',*inherited_inputs]
+    if request['dock']:
+        paths.append(Path(plants_config))
     protocol = dict(request=request,inputs=fingerprint(paths),code=fingerprint(sorted(Path(__file__).parent.glob('*.py'))),
                     library_registry=snapshot(batch/'registry.sqlite3'),
                     ranking='contact-first per-template ranks fused by conformer RRF; positive-contact tier first')
@@ -320,6 +362,7 @@ def run(request, output, cfg):
         raise ValueError('Search inputs changed; use a new campaign')
     save(output/'protocol.json',protocol)
     if (output/'report.json').exists() and read(output/'report.json').get('status') == 'complete':
+        check_outputs(output/'selected')
         return check_outputs(output)
     design_dir = output/'query'
     if not (design_dir/'report.json').exists():
@@ -356,9 +399,17 @@ def run(request, output, cfg):
         save(marker,fingerprint([database]))
     save(output/'progress.json',dict(stage='3d_refinement',selected_block_conformers=len(ids),requested_conformers=request['conformers']))
     print(f'Refining {len(ids):,} selected-block conformers; retaining up to {request["conformers"]:,} conformers, not molecules.',flush=True)
-    run_refinement(batch,output,design,ids,search['workers'],search['refine_chunk'])
-    rows, ranked = rank_conformers(output,design,database,request['conformers'])
-    if not rows:
+    policy = request.get('search_policy','all_selected')
+    history = []
+    if policy == 'ranked_blocks_until_budget':
+        rows,ranked,searched,history = search_ranked_blocks(request,output,batch,design,database,search)
+    elif policy == 'all_selected':
+        run_refinement(batch,output,design,ids,search['workers'],search['refine_chunk'])
+        rows, ranked = rank_conformers(output,design,database,request['conformers'])
+        searched = len(ids)
+    else:
+        raise ValueError('Unknown search policy')
+    if not rows and request['dock']:
         raise ValueError('No qualified 3D search poses; docking was not submitted')
     exported = export_selected(output/'selected',database,rows,request['selection']['scheme'])
     check_hashes(protocol['inputs'])
@@ -366,11 +417,17 @@ def run(request, output, cfg):
         if snapshot(record['path']) != record:
             raise ValueError('Original block population changed during search')
     outputs = ['protocol.json','members.sqlite','members-seal.json','ranking.sqlite','selected/report.json','query/report.json']
+    if history:
+        outputs.append('search-history.json')
     results = dict(kind='block_search_dock',status='complete',selection=request['selection'],query=str(design_dir/'report.json'),
-                   requested_conformers=request['conformers'],searched_conformers=len(ids),ranked_conformers=ranked,
+                   requested_conformers=request['conformers'],searched_conformers=searched,ranked_conformers=ranked,
                    exported_conformers=exported['unique_conformers'],unique_molecules=exported['unique_molecules'],
-                   shortfall=request['conformers']-len(rows),receptors=1,planned_pairs=len(rows),
+                   shortfall=request['conformers']-len(rows),receptors=1 if request['dock'] else 0,planned_pairs=len(rows) if request['dock'] else 0,
                    candidate_unit='conformer',docking_requested=request['dock'],biological_validation='not_run')
+    results.update(search_policy=policy,searched_blocks=history,
+                   mol2_directory=str(output/'selected/ligands'),mol2_coordinates='original_source',
+                   elapsed_seconds=time.perf_counter()-started,resumed_execution=resumed_execution,
+                   stop_reason='budget_reached' if len(rows)>=request['conformers'] else 'selected_blocks_exhausted')
     if request['dock']:
         save(output/'plants-profile.json',profile)
         prepare(output/'selected/report.json',output/'plants-profile.json',output/'prepare')
@@ -385,7 +442,10 @@ def run(request, output, cfg):
     results['limitations'] = ['Block priorities and contact-first retrieval are exploratory, not affinity or experimental enrichment.',
                              'Follow-up conformers are search-selected; do not report population-weighted block estimates.',
                              'Shortfalls are retained explicitly; no outside-block conformers are added.']
+    results['elapsed_seconds'] = time.perf_counter()-started
     save(output/'report.json',results)
+    save(output/'progress.json',dict(stage=results['status'],exported_conformers=results['exported_conformers'],
+                                   searched_conformers=searched,shortfall=results['shortfall']))
     if results['status'] != 'complete':
         raise RuntimeError('Follow-up docking incomplete; inspect the saved docking report before resuming')
     return results

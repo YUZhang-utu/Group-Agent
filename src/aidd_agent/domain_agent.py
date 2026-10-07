@@ -34,6 +34,12 @@ model's leading blocks within one scheme/receptor. start consumes the chosen
 analysis task and confirmed MDM2 query task. The default 100000 budget counts
 CONFORMERS, allows multiple conformers per molecule, and covers the selected
 block union, not each block separately. Keep Top-10 DISTINCT-MOLECULE block means.
+For independent comparison of partitions/scorers and Top-5/Top-10, use compare to queue
+12 separate search-only arms with the owned analysis/query and requested receptor.
+Never substitute union. Each arm finishes one ranked block at a time and stops at
+100000 qualified conformers, or reports shortfall at the block limit. Top-5/Top-10
+are block counts, not changes to the Top-10-molecule statistic. No docking is
+performed by compare. For other search-only starts explicitly set dock=false.
 An explicit request to search and dock authorizes both stages; never launch it
 for a status/ranking question. If several query tasks exist, ask which one to use.
 An empty block_campaign list is not proof that the old terminal query or scoring
@@ -186,7 +192,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             last_error=None;name=step['tool'];args=step['arguments']
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
-                if name == 'block_campaign' and args.get('operation') in {'import','import_query','start'} and waiting:
+                if name == 'block_campaign' and args.get('operation') in {'import','import_query','start','compare'} and waiting:
                     raise ValueError('An operation is pending; inspect its task before submitting another campaign')
                 if name == 'block_results' and args.get('operation') == 'analyze' and waiting:
                     raise ValueError('An operation is pending; inspect its task rather than dispatching another analysis')
@@ -212,6 +218,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
+            if name == 'block_campaign' and args.get('operation') == 'compare' and record['status'] == 'complete':
+                answer='Independent search-only comparison arms recorded (no docking):\n'+json.dumps(result,indent=2)
+                answer+='\nInspect /status TASK_ID and /results TASK_ID. Each arm stops after a complete block reaches the conformer budget; Top-5 and Top-10 may return the same prefix.'
+                audit.update(status='pending' if pending(result) else 'complete',answer=answer,evidence_ids=[row['id']]);save();break
             if name == 'block_campaign' and args.get('operation') in {'import','import_query','start','retry_config'} and record['status'] == 'complete' and pending(result):
                 answer='Block campaign is '+result['status']+'. Task ID: '+str(result['task_id'])+'. '
                 answer+=('The original multi-cocrystal query will be verified and recorded without selecting new templates or running a search.' if args['operation']=='import_query' else
@@ -244,7 +254,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
     for record in audit['steps']:
         result=record.get('result',{})
         if isinstance(result,dict) and result.get('tasks') and result.get('status')=='queued':
-            receipts.extend(f"Task {row['id']}: {row['status']}" for row in result['tasks'])
+            receipts.extend(f"Task {row.get('id',row.get('task_id'))}: {row['status']}" for row in result['tasks'])
     if receipts:answer+='\n\nExecution receipts: '+ '; '.join(receipts)
     sources=[]
     for record in audit['steps']:

@@ -1,4 +1,19 @@
 project: aidd-macrocycle-agent
+independent_block_comparison:
+  saved: 2026-10-07
+  protocol: experiments/E105-independent-block-search.md
+  guide: to_human/20261007_AIDD_INDEPENDENT_BLOCK_SEARCH.md
+  status: implemented_74_local_tests_passed_workstation_launch_pending
+  arms: 12
+  schemes: [E094, E095, E096]
+  scorers: [ChemPLP, EquiScore]
+  block_limits: [5, 10]
+  ranking_context: 7NA2_A
+  conformers_per_arm: 100000
+  stop_policy: finish_each_ranked_block_stop_before_next_when_budget_reached
+  docking: false
+  prior_union_run: PROMPT-874365d177704bf3
+  prior_union_receipt: complete_344476_searched_100000_docked_72859_molecules_zero_failed_jobs
 latest_continuation:
   saved: 2026-10-06
   handoff: to_human/20261006_BLOCK_SEARCH_AGENT.md

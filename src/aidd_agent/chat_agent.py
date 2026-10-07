@@ -328,7 +328,7 @@ def screening_summary(job):
     block_steps=[s for s in report.get('steps',{}).values() if s.get('action') in {'plants_receptors','block_sample','block_plants_prepare','block_plants_run','block_analyze','block_import_analysis','block_adopt_scores','block_search_dock'} and s.get('status')=='complete']
     if block_steps:
         child=read_json(ensure_within(Path(block_steps[-1]['result']['report']),Path(job['plan']).parent)) or {}
-        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','ranking','receptors','sites','limitations','selection','requested_conformers','searched_conformers','ranked_conformers','exported_conformers','unique_molecules','shortfall','planned_pairs','candidate_unit','outputs','adoption') if k in child}
+        return {k:child[k] for k in ('kind','status','readiness','slots','unique_conformers','blocks','jobs','scored','failed_jobs','ligand_mode','comparisons','ranking','receptors','sites','limitations','selection','requested_conformers','searched_conformers','ranked_conformers','exported_conformers','unique_molecules','shortfall','planned_pairs','candidate_unit','outputs','adoption','search_policy','searched_blocks','mol2_directory','mol2_coordinates','stop_reason','docking_requested','elapsed_seconds','resumed_execution') if k in child}
     for step in report.get("steps", {}).values():
         if step.get('action') in {'pocket_states','receptor_assess','pocket_adopt'} and step.get('status')=='complete':
             child=read_json(ensure_within(Path(step['result']['report']),Path(job['plan']).parent)) or {}
