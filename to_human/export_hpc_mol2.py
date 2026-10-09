@@ -44,7 +44,7 @@ def records(raw):
         yield lines
 
 
-def export(runs_root, output, run_ids, batch_size=1000):
+def export(runs_root, output, run_ids, batch_size=10000):
     if batch_size < 1:
         raise ValueError('Batch size must be positive')
     if output.exists():
@@ -170,7 +170,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--runs-root', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--batch-size', type=int, default=1000)
+    p.add_argument('--batch-size', type=int, default=10000)
     p.add_argument('--archive', action='store_true')
     a = p.parse_args()
     archive = a.output.with_name(a.output.name+'.tar.gz')
