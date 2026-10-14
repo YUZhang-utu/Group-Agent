@@ -362,3 +362,15 @@ Complete-universe replay evaluates six priority orders, repeated random block or
 and uniform-conformer controls at whole-block work budgets. Actual timing is a
 separate explicit command with fresh receipts and matched repeat summaries.
 No activity labels, independent active enrichment or measured speedup are asserted.
+
+## E109 matched threshold benchmark
+
+Protocol: experiments/E109-matched-block-benchmark.md. Workstation guide:
+to_human/E109_MATCHED_BLOCK_BENCHMARK.md. Staged runner:
+scripts/run_mdm2_matched_benchmark.sh. Prepare one canonical regular population,
+exclude priority-training molecules, evaluate one frozen full threshold reference,
+and replay six orders plus repeated random controls. Report reference discovery
+and prefix-local delivered recovery separately, equal-work budgets, nested molecule
+scales and fresh matched-quality timings. Full/all-block pilot equivalence is a
+prerequisite to the staged full run. Local evidence is synthetic software testing;
+actual MDM2 recovery and speedup remain pending workstation execution.
