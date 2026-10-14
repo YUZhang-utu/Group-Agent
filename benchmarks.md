@@ -346,3 +346,19 @@ conformer/molecule/pair counters; original PLANTS receptor/engine inheritance;
 queued receipt reuse and blocked-state correctness. Fixtures included six
 conformers from three molecules with explicit 99994 shortfall. No independent
 MDM2 retrieval recall, model superiority or experimental enrichment is claimed.
+
+## E108 label-free routing benchmark
+
+Protocol: experiments/E108-label-free-routing-benchmark.md. Run instructions:
+to_human/E108_LABEL_FREE_BENCHMARK.md. The standard-library runner is
+scripts/benchmark_routing.py; scripts/run_mdm2_routing_benchmark.sh supplies the
+recorded workstation paths for the twelve-arm historical comparison.
+
+Historical reference recovery uses canonical artifact and registry molecule IDs,
+verified source hashes, reference Top-K sets and fixed output-prefix sensitivity.
+Stage losses distinguish unselected blocks, early stopping, current qualification
+and final truncation. Existing historical ANN and current threshold policies differ.
+Complete-universe replay evaluates six priority orders, repeated random block orders
+and uniform-conformer controls at whole-block work budgets. Actual timing is a
+separate explicit command with fresh receipts and matched repeat summaries.
+No activity labels, independent active enrichment or measured speedup are asserted.
