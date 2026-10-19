@@ -1,0 +1,17 @@
+# E111: bounded strict cached-pose audit
+
+Date: 2026-10-19. Exploratory diagnostic, not a production evaluator or activity test.
+
+User requirement: same pose must match pocket:74a6061918ece571 (Ile61) at >=0.5 and at least three distinct protein residues at >=0.5. Multiple atoms/modes of one residue count once.
+
+Hypothesis: replacing the weak composite-only cutoff with independent contact, shape/color, steric and reference contact-envelope gates removes weak cached poses while retaining a useful reference subset. No target rejection percentage is prescribed.
+
+Frozen first diagnostic thresholds (heuristic, not validated drug-discovery cutoffs): shape Tanimoto >=0.50 and feature-color Tanimoto >=0.30 independently, sigma=1 A without cutoff. No aggregate score can compensate for failure. All ligand heavy atoms must be >=2.0 A from receptor points. For the matched template, select heavy atoms within 4.5 A of receptor points; require >=65% of those points covered by candidate heavy atoms within 1.5 A. Also divide that reference contact envelope into three deterministic, spatially separated atom groups using farthest-point seeds; require >=50% coverage per group, at least three reference atoms per group and seed separation >=2 A. Unsupported region geometry fails closed and is reported. This is reference-contact-envelope occupancy, NOT validated canonical subpocket occupancy or true cavity-volume filling. Clash is stricter untyped distance, NOT a full element-specific VDW energy calculation.
+
+Run saved crystal identity-score contact check locally first. On workstation, independently score all eleven selected crystal template identity poses for shape/color/steric/envelope gates. Reuse E109 prepared query and pilot-full scores, selecting 2000 conformers uniformly with seed 20261019 BEFORE looking at their outcomes. Include old failures in the denominator. Inspect all saved per-template representatives for each selected conformer and accept only if all gates coexist on one pose. No new alignment/docking. Saved best-per-template representatives may miss an alternative pose satisfying the new rule, so results are cached-pose retention, not definitive new search recall. Report incremental and standalone gate retention, raw metrics, conformer count and sampled-molecule counts (not full molecule pass rate).
+
+Time budget: 600 seconds of audit processing, with cooperative checks between conformers and during sampling. Hash verification and input setup are recorded separately and can exceed this estimate. On interruption/time exhaustion, retain partial data but do not extrapolate a full-sample pass rate. Never silently count an unprocessed conformer as failure. No full-library or E110 refitting run.
+
+Input integrity: verify prepared/reference report links and declared query/schedule/score hashes, record normalized source code identity, verify selected template/receptor hashes when present in query sources, and check saved candidate identities/transform and Gaussian recomputation. Read all source databases read-only. New output only.
+
+No threshold tuning based on observed pass rate in this run. Report reference losses explicitly; any later calibration is a new protocol. Local synthetic regression verifies same-pose conjunction, distinct residues, threshold boundaries, spatial coverage, invalid inputs and time-limit accounting. Actual library execution requires workstation databases and coordinate artifacts absent from returned report archives.
