@@ -1,0 +1,15 @@
+# E112 paired native-receptor review
+
+Exploratory follow-up. User authorizes each co-crystal ligand with its own receptor and retains same-pose Ile61 plus three distinct residues, shape >=0.50 and color >=0.30. No relaxation to force hits.
+
+Use sealed original native ligand NPZ/mmCIF and stored native-to-common alignment for each of eleven templates. Transform the entire corresponding receptor with exactly the same rigid transform as its ligand. Verify native/aligned ligand coordinates, source hashes, target chain/canonical numbering and assembly provenance. Never fit receptors to candidates.
+
+Re-extract native crystal contact hypotheses using the existing anchor_evidence and extra_hypotheses helpers. Keep only the residue, protein-atom and interaction-type combinations present in the adopted selected-anchor inventory, including Ile61 CD1 hydrophobic contact. Match candidate features to these native-state features; do not reuse pooled contact scores. Shared feature indices are matched once and may support multiple distinct residue contacts. If a state lacks a source-supported Ile61 mode or three selected residues, label it unsupported for the requested rule rather than claim an intrinsic nonbinder. Additional source-defined contact discovery would be a separate policy.
+
+Paired diagnostic reuses EXACT E111 sample and saved poses, keeping shape/color fixed; compare native-receptor and old common-receptor distances and recalculate native-state contact/coverage on the SAME pose. Minimum distance 2.0 A and E111 reference-contact-envelope proxy unchanged. No claim of canonical subpocket volumetry or energetic contact validation. Exclude unresolved alternate locations and partial occupancy <0.9 from target-chain receptor, record this choice. Report controls in native and aligned coordinates and rigid invariance. No waters/metal/covalent modeling.
+
+Evaluate templates against their own receptor and perform ordered cross-template shape/color comparisons excluding identity (already aligned common frame). These comparisons are exploratory calibration diagnostics, not an independent activity benchmark. Do not tune thresholds on their outcome.
+
+This is NOT a fresh pose search. The E111 fixed-pose shape/color failures cannot be rescued by changing receptor alone. Quantify representation differences before launching a fresh per-state alignment pilot. Default 2000 supplied E111 conformers, 600-second cooperative audit cap; timeout outputs no overall rate. Original files read-only; fresh output with receipts. No full library or docking.
+
+Implementation tests: common transform preserves ligand/receptor distances; cross-state receptors stay paired; missing source/native contact modes fail explicitly; native-contact counts use distinct residues and assignment presence; same-pose gate conjunction; output and alignment seals. Raw structures/library unavailable locally: workstation execution remains required.
