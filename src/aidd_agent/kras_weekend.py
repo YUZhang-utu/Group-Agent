@@ -37,7 +37,7 @@ def sha(path):
 def save(path, value):
     path = Path(path)
     temporary = path.with_suffix(path.suffix + '.partial')
-    temporary.write_text(json.dumps(value, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False)+'\n', encoding='utf-8', newline='\n')
     temporary.replace(path)
 
 
@@ -180,7 +180,7 @@ def prepare(sources, output):
         save(folder/'reference.json',record)
         records[target]=record
     save(output/'report.json',dict(status='prepared',targets=records,
-         output_hashes={str(p.relative_to(output)):sha(p) for p in output.rglob('*') if p.is_file()}))
+         output_hashes={p.relative_to(output).as_posix():sha(p) for p in output.rglob('*') if p.is_file()}))
     return records
 
 

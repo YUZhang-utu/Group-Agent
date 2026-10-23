@@ -30258,15 +30258,16 @@
     }
   },
   "output_hashes": {
-    "KRAS_G12D\\geometry.npz": "b237c4ff16f22340fdb2b7706081a0b55d3b1e989888a0bf64cf6d3fe7eebf12",
-    "KRAS_G12D\\input.json": "8dc8af059970e72bd66111e9ae4c3403cd9093f5361ce64d9b8adcd42bcc56bf",
-    "KRAS_G12D\\query.manifest.json": "bc7cf46644880543fd2949ac4a5970eff43940dcfe30866366f9901cab6cbcb8",
-    "KRAS_G12D\\query.npz": "7adc15b52d50fb31ac54f442e7f949ea2ac82b4f018c07fdae094d8c30236ffe",
-    "KRAS_G12D\\reference.json": "31d88627b58e7a2a79d913bab20b4e615e1da4ca9a86f617d76320ddb628e5b0",
-    "KRAS_G12V\\geometry.npz": "4e18f8cdcb237df1772ca9ba560ac263f55f029a4faa6780b5a6a378ce08f3e3",
-    "KRAS_G12V\\input.json": "07372c3e49ae5611b30150626e887014b65d5ac64f75054b3b09a8376cd917be",
-    "KRAS_G12V\\query.manifest.json": "45ff517762015a04bb1b6c097c6886306f25e660b0b6bd1c3aab464faa34a69c",
-    "KRAS_G12V\\query.npz": "cd8ad07eefb2ad50eb896d0a3abc724a4d8f6cfc400ddf48686f90e612986ce0",
-    "KRAS_G12V\\reference.json": "a1194cd95e7e334c1dabe940f917de07b5d461bd521cd730aebefe0380be76a9"
+    "controls.json": "8f3947c75b85bec5168e4cd330eaf383a83bca7bebefec98dfc11a93aa6b3552",
+    "KRAS_G12D/geometry.npz": "b237c4ff16f22340fdb2b7706081a0b55d3b1e989888a0bf64cf6d3fe7eebf12",
+    "KRAS_G12D/input.json": "1da326672b470b70d974d55f153b832ee45933b5fa63e0bb7002e19526aaedd9",
+    "KRAS_G12D/query.manifest.json": "6e7e9c895afea7f133a86e1c80032b25136edd8857a97c4bd788e729bca66a33",
+    "KRAS_G12D/query.npz": "7adc15b52d50fb31ac54f442e7f949ea2ac82b4f018c07fdae094d8c30236ffe",
+    "KRAS_G12D/reference.json": "dbb0f63db1a45bdafbc580d3f1fb52332ce43f8c7baa58cd578f7f16110b1ceb",
+    "KRAS_G12V/geometry.npz": "4e18f8cdcb237df1772ca9ba560ac263f55f029a4faa6780b5a6a378ce08f3e3",
+    "KRAS_G12V/input.json": "791319dac427c8506309f077cee3849cb72e55ea97287b0f89b7e7ec1d225b02",
+    "KRAS_G12V/query.manifest.json": "80e8c1148b2b15da843be760f88866acff31c84e8158aa622892693c156e756a",
+    "KRAS_G12V/query.npz": "cd8ad07eefb2ad50eb896d0a3abc724a4d8f6cfc400ddf48686f90e612986ce0",
+    "KRAS_G12V/reference.json": "fdc814919947bedb78b0f9374493bef2cdabd3900f7c719d91a9f4702ccfeff1"
   }
 }

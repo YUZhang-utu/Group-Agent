@@ -116,6 +116,16 @@ def test_spread_schedule_and_full_schedule():
     assert len(set(sampled))==5 and sampled[0]==0 and sampled[-1]==99
 
 
+def test_reference_seal_is_portable_between_windows_and_linux(tmp_path):
+    report=kw.read(PREPARED/'report.json')
+    for relative,digest in report['output_hashes'].items():
+        assert '\\' not in relative
+        assert kw.sha(PREPARED/relative)==digest
+        if relative.endswith('.json'): assert b'\r\n' not in (PREPARED/relative).read_bytes()
+    output=tmp_path/'test.json'; kw.save(output,{'status':'complete'})
+    assert b'\r\n' not in output.read_bytes()
+
+
 def test_seal_detects_reference_tampering(tmp_path):
     import shutil
     batch=tiny_library(tmp_path/'library'); prepared=tmp_path/'prepared'
