@@ -14,6 +14,40 @@ from aidd_agent.chemical_companion import CHEM_META_DTYPE, ATOM_DTYPE, FEATURE_D
 PREPARED=Path(__file__).resolve().parents[1]/'configs/targets/kras_sip_e116'
 
 
+def test_contact_diagnostic_isolates_reference_gate_and_restores_it(tmp_path, monkeypatch):
+    import diagnose_kras_contacts as diagnostic
+    batch=tiny_library(tmp_path/'diagnostic-library')
+    run.initialize(batch, PREPARED)
+    def reject_all(state, assignments, scores):
+        return np.zeros(len(assignments), dtype=bool)
+    monkeypatch.setattr(kw, 'contact_mask', reject_all)
+    result=diagnostic.diagnose((0, [0, 2, 3]))
+    assert kw.contact_mask is reject_all
+    for target, row in result.items():
+        assert row['counts']['processed'] == 3
+        assert row['counts']['strict_full'] == 0
+        assert row['counts']['bypass_full'] >= 1
+        assert row['counts']['direct_poses'] > 0
+        assert row['matches']
+
+
+def test_contact_diagnostic_cli_pool_and_pilot_lineage(tmp_path):
+    import subprocess
+    batch=tiny_library(tmp_path/'cli-library')
+    pilot=tmp_path/'pilot'
+    run.execute(SimpleNamespace(batch=batch, prepared=PREPARED, output=pilot,
+        workers=2, chunk_size=32, sample=1000, hours=.1))
+    output=tmp_path/'diagnostic'
+    subprocess.run([sys.executable, str(Path(run.__file__).with_name('diagnose_kras_contacts.py')),
+        '--pilot', str(pilot), '--output', str(output), '--workers', '2'],
+        check=True, capture_output=True, text=True)
+    report=kw.read(output/'report.json')
+    assert report['status']=='complete' and report['native_controls_passed']
+    for row in report['targets'].values():
+        assert row['counts']['processed']==4
+        assert row['counts']['bypass_full']>=row['counts']['strict_full']>=1
+
+
 def tiny_library(root):
     artifact=root/'artifacts'; chemical=root/'chemical'
     for directory in (artifact,chemical): (directory/'fixture').mkdir(parents=True)
