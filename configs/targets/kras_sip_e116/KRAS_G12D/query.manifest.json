@@ -1,0 +1,30 @@
+{
+  "format": "aidd-gaussian-query",
+  "version": 1,
+  "query_npz": "query.npz",
+  "query_npz_sha256": "7adc15b52d50fb31ac54f442e7f949ea2ac82b4f018c07fdae094d8c30236ffe",
+  "shape_points": 44,
+  "feature_points": 23,
+  "anchor_feature_indices": [
+    0,
+    1,
+    2,
+    6,
+    7,
+    8,
+    9,
+    11,
+    12,
+    14,
+    15,
+    22
+  ],
+  "color_model": "atom-centered-feature-v1",
+  "projected_color_available": true,
+  "directional_features": 15,
+  "source": {
+    "query_id": "7RPZ:6IC:A:202",
+    "mmcif_sha256": "102fe7dbc630e37624597ee3c204446b839c26079c7014da885114312af576ee",
+    "ccd_sha256": "39ca9890f611c5d4f0f53e962d672ee32af94987245e4b56eccdb44036734697"
+  }
+}
