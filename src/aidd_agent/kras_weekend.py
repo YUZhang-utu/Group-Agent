@@ -179,6 +179,10 @@ def prepare(sources, output):
                 'One chemotype/state per allele; no allele selectivity inference.'])
         save(folder/'reference.json',record)
         records[target]=record
+    # The existing query writer uses platform-default newlines. Normalize before
+    # sealing so a Git checkout on Linux preserves the prepared package hashes.
+    for path in output.rglob('*.json'):
+        path.write_bytes(path.read_bytes().replace(b'\r\n',b'\n'))
     save(output/'report.json',dict(status='prepared',targets=records,
          output_hashes={p.relative_to(output).as_posix():sha(p) for p in output.rglob('*') if p.is_file()}))
     return records

@@ -42,8 +42,9 @@ Reference package: configs/targets/kras_sip_e116. The package records coordinate
 CCD and KRAS4B sequence hashes, atom/feature metadata and all screening thresholds.
 Native self-recovery passes for both references. Shared versus independent
 evaluation, chemical negatives, two-process execution, deduplication, resume and
-corruption checks are covered by local tests (30 focused checks passed, including
-seven E116 tests and actual two-process fixture execution). Workstation timing/pass rates are
+corruption checks are covered by local tests (31 focused checks passed, including
+eight E116 tests and actual two-process fixture execution). Reference seals also
+pass Windows/Linux newline/path portability checks. Workstation timing/pass rates are
 pending; synthetic tests do not establish library enrichment.
 
 ## Run today
