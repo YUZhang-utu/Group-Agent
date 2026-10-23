@@ -42,3 +42,11 @@ Budget exhaustion produces partial status and explicit coverage, never full stat
 Verification: synthetic shape/contact/identity tests and resume/seal failure tests;
 native reference recovery from downloaded structures locally where feasible.
 Actual full-library timings/results can only be established on the workstation.
+
+Pre-library amendment after the user's explicit request for effective hard
+screening: require three distinct matched reference feature indices in addition
+to three residues, a native polar contact to Glu62 or Asp69, and a separate native
+contact to His95 or Tyr96. This prevents arbitrary three-contact matches from
+meeting the rule. Derived from the native reference inventory, before viewing any
+KRAS library scores; still exploratory and chemotype-biased. Compare sequence to
+KRAS4B P01116-2, not the alternative canonical KRAS4A C-terminal isoform.
