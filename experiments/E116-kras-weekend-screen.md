@@ -50,3 +50,19 @@ contact to His95 or Tyr96. This prevents arbitrary three-contact matches from
 meeting the rule. Derived from the native reference inventory, before viewing any
 KRAS library scores; still exploratory and chemotype-biased. Compare sequence to
 KRAS4B P01116-2, not the alternative canonical KRAS4A C-terminal isoform.
+
+2026-10-23 user-confirmed shared regions: His95, Asp69, Glu62, Met72, Arg68,
+with codon 12 evaluated separately. Operational strict branch: all five regions
+must be occupied compatibly in one pose, not pooled across poses. His95 requires
+ligand N/O acceptor proximity to native donor atoms; Asp69/Glu62 require ligand
+N/O donor proximity to acidic oxygen atoms (3.5 A). Met72 requires ligand
+hydrophobic/aromatic carbon to sidechain carbon proximity (4.5 A). Arg68 accepts
+an N/O acceptor contact to the guanidinium atoms (3.5 A) or a carbon contact to its
+aliphatic sidechain (4.5 A). G12D additionally requires the polar Arg68 mode and
+an N/O donor contact to Asp12 oxygen. G12V requires Val12 steric compatibility,
+not a fabricated Asp-like H bond or obligatory direct Val12 hydrophobic contact.
+These are provisional geometric screening criteria, not validated H-bond angles.
+Organic fluorine cannot fulfill mandatory N/O polar requirements. Whole-color
+definition stays unchanged for baseline replay. Shared chemical eligibility is
+computed once; branch poses and native geometry remain independent. Keep one
+decoded candidate/chemical record for both target evaluations per work item.
