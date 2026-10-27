@@ -1,5 +1,23 @@
 # Generic AlphaFold 3 SMILES batch
 
+## Unzip-and-edit entry point
+
+Edit the included myprotein.json (replace the sequence placeholder) and
+ligands.tsv (add your own id/SMILES rows). These are deliberately incomplete
+until filled; no example molecule is submitted automatically. Then run:
+
+```bash
+bash start_batch.sh --check
+bash start_batch.sh --run
+```
+
+The launcher finds both files beside itself, regardless of the current working
+directory, and creates a fresh jobs_TIMESTAMP_PID folder there. It reads seeds
+from myprotein.json. AF3_LIGAND_COPIES defaults to 1. Prediction model locations
+still follow the existing school runner's AF3_INSTALL/tests/output convention;
+all local input and batch-log paths are resolved from the extracted directory.
+Each invocation creates fresh inputs; --check performs no inference.
+
 Each input table row produces a separate protein-ligand complex prediction.
 The example molecules are syntax examples, not recommended binders.
 Use your previously verified protein JSON as the base: monomer, homodimer and
@@ -22,14 +40,16 @@ python run_batch.py myprotein_ligands --check
 python run_batch.py myprotein_ligands --run
 ```
 
-Run on the school GPU allocation with Apptainer available. Host Python needs
-RDKit for preparation only. The AF3 installation stays inside the existing SIF.
+Run on the school GPU allocation with Apptainer available. Host preparation uses
+only the Python standard library (Python 3.8+); RDKit is not required on the host.
+Chemical parsing happens inside AF3. Optional --rdkit-check enables early host
+validation if RDKit is already installed. The AF3 installation stays inside the existing SIF.
 The runner uses the previous school paths, configurable with AF3_INSTALL,
 AF3_IMAGE, AF3_MODELS and AF3_DB_DIR. --check verifies host paths only, not AF3
 schema compatibility, available GPU memory or successful inference.
 
 The table has `id` and `smiles` columns, separated by tabs (.tsv) or commas (.csv).
-SMILES are copied literally after strict RDKit parsing. Include desired charge
+SMILES are copied literally after basic text checks by default. Include desired charge
 and stereochemistry explicitly. Disconnected salts are rejected; supply the
 intended ligand and add ions as explicit fixed entities if appropriate.
 IDs must use letters/digits/underscore/hyphen and be unique ignoring case.

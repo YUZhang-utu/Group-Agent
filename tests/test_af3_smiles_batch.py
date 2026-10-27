@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sys
+import subprocess
 import pytest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools/af3_smiles_batch'))
@@ -31,7 +32,17 @@ def test_separate_ligands_and_dimer_ids(tmp_path):
 
 @pytest.mark.parametrize('smiles',['invalid','CC.O','CC name',''])
 def test_invalid_or_disconnected_smiles(smiles):
-    with pytest.raises(ValueError):prep.validate_smiles(smiles)
+    with pytest.raises(ValueError):prep.validate_smiles(smiles,rdkit_check=True)
+
+
+def test_preparation_without_site_packages(tmp_path):
+    base,table=inputs(tmp_path);out=tmp_path/'stdlib_only'
+    result=subprocess.run([sys.executable,'-S',str(Path(prep.__file__)),
+        '--base',str(base),'--ligands',str(table),'--output',str(out)],capture_output=True,text=True)
+    assert result.returncode==0,result.stdout+result.stderr
+    manifest=json.loads((out/'manifest.json').read_text())
+    assert manifest['smiles_validation']=='text_only_chemical_validation_deferred_to_AF3'
+    assert all(job['heavy_atoms'] is None for job in manifest['jobs'])
 
 
 def test_base_ligand_requires_explicit_retention(tmp_path):

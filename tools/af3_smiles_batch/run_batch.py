@@ -15,7 +15,7 @@ def run(bundle,check=False,runner=None):
     # Validate the entire batch before allocating work.
     for job in manifest['jobs']:
         path=(bundle/job['input']).resolve()
-        if not path.is_relative_to(bundle) or sha(path)!=job['sha256']:
+        if bundle not in path.parents or sha(path)!=job['sha256']:
             raise ValueError('Input path/checksum mismatch')
     run_id=datetime.now().strftime('%Y%m%d_%H%M%S')+'_'+str(os.getpid())
     logs=bundle/('check_'+run_id if check else 'run_'+run_id);logs.mkdir()
@@ -40,7 +40,7 @@ def run(bundle,check=False,runner=None):
                 row['error']='Expected exactly one final model';code=1
             else:
                 model=models[0];row.update(model=str(model),model_sha256=sha(model))
-                summary=model.with_name(model.name.removesuffix('_model.cif')+'_summary_confidences.json')
+                summary=model.with_name(model.name[:-len('_model.cif')]+'_summary_confidences.json')
                 if summary.exists():row['confidence']=json.loads(summary.read_text())
         row['status']='host_checks_passed' if check and code==0 else 'model_generated' if code==0 else 'failed'
         report['jobs'].append(row);save(logs/'report.json',report)
