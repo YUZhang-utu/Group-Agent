@@ -10,8 +10,8 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 INPUT=$1
 MODE=${2:-run}
-if [[ "$MODE" != run && "$MODE" != --check ]]; then
-  echo 'Usage: bash run_af3.sh INPUT.json [--check]' >&2; exit 2
+if [[ "$MODE" != run && "$MODE" != --check && "$MODE" != --data-only && "$MODE" != --inference-only ]]; then
+  echo 'Usage: bash run_af3.sh INPUT.json [--check|--data-only|--inference-only]' >&2; exit 2
 fi
 [[ -f "$INPUT" && -r "$INPUT" ]] || { echo "Unreadable input: $INPUT" >&2; exit 1; }
 INPUT_DIR=$(cd -- "$(dirname -- "$INPUT")" && pwd)
@@ -41,10 +41,14 @@ else
   DATABASES=${candidates[0]}
 fi
 [[ -d "$DATABASES" && -r "$DATABASES" ]] || { echo "Unreadable database directory: $DATABASES" >&2; exit 1; }
-for location in "$INPUT_DIR" "$IMAGE" "$MODELS" "$DATABASES"; do
+CACHE=${AF3_JAX_CACHE_DIR:-$SCRIPT_DIR/.af3_cache/jax}
+mkdir -p -- "$CACHE"
+CACHE=$(cd -- "$CACHE" && pwd)
+for location in "$INPUT_DIR" "$IMAGE" "$MODELS" "$DATABASES" "$CACHE"; do
   case "$location" in *:*|*,*|*$'\n'*) echo "Unsupported bind-path separator: $location" >&2; exit 1;; esac
 done
 printf 'Input: %s\nImage: %s\nModels: %s\nDatabases: %s\n' "$INPUT" "$IMAGE" "$MODELS" "$DATABASES"
+printf 'JAX persistent cache: %s\nStage: %s\n' "$CACHE" "$MODE"
 echo 'Database file names (top level):'
 find "$DATABASES" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort
 if [[ "$MODE" == --check ]]; then
@@ -56,15 +60,25 @@ OUTPUT="$INSTALL/tests/output/$JOB/$RUN_ID"
 LOG="$INSTALL/logs/${JOB}_$RUN_ID.log"
 mkdir -p -- "$OUTPUT" "$(dirname -- "$LOG")"
 cp -- "$INPUT" "$OUTPUT/submitted_input.json"
-COMMAND=(apptainer exec --nv
+GPU_ARGS=(--nv)
+STAGE_ARGS=(--run_data_pipeline=true --run_inference=true)
+if [[ "$MODE" == --data-only ]]; then
+  GPU_ARGS=()
+  STAGE_ARGS=(--run_data_pipeline=true --run_inference=false)
+elif [[ "$MODE" == --inference-only ]]; then
+  STAGE_ARGS=(--run_data_pipeline=false --run_inference=true)
+fi
+COMMAND=(apptainer exec "${GPU_ARGS[@]}"
   --bind "$INPUT_DIR:/root/af_input:ro"
   --bind "$OUTPUT:/root/af_output:rw"
   --bind "$MODELS:/root/models:ro"
   --bind "$DATABASES:/root/public_databases:ro"
+  --bind "$CACHE:/root/af_jax_cache:rw"
   "$IMAGE" python /app/alphafold/run_alphafold.py
   "--json_path=/root/af_input/$INPUT_NAME"
   --model_dir=/root/models --db_dir=/root/public_databases
-  --output_dir=/root/af_output --flash_attention_implementation=xla)
+  --output_dir=/root/af_output --flash_attention_implementation=xla
+  --jax_compilation_cache_dir=/root/af_jax_cache "${STAGE_ARGS[@]}")
 {
   printf 'Output: %s\nLog: %s\nCommand: ' "$OUTPUT" "$LOG"
   printf '%q ' "${COMMAND[@]}"

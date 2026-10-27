@@ -8,6 +8,7 @@ import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools/af3_smiles_batch'))
 import prepare_batch as prep
 import run_batch as runner
+import msa_reuse
 
 
 def inputs(tmp_path):
@@ -72,7 +73,7 @@ def test_batch_verifies_model_and_hash(tmp_path,monkeypatch):
             def wait(self):return 0
         return Process()
     monkeypatch.setattr(runner.subprocess,'Popen',popen)
-    report=runner.run(out)
+    report=runner.run(out,optimize=False)
     assert report['status']=='complete' and len(report['jobs'])==2
     assert all(j['confidence']['iptm']==.5 for j in report['jobs'])
     (out/'inputs/lig1.json').write_text('{}')
@@ -85,4 +86,57 @@ def test_no_final_model_is_failure(tmp_path,monkeypatch):
         stdout=iter([])
         def wait(self):return 0
     monkeypatch.setattr(runner.subprocess,'Popen',lambda *a,**k:Process())
-    with pytest.raises(RuntimeError,match='Job failed'):runner.run(out)
+    with pytest.raises(RuntimeError,match='Job failed'):runner.run(out,optimize=False)
+
+
+def test_one_data_pipeline_many_inference_jobs(tmp_path,monkeypatch):
+    base,table=inputs(tmp_path);out=tmp_path/'batch';prep.prepare(base,table,out,[7,9])
+    calls=[]
+    def invoke(command,log):
+        calls.append(command[-1]);data=json.loads(Path(command[2]).read_text())
+        folder=tmp_path/('output'+str(len(calls)));folder.mkdir()
+        if command[-1]=='--data-only':
+            for e in data['sequences']:
+                if 'protein' in e:e['protein'].update(unpairedMsa='>q\nACDEFG\n',pairedMsa='',templates=[])
+            prep.save(folder/'lig1_data.json',data)
+        else:
+            assert command[-1]=='--inference-only'
+            assert data['modelSeeds']==[7,9]
+            assert data['sequences'][0]['protein']['pairedMsa']==''
+            original=json.loads((out/'inputs'/(data['name']+'.json')).read_text())
+            assert data['sequences'][-1]==original['sequences'][-1]
+            (folder/'job_model.cif').write_text('data_test\n')
+        return 0,folder
+    monkeypatch.setattr(runner,'invoke',invoke)
+    report=runner.run(out)
+    assert calls==['--data-only','--inference-only','--inference-only']
+    assert report['status']=='complete' and not report['shared_data']['reused_inline']
+
+
+def test_inline_features_skip_shared_search(tmp_path,monkeypatch):
+    base,table=inputs(tmp_path);value=json.loads(base.read_text())
+    value['sequences'][0]['protein'].update(pairedMsa='',templates=[]);prep.save(base,value)
+    out=tmp_path/'batch';prep.prepare(base,table,out);calls=[]
+    def invoke(command,log):
+        calls.append(command[-1]);folder=tmp_path/('output'+str(len(calls)));folder.mkdir()
+        (folder/'job_model.cif').write_text('data_test\n');return 0,folder
+    monkeypatch.setattr(runner,'invoke',invoke)
+    report=runner.run(out)
+    assert calls==['--inference-only','--inference-only'] and report['shared_data']['reused_inline']
+
+
+def test_feature_transfer_rejects_mismatched_chain_and_sequence(tmp_path):
+    base,_=inputs(tmp_path);job=json.loads(base.read_text());source=json.loads(base.read_text())
+    p=source['sequences'][0]['protein'];p.update(pairedMsa='',templates=[])
+    p['sequence']='ACDEFA'
+    with pytest.raises(ValueError,match='sequence'):msa_reuse.transfer(job,source)
+    p['sequence']='ACDEFG';p['id']='C'
+    with pytest.raises(ValueError,match='chain IDs'):msa_reuse.transfer(job,source)
+
+
+def test_data_pipeline_failure_is_recorded(tmp_path,monkeypatch):
+    base,table=inputs(tmp_path);out=tmp_path/'batch';prep.prepare(base,table,out)
+    monkeypatch.setattr(runner,'invoke',lambda *args:(1,None))
+    with pytest.raises(RuntimeError,match='Shared data pipeline failed'):runner.run(out)
+    report=json.loads(next(out.glob('run_*/report.json')).read_text())
+    assert report['status']=='failed' and report['stage']=='shared_data'

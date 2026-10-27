@@ -74,11 +74,35 @@ and confidence JSON are referenced by the batch report. Seed/sample outputs
 remain in the AF3 job directory. A successful process without a final model is
 reported as failed. Confidence scores are not binding affinities.
 
-If using an ordinary sequence-only base, each job may repeat MSA/template search.
-For many ligands, reuse an appropriate prior AF3 *_data.json containing inline
-MSA/templates, retaining only the intended proteins and fixed cofactors. Do not
-replace missing MSA with empty strings as a speed shortcut. This helper does not
-promise automatic cross-job feature caching.
+## Automatic shared preparation and compilation cache
+
+The default batch flow now runs the data pipeline only once on the first input
+(--run_inference=false), copies only matching protein MSA/templates to the other
+jobs, then runs every ligand with --run_data_pipeline=false. Protein chain IDs,
+sequences and modifications must match. Ligands, seeds and fixed cofactors are
+preserved from each original input. Inline prepared features in the base skip
+the shared search entirely. Missing feature fields never become empty by default.
+An explicit empty field supplied by the user or AF3 output is preserved.
+
+Shared preparation is once per batch, not an unverified permanent MSA cache.
+Its *_data.json path/hash appears in shared_data in the batch report. For later
+batches, use that data as the base after removing the previous test ligand and
+retaining only intended proteins/cofactors. The helper checks chain identity
+before transferring any features. Grouped chains with different prepared data
+must be represented by separate protein entries rather than silently merging them.
+
+The shell runner binds a persistent host JAX cache to /root/af_jax_cache and sets
+--jax_compilation_cache_dir. Default host location is .af3_cache/jax beside the
+scripts. Override with AF3_JAX_CACHE_DIR if needed. First compilation still costs
+time; different token buckets or software/hardware may require new compilations.
+Cache reuse is not a guarantee of a particular speedup. Keep cache permissions
+private to trusted users. No GPU parallelism or memory-overcommit flags are added.
+
+The installed container must support the AF3 stage/cache flags; unsupported flags
+produce an error rather than silently claiming acceleration. --check remains a
+host path check only. run_batch.py --legacy restores separate full data pipelines
+for troubleshooting (persistent JAX caching remains enabled in the shell runner).
+Actual school GPU timing has not been measured here.
 
 The result is a predicted complex, not an experimental co-crystal or proof that
 the ligand binds. Compare poses and interface confidence across seeds; AF3 is
