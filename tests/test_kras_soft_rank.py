@@ -44,6 +44,13 @@ class SoftRankingTests(unittest.TestCase):
             command=[sys.executable,str(ROOT/'scripts/kras_soft_rank.py'),'--direct',str(direct),
                      '--workers','2','--chunk-size','2']
             subprocess.run(command+['--output',str(root/'pilot'),'--sample','4'],check=True,capture_output=True,text=True)
+            subprocess.run([sys.executable,str(ROOT/'scripts/diagnose_kras_soft_clashes.py'),
+                '--pilot',str(root/'pilot'),'--direct',str(direct),'--output',str(root/'clashes'),
+                '--workers','2'],check=True,capture_output=True,text=True)
+            diagnostic=exporter.read(root/'clashes/report.json')
+            self.assertEqual(diagnostic['status'],'complete')
+            self.assertTrue(all(r['matches_pilot_direct_count'] and r['matches_pilot_geometry_count']
+                                for r in diagnostic['targets'].values()))
             full=command+['--output',str(root/'full'),'--sample','0','--pilot',str(root/'pilot/report.json')]
             subprocess.run(full,check=True,capture_output=True,text=True)
             report=exporter.read(root/'full/report.json')
