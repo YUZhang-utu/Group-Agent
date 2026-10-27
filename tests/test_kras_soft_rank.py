@@ -51,6 +51,20 @@ class SoftRankingTests(unittest.TestCase):
             self.assertEqual(diagnostic['status'],'complete')
             self.assertTrue(all(r['matches_pilot_direct_count'] and r['matches_pilot_geometry_count']
                                 for r in diagnostic['targets'].values()))
+            rescue=[sys.executable,str(ROOT/'scripts/run_kras_contact_refine.py')]
+            subprocess.run(rescue+['gate','--direct',str(direct),'--examples',str(root/'clashes/report.json'),
+                '--output',str(root/'rescue-gate')],check=True,capture_output=True,text=True)
+            gate_report=exporter.read(root/'rescue-gate/report.json')
+            self.assertTrue(any(r['eligible_molecules'] for r in gate_report['targets'].values()))
+            rescue_batch=rescue+['batch','--direct',str(direct),'--gate',str(root/'rescue-gate'),
+                '--output',str(root/'rescue-batch'),'--hours','.05','--workers','2','--chunk-size','2']
+            subprocess.run(rescue_batch,check=True,capture_output=True,text=True)
+            batch_report=exporter.read(root/'rescue-batch/report.json')
+            self.assertEqual(batch_report['status'],'complete')
+            self.assertTrue(batch_report['budget_finished'])
+            self.assertEqual(batch_report['processed'],4)
+            subprocess.run(rescue_batch,check=True,capture_output=True,text=True)
+            self.assertEqual(exporter.read(root/'rescue-batch/report.json')['invocation_new_conformers'],0)
             full=command+['--output',str(root/'full'),'--sample','0','--pilot',str(root/'pilot/report.json')]
             subprocess.run(full,check=True,capture_output=True,text=True)
             report=exporter.read(root/'full/report.json')
@@ -142,6 +156,14 @@ class SoftRankingTests(unittest.TestCase):
             source.write_text(raw.replace('-0.8','-0.7')*5,encoding='utf-8')
             with self.assertRaisesRegex(ValueError,'hash mismatch'):
                 exporter.export(ranking,root/'bad-export',count=5,batch_size=2)
+            source.write_text(raw*5,encoding='utf-8')
+            snapshot=exporter.read(ranking/'report.json')
+            snapshot.update(status='partial',full_catalog=False,budget_finished=True,scope='budgeted_direct_pool_refinement',processed=5,scheduled=100)
+            exporter.save(ranking/'report.json',snapshot)
+            with self.assertRaises(ValueError):exporter.export(ranking,root/'not-authorized',count=5,batch_size=2)
+            partial=exporter.export(ranking,root/'budget-export',count=5,batch_size=2,allow_budgeted=True)
+            self.assertEqual(partial['source_scope'],'budgeted_direct_pool_refinement')
+            self.assertEqual(partial['source_processed'],5)
 
 
 if __name__ == '__main__':

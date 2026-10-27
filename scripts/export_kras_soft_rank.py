@@ -53,6 +53,34 @@ def rename_record(raw, alias):
     return ''.join(lines).rstrip('\n') + '\n'
 
 
+def source_pose_checker(batch,prepared):
+    """Recheck the exact source coordinates rather than only quantized artifacts."""
+    import numpy as np
+    from aidd_agent.gaussian_batch import ArtifactCatalogReader
+    from aidd_agent.chemical_companion import ChemicalCompanionReader
+    from aidd_agent import kras_weekend as kw
+    reader=ArtifactCatalogReader(batch/'artifacts/catalog.json')
+    chemistry=ChemicalCompanionReader(batch/'chemical/catalog.json')
+    states={target:kw.load_state(prepared,target) for target in TARGETS}
+    def check(molecule,target,pose):
+        candidate=reader.get(pose['gid']);chem=chemistry.get(pose['gid'])
+        if any((r.molecule_id,r.conformer_id)!=(pose['mid'],pose['cid']) for r in (candidate,chem)):
+            raise ValueError('Export artifact/chemical identity mismatch')
+        heavy=[a.GetIdx() for a in molecule.GetAtoms() if a.GetAtomicNum()>1]
+        numbers=[molecule.GetAtomWithIdx(i).GetAtomicNum() for i in heavy]
+        points=molecule.GetConformer().GetPositions()[heavy]
+        if numbers!=list(chem.atomic_numbers) or points.shape!=candidate.shape_points.shape:
+            raise ValueError('Export source heavy-atom order mismatch')
+        if np.max(np.abs(points-candidate.shape_points))>.02:
+            raise ValueError('Export source/artifact coordinate mismatch')
+        matrix=np.array(pose['transform']).reshape(4,4);state=states[target]
+        minimum=float(state['tree'].query(points@matrix[:3,:3].T+matrix[:3,3])[0].min())
+        sets=kw.chemical_sets(chem,candidate.feature_types)
+        direct=bool(kw.direct_contact_masks(points,sets,state,matrix[None])['all'][0])
+        return minimum>=2. and direct,minimum
+    return check
+
+
 class BatchWriter:
     def __init__(self, root, size):
         self.root = root; self.size = size; self.count = 0; self.stream = None; self.batches = []
@@ -73,12 +101,14 @@ class BatchWriter:
             self.batches[-1]['sha256'] = sha(Path(self.batches[-1]['path']))
 
 
-def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False):
+def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False, allow_budgeted=False):
     ranking = Path(ranking).resolve(); output = Path(output).resolve()
     report = read(ranking / 'report.json'); protocol = read(ranking / 'protocol.json')
-    if report['status'] != 'complete':
+    budgeted = (allow_budgeted and report.get('scope') == 'budgeted_direct_pool_refinement'
+                and report.get('budget_finished') is True and report.get('status') in ('complete','partial'))
+    if report['status'] != 'complete' and not budgeted:
         raise ValueError('Complete scoring report required')
-    if not report.get('full_catalog') and not allow_pilot:
+    if not report.get('full_catalog') and not allow_pilot and not budgeted:
         raise ValueError('Pilot cannot be exported as a full-library selection')
     if report.get('ranking_sha256') != sha(ranking / 'ranking.sqlite'):
         raise ValueError('Ranking database checksum mismatch')
@@ -92,11 +122,14 @@ def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False)
     if output.exists():
         raise ValueError('Use a new export directory; existing files are never overwritten')
     output.mkdir(parents=True)
+    save(output / 'source_ranking_report.json', report)
+    save(output / 'source_ranking_protocol.json', protocol)
     save(output / 'report.json', dict(status='running', requested_per_target=count))
     save(output / 'protocol.json', dict(ranking_protocol_sha256=sha(ranking/'protocol.json'),
         ranking_report_sha256=sha(ranking/'report.json'), requested_per_target=count, batch_size=batch_size,
         selection='80% score; 20% round-robin coarse graph buckets', coordinates='original_source',
-        representative='highest soft-score conformer; not an energy minimum', pilot=not report.get('full_catalog'),
+        representative='highest soft-score conformer; not an energy minimum', pilot=report.get('scope')=='spread_pilot',
+        source_scope=report.get('scope'),source_processed=report.get('processed'),budgeted=budgeted,
         export_code_sha256=sha(Path(__file__))))
     started = time.monotonic()
     db = sqlite3.connect(output / 'selection.sqlite')
@@ -132,6 +165,7 @@ def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False)
     for writer in csvs.values():
         writer.writerow(fields)
     rejected = {t: 0 for t in TARGETS}; seen = 0
+    recheck=source_pose_checker(batch,prepared) if report.get('recheck_source_pose_required') else None
     qc_file = (output/'rejected.csv').open('w', encoding='utf-8', newline='')
     qc = csv.writer(qc_file); qc.writerow(['target','mid','cid','reason'])
     try:
@@ -159,9 +193,13 @@ def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False)
                     reason = 'parse_failure:' + type(exc).__name__
                 for target, mid, cid, score, selected_by, payload, _, _, _ in records:
                     seen += 1
-                    if reason:
-                        rejected[target] += 1; qc.writerow([target, mid, cid, reason]); continue
                     poses = json.loads(payload); pose = poses[0]
+                    target_reason=reason
+                    if target_reason is None and recheck:
+                        valid,_=recheck(molecule,target,pose)
+                        if not valid:target_reason='exact_source_pose_failed_contacts_or_geometry'
+                    if target_reason:
+                        rejected[target] += 1; qc.writerow([target, mid, cid, target_reason]); continue
                     alias = mid + '__' + cid
                     batch_id, record_id = writers[target].add(rename_record(raw, alias))
                     csvs[target].writerow([alias,mid,cid,score,selected_by,batch_id,record_id,source,index,digest,
@@ -183,6 +221,9 @@ def export(ranking, output, count=1000000, batch_size=100000, allow_pilot=False)
                       rejected=rejected[t], batches=w.batches,
                       manifest_sha256=sha(output/t/'molecules.csv')) for t,w in writers.items()}
     result = dict(status='complete', scope='exploratory_docking_input_not_activity_hits', targets=targets,
+                  exact_source_pose_rechecked=bool(recheck),
+                  source_scope=report.get('scope'), source_processed=report.get('processed'),
+                  source_scheduled=report.get('scheduled'), source_full_catalog=report.get('full_catalog'),
                   elapsed_seconds=time.monotonic()-started, quota_met=all(w.count==count for w in writers.values()),
                   limitations=['Molecule IDs are library identities, not canonical chemical deduplication.',
                                'Original coordinates, charges and atom/bond records preserved; only title changed.',
@@ -200,8 +241,9 @@ def main():
     p.add_argument('--count', type=int, default=1000000)
     p.add_argument('--batch-size', type=int, default=100000)
     p.add_argument('--allow-pilot', action='store_true', help='Only for a separately labelled diagnostic export')
+    p.add_argument('--allow-budgeted', action='store_true', help='Export an explicitly labelled completed compute-budget snapshot')
     args = p.parse_args()
-    print(json.dumps(export(args.ranking,args.output,args.count,args.batch_size,args.allow_pilot),indent=2),flush=True)
+    print(json.dumps(export(args.ranking,args.output,args.count,args.batch_size,args.allow_pilot,args.allow_budgeted),indent=2),flush=True)
 
 
 if __name__ == '__main__':
