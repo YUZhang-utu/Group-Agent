@@ -1,6 +1,11 @@
 """Planning requirements, not an implemented pocket-clustering adapter."""
 
 TARGET_POCKET_POLICY = """
+When the user already explicitly selects a receptor and site/reference, the
+target_search coordinator may evaluate that exact supplied structural hypothesis.
+This is not automatic receptor adoption or a claim that a pocket-state cohort was
+reviewed. Preserve its source and uncertainty, including predicted structures.
+The following cohort workflow applies when receptor/site selection is requested:
 For a new target-based screening project, require PDB pocket-state review before
 interaction consensus or downstream screening. The intended order is verified
 target/site identity, experimental PDB collection and quality control, aligned

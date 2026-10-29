@@ -10,6 +10,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'target_search': 'Generic receptor/reference full-library workflow, not tied to any target name. operation prepare creates a query only; start prepares and scans; run scans a previously completed query task_id. prepare/start need name, receptor_chains (explicit author chain IDs), receptor (exact user-supplied absolute PDB/mmCIF path) OR pdb_id, and reference_ligand (exact posed SDF/MOL2 path in receptor coordinates) OR ligand_instance {ccd,chain,residue}. Optional keep_residues [{chain,residue,name}] preserves specified cofactors/ions; water is excluded. Optional required_contacts [{chain,residue,feature_class?,distance?}] requires every listed residue in the SAME pose, with any supported reference feature per residue. Omitted contacts require any observed native feature, not all residues. Optional policy {minimum_score,coarse_constraints,pocket} overrides recorded broad exploratory defaults. Source files must be in Project or configured --input-root. Paths and PDB IDs must come from the user. Returns a queued task; inspect tasks/task_report for progress. No blind pocket invention, target-name template substitution, affinity or guaranteed recall. run needs task_id and optional contacts/policy only.',
+    'workflow_results': 'Read-only external KRAS E123 export and AF3 evidence. operation list (default); attach requires kind kras_export, af3_batch or af3_prediction and the exact user-supplied absolute report path on this host. check requires attachment_id and checks source report freshness only. read requires attachment_id with optional pointer, offset, limit to page the immutable snapshot. Only active Project or operator-configured import roots are readable. Never launches calculations or verifies remote MOL2/model payloads. Keep report-only evidence distinct from payload validation; AF3 host checks are not inference. Imports do not become resumable Chat execution tasks.',
     'block_campaign': 'Adopt completed full EquiScore analysis into this conversation without inference. import: exact user-supplied analysis report.json path. list: campaign tasks and existing confirmed consensus query tasks. ranks/top: task_id plus optional score EquiScore or ChemPLP and scheme/receptor/block_id as appropriate. preview: task_id, scheme, receptor, optional method union/intersection/equiscore/chemplp and blocks 5 or 10; blocks are ranked by mean of Top-10 distinct molecules. start: same selection plus query_task_id, optional conformers (default 100000), dock (default true). Reuses the confirmed MDM2 query; retrieves CONFORMERS only inside leading blocks, permits multiple conformers per molecule, then docks against the selected receptor. Choose an explicit existing query task; never use WEE1 defaults. Call start only when search/docking is requested; reuse returned task ID. Ranking and search are exploratory, not affinity or experimental enrichment.',
     'block_results': 'Completed CLI PLANTS results without redocking. operation list (default); attach: exact user-supplied report path in active Project. analyze: attachment_id, optional top_n (1..100, default 10), ranking_unit (molecule default, or conformer). Queues sealed Top-N mean rankings, never whole-block-mean ranking; includes Top-5/10. molecule mode uses best in-block conformer per molecule. ranks: task_id, optional scheme/receptor (omit to discover groups), top_n, limit (default 5). top: task_id, scheme, receptor, block_id, optional limit (default 5), top_n. Returns saved candidates/poses. Rank within scheme/receptor only; incomplete or insufficient panels are unranked. Scores are ChemPLP, not rescoring or affinity. Reuse task IDs.',
     'structure_chain': 'Persist explicitly authorized automatic continuation from an existing diversity/consensus/recommendation/design task. operation start requires task_id, goal recommendation or budget, optional reference {reference_query,target_chain,maximum_templates}, budget settings. Other operations: status, pause/resume/cancel with chain_id. Controls continuation, not the current scientific task. No automatic recovery of uncertain dispatch.',
@@ -27,6 +29,8 @@ TOOLS = {
 
 
 TOOL_ARGUMENTS = {
+    'target_search': {'operation','name','receptor','pdb_id','reference_ligand','ligand_instance','receptor_chains','keep_residues','required_contacts','policy','task_id'},
+    'workflow_results': {'operation', 'kind', 'report', 'attachment_id', 'pointer', 'offset', 'limit'},
     'block_campaign': {'operation','report','candidate_id','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock','search_policy'},
     'block_results': {'operation', 'report', 'attachment_id', 'top_n', 'ranking_unit', 'task_id', 'scheme', 'receptor', 'block_id', 'limit'},
     'structure_chain': {'operation', 'task_id', 'goal', 'reference', 'budget', 'chain_id'},
@@ -75,6 +79,10 @@ def argument_contracts():
 
 
 def validate_arguments(name, args):
+    if name == 'target_search':
+        from .target_search_workflow import validate
+        validate(args)
+        return
     if name == 'block_campaign':
         from .block_campaign import validate
         validate(args)
@@ -84,6 +92,15 @@ def validate_arguments(name, args):
     if not isinstance(args, dict):
         raise ValueError(name + ' arguments must be an object')
     allowed, required, label = TOOL_ARGUMENTS[name], set(), name
+    if name == 'workflow_results':
+        operations = {'list': (set(), set()), 'attach': ({'kind', 'report'}, set()),
+            'check': ({'attachment_id'}, set()), 'read': ({'attachment_id'}, {'pointer', 'offset', 'limit'})}
+        operation = args.get('operation', 'list')
+        if not isinstance(operation, str) or operation not in operations:
+            raise ValueError('Unknown workflow_results operation')
+        required, optional = operations[operation]
+        allowed = required | optional | {'operation'}
+        label += '.' + operation
     if name == 'block_results':
         operation = args.get('operation', 'list')
         if not isinstance(operation, str) or operation not in BLOCK_OPERATIONS:
@@ -179,6 +196,19 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name == 'target_search':
+            for field in ('receptor','reference_ligand','pdb_id'):
+                supplied=args.get(field)
+                present=(supplied.lower() in self.request.lower() if field=='pdb_id' else supplied in self.request) if isinstance(supplied,str) else False
+                if field in args and not present:
+                    raise ValueError('Use the exact '+field+' supplied in the current user request')
+            from .target_search_workflow import handle
+            return handle(self.app,self.sid,args)
+        if name == 'workflow_results':
+            if args.get('operation') == 'attach' and (not isinstance(args.get('report'), str) or args['report'] not in self.request):
+                raise ValueError('Use the exact report path supplied in the current user message')
+            from .workflow_results import handle
+            return handle(self.app, self.sid, args)
         if name == 'block_campaign':
             if args.get('operation') in {'import','import_query'} and 'report' in args and (not isinstance(args.get('report'),str) or args['report'] not in self.request):
                 raise ValueError('Ask for the exact analysis or query report path in the current user message, or use a discovered candidate_id')

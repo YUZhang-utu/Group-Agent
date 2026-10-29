@@ -140,3 +140,22 @@ def test_data_pipeline_failure_is_recorded(tmp_path,monkeypatch):
     with pytest.raises(RuntimeError,match='Shared data pipeline failed'):runner.run(out)
     report=json.loads(next(out.glob('run_*/report.json')).read_text())
     assert report['status']=='failed' and report['stage']=='shared_data'
+
+
+@pytest.mark.parametrize('failure', ['missing_model', 'invalid_confidence', 'launch_error'])
+def test_inference_artifact_failures_are_recorded(tmp_path,monkeypatch,failure):
+    base,table=inputs(tmp_path);out=tmp_path/'batch';prep.prepare(base,table,out)
+    def invoke(command,log):
+        if failure=='launch_error':raise OSError('Fixture launch failure')
+        folder=tmp_path/'output';folder.mkdir()
+        if failure=='invalid_confidence':
+            (folder/'job_model.cif').write_text('data_fixture\n')
+            (folder/'job_summary_confidences.json').write_text('{invalid')
+        return 0,folder
+    monkeypatch.setattr(runner,'invoke',invoke)
+    with pytest.raises(RuntimeError,match='Job failed'):runner.run(out,optimize=False)
+    report=json.loads(next(out.glob('run_*/report.json')).read_text())
+    assert report['status']=='failed' and report['total_jobs']==2
+    assert len(report['jobs'])==1 and report['jobs'][0]['status']=='failed'
+    assert report['jobs'][0]['returncode']==1 and report['jobs'][0]['error']
+    if failure!='launch_error':assert report['jobs'][0]['process_returncode']==0

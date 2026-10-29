@@ -1,5 +1,32 @@
 # Findings
 
+## 2026-10-29 E125 general prompt execution
+
+The user's intended interface is target-independent execution, not just KRAS
+result import. Direct literal AF3 sequences, heteromer lists, deterministic seed
+counts and optional ligands now compile to the existing prediction adapter.
+Explicit receptor/reference queries now compile to the existing guided full-catalog
+engine through a typed Chat coordinator. Requested residue proximity is checked
+in each individual candidate pose, in addition to reference-feature matching.
+Input hash checks and native-reference controls remain mandatory. No target-name
+template substitution or universal recall claim is introduced. Real school GPU
+and production-library acceptance remain distinct from the offline integration tests.
+
+## 2026-10-29 core workflow audit
+
+Block-routing development is deferred at the user's request; weak E109/E110
+routing evidence is not a reason to delay AF3 or full-library infrastructure.
+Completed KRAS E123 receipts now confirm 254,364 G12D and 983,854 G12V original
+MOL2 exports, with 4,533 and 16,146 source-QC quarantines respectively. These are
+per-target counts; scientific acceptance and remote payload checks remain separate.
+
+Chat execution already supports typed full-library/structure-guided workflows,
+but the latest KRAS retained-pool orchestration and shared-MSA AF3 batching remain
+standalone runners. E124 closes their read-only result visibility gap, adds explicit
+AF3 homomer preparation and improves AF3 batch failure receipts. It does not
+mislabel these changes as complete remote orchestration or GPU validation.
+See `to_human/E124_CHAT_CORE_PROGRESS.md` for tested capabilities and next work.
+
 ## Current understanding
 
 - E032b is confirmed on Linux with RDKit 2026.03.5: `N5_0.mol2` completed

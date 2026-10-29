@@ -74,11 +74,17 @@ def make_server(agent, port=8765, token=None):
                 self.send(403,{"error":"Cross-origin requests are not allowed"}); return
             try:
                 size = int(self.headers.get("Content-Length","0"))
-                if not 0 < size <= 40000: raise ValueError("Invalid request size")
+                if not 0 < size <= 512000: raise ValueError("Invalid request size")
                 body = json.loads(self.rfile.read(size))
                 if not isinstance(body,dict): raise ValueError("Expected JSON object")
                 if self.path == "/api/session": result={"session":agent.new_session()}
                 elif self.path == "/api/import": result={"task":agent.attach(body["session"],body["plan"])}
+                elif self.path == '/api/workflow-results':
+                    from .workflow_results import handle
+                    result = handle(agent, body['session'], body['arguments'])
+                elif self.path == '/api/target-search':
+                    from .target_search_workflow import handle
+                    result = handle(agent, body['session'], body['arguments'])
                 elif self.path == '/api/block-results':
                     from .block_results import handle
                     result = handle(agent, body['session'], body['arguments'])
@@ -104,12 +110,15 @@ def main():
     p.add_argument("--llm-config-dir",type=Path,default=os.environ.get("AIDD_LLM_CONFIG_DIR"))
     p.add_argument("--port",type=int,default=8765)
     p.add_argument("--allow-compute",action="store_true")
+    p.add_argument('--result-import-root', '--input-root', type=Path, action='append', default=[],
+                   help='Allow explicit report or molecular-input import from this directory (repeatable)')
     args=p.parse_args()
     if not 0 < args.port < 65536: p.error("Invalid port")
     lock=args.storage_root.resolve()/"chat/server.lock"
     lock.parent.mkdir(parents=True,exist_ok=True)
     with file_lock(lock):
-        agent=ChatAgent(args.storage_root,args.runtime,args.llm_config_dir,args.allow_compute)
+        agent=ChatAgent(args.storage_root,args.runtime,args.llm_config_dir,args.allow_compute,
+                        result_import_roots=args.result_import_root)
         server=None
         try:
             server=make_server(agent,args.port)

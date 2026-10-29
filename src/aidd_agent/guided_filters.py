@@ -37,6 +37,13 @@ class GuidedFilter:
         self.cutoff=design['pocket']['minimum_heavy_atom_distance']
         self.fraction=design['pocket']['maximum_clashing_fraction']
         self.allowed_reference_clash_fraction=None
+        self.direct_contacts=[]
+        for group in design.get('direct_contact_groups', []):
+            points=np.asarray(group['points'],dtype=float)
+            cutoff=group['distance']
+            if points.ndim!=2 or points.shape[1]!=3 or not len(points) or not np.isfinite(points).all() or type(cutoff) not in (int,float) or not 0<cutoff<=8:
+                raise ValueError('Invalid direct residue contact group')
+            self.direct_contacts.append((cKDTree(points),cutoff))
 
     def geometry_possible(self, features):
         return all(bound.check(features)[0] for bound in self.bounds)
@@ -66,6 +73,9 @@ class GuidedFilter:
             moved=points @ block[:,:3,:3].transpose(0,2,1)+block[:,None,:3,3]
             distances,_=self.tree.query(moved.reshape(-1,3),k=1)
             physical=np.mean(distances.reshape(len(block),len(points))<self.cutoff-1e-8,axis=1)<=self.fraction
+            for tree,cutoff in self.direct_contacts:
+                contact_distances,_=tree.query(moved.reshape(-1,3),k=1)
+                physical &= np.min(contact_distances.reshape(len(block),len(points)),axis=1)<=cutoff
             for region in hard:
                 physical &= ~np.any(np.linalg.norm(moved-np.array(region['center']),axis=2)<region['radius'],axis=1)
             answer[start+survivors]=physical

@@ -16,12 +16,12 @@ from aidd_agent.protein_data import fetch_protein, resolve_protein
 from aidd_agent.registry import connect
 
 
-def make_plan(tmp_path, steps=None):
+def make_plan(tmp_path, steps=None, prompt='fixture prompt'):
     context = initialize_context(tmp_path / "home", "alice", "Prompt tests")
     payload = copy.deepcopy(SMOKE_PLAN)
     if steps is not None: payload["steps"] = steps
     fixture = tmp_path / "response.json"; ev.write(fixture, payload)
-    path = create_plan(Path(context["db"]), context["user_id"], context["project_id"], "fixture prompt", response_file=fixture)
+    path = create_plan(Path(context["db"]), context["user_id"], context["project_id"], prompt, response_file=fixture)
     return context, path
 
 
@@ -60,6 +60,33 @@ def test_invalid_model_actions_are_rejected(bad):
 def test_duplicate_json_and_nonfinite_rejected():
     for text in ('{"a":1,"a":2}', '{"a":NaN}'):
         with pytest.raises(ValueError): strict_json(text)
+
+
+@pytest.mark.parametrize('copies', [0, 9, True, 1.5, '2'])
+def test_af3_invalid_homomer_copy_count(copies):
+    payload = copy.deepcopy(SMOKE_PLAN)
+    payload['steps'][2]['params']['protein_copies'] = copies
+    with pytest.raises(ValueError, match='protein_copies'):
+        validate_plan(payload)
+
+
+@pytest.mark.parametrize('copies', [1, 2, 8])
+def test_af3_homomers_preserve_construct_seeds_and_ligand_ids(tmp_path, copies):
+    steps = copy.deepcopy(SMOKE_PLAN['steps'])
+    steps[2]['params'].update(protein_copies=copies, seeds=[11, 22], ligand_smiles=['C[C@H](O)C(=O)O'])
+    context, path = make_plan(tmp_path, steps, prompt='Prepare the requested homomer with C[C@H](O)C(=O)O')
+    result, report = run(context, path, services=OfflineServices())
+    assert result['status'] == 'complete'
+    payload = ev.read(report.parent / 'prediction/af3-input.json')
+    assert payload['modelSeeds'] == [11, 22]
+    entities = payload['sequences']
+    assert [e['protein']['sequence'] for e in entities[:copies]] == ['CDEFGHI'] * copies
+    assert [next(iter(e.values()))['id'] for e in entities] == [chr(65+i) for i in range(copies+2)]
+    assert entities[copies]['ligand']['ccdCodes'] == ['ATP']
+    assert entities[copies+1]['ligand']['smiles'] == 'C[C@H](O)C(=O)O'
+    evidence = ev.read(report.parent / 'prediction/input-provenance.json')
+    assert evidence['protein_copies'] == copies
+    assert evidence['protein_chain_ids'] == [chr(65+i) for i in range(copies)]
 
 
 def test_compatible_chat_request_and_no_secret_in_payload(monkeypatch):

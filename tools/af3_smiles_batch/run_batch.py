@@ -30,7 +30,7 @@ def run(bundle,check=False,runner=None,optimize=True):
             raise ValueError('Input path/checksum mismatch')
     run_id=datetime.now().strftime('%Y%m%d_%H%M%S')+'_'+str(os.getpid())
     logs=bundle/('check_'+run_id if check else 'run_'+run_id);logs.mkdir()
-    report=dict(status='running',mode='host_check' if check else 'prediction',jobs=[])
+    report=dict(status='running',mode='host_check' if check else 'prediction',total_jobs=len(manifest['jobs']),jobs=[])
     save(logs/'report.json',report)
     inference_inputs={}
     if optimize and not check:
@@ -63,19 +63,23 @@ def run(bundle,check=False,runner=None,optimize=True):
         command=['bash',str(runner),str(input_path)]+mode
         started=time.monotonic();output_root=None
         print('Starting '+job['id'],flush=True)
-        code,output_root=invoke(command,logs/(job['id']+'.log'))
-        row=dict(id=job['id'],returncode=code,seconds=time.monotonic()-started,
-                 input_sha256=job['sha256'],submitted_input_sha256=sha(input_path),
-                 submitted_input=str(input_path),output=str(output_root) if output_root else None)
-        if code==0 and not check:
-            models=[] if output_root is None else [p for p in output_root.rglob('*_model.cif')
-                if not any(part.startswith('seed-') for part in p.relative_to(output_root).parts)]
-            if len(models)!=1:
-                row['error']='Expected exactly one final model';code=1
-            else:
+        row=dict(id=job['id'],input_sha256=job['sha256'],submitted_input=str(input_path))
+        try:
+            row['submitted_input_sha256']=sha(input_path)
+            code,output_root=invoke(command,logs/(job['id']+'.log'))
+            row['process_returncode']=code
+            row['output']=str(output_root) if output_root else None
+            if code==0 and not check:
+                models=[] if output_root is None else [p for p in output_root.rglob('*_model.cif')
+                    if not any(part.startswith('seed-') for part in p.relative_to(output_root).parts)]
+                if len(models)!=1:
+                    raise ValueError('Expected exactly one final model')
                 model=models[0];row.update(model=str(model),model_sha256=sha(model))
                 summary=model.with_name(model.name[:-len('_model.cif')]+'_summary_confidences.json')
                 if summary.exists():row['confidence']=json.loads(summary.read_text())
+        except (OSError, ValueError) as exc:
+            code=1;row['error']=str(exc)
+        row.update(returncode=code,seconds=time.monotonic()-started)
         row['status']='host_checks_passed' if check and code==0 else 'model_generated' if code==0 else 'failed'
         report['jobs'].append(row);save(logs/'report.json',report)
         if code:

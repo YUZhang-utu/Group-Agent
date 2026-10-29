@@ -8,6 +8,15 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+E125 adds `target_search` for an explicitly user-selected receptor and binding
+reference of any target. Use the [general guide](../../../to_human/E125_GENERAL_PROMPT_WORKFLOWS.md).
+This trusted Chat coordinator accepts PDB/mmCIF plus receptor-frame SDF/MOL2, or a
+PDB ID with explicit ligand instance. It builds queries and reuses the guided
+full-catalog engine, not a target-name-specific WEE1/KRAS dispatch. Explicit residue
+contacts are rechecked in the same pose. A missing site/reference is a clarification,
+not permission to invent a pocket. The old calibrated `search_3d` restriction below
+still applies to that legacy action. Generic thresholds remain exploratory.
+
 For a zero-positive hardware panel, use the terminal
 [E049 survivor validation](../../../to_human/E049_SURVIVOR_VALIDATION.md).
 Rebuild the same coarse panel, audit all survivors and rejected controls, and

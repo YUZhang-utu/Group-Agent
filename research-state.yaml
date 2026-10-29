@@ -1,3 +1,48 @@
+general_prompt_workflows_e125:
+  date: 2026-10-29
+  guide: to_human/E125_GENERAL_PROMPT_WORKFLOWS.md
+  experiment: experiments/E125-general-prompt-workflows.md
+  af3: [literal_sequences, verified_protein_steps, monomers, homomers, heteromers, seed_lists, seed_counts, ccd_ligands, smiles_ligands]
+  target_search: explicit_receptor_and_posed_reference_without_target_name_dispatch
+  entry: target_search_tool_or_command
+  operations: [prepare, start, run]
+  search_engine: existing_guided_full_catalog_finite_pose_engine
+  required_residue_contacts: rechecked_in_same_pose
+  input_provenance: copied_and_hashed_project_inputs
+  block_development: deferred
+  shared_msa_large_batch_chat_dispatch: not_implemented_cli_remains_available
+  automatic_generic_mol2_quota_export: separate_downstream_work
+  gpu_and_production_library_acceptance: pending_school_runtime
+  delivery_branch: feature/structure-guided-chat
+  isolated_release_tests: 155_passed
+  note: Supersedes the monomer/homomer-only AF3 and result-import-only generality described in E124.
+
+core_workflow_update_20261029:
+  priority: af3_full_library_chat_continuity
+  block_routing_development: deferred_by_user
+  block_history_and_explicit_actions: preserved
+  experiment: E124
+  guide: to_human/E124_CHAT_CORE_PROGRESS.md
+  report_bridge: session_owned_read_only_snapshots
+  supported_reports: [kras_e123_export, af3_batch, af3_prediction_manifest]
+  external_import_roots: explicit_chat_cli_configuration
+  payload_verification: not_performed_by_report_import
+  af3_chat_homomer_copies: 1_to_8_explicitly_requested
+  af3_shared_msa_batch_chat_dispatch: pending
+  kras_e123_chat_execution_adapter: pending
+  school_gpu_end_to_end_acceptance: pending
+  github_delivery_this_update: not_pushed
+  returned_kras_e123:
+    status: complete_report_and_receipts_verified
+    prior_report_receipt_checks: 24
+    actual_report_chat_import: passed_without_compute
+    evidence: data/e124-core-integration/returned_report_check.json
+    g12d: {pool_processed: 2632299, selected: 258897, exported: 254364, quarantined: 4533, mol2_files: 3}
+    g12v: {pool_processed: 4080670, selected: 1000000, exported: 983854, quarantined: 16146, mol2_files: 10}
+    remote_mol2_payload_verification: not_performed_locally
+    docking_and_internal_model_results: not_inspected
+  note: This dated section supersedes older pending-status entries for E123 completion; historical entries are preserved.
+
 project: aidd-macrocycle-agent
 independent_block_comparison:
   saved: 2026-10-07

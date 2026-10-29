@@ -85,3 +85,18 @@ the model must not invent thresholds or combine preview and export. Actual IDs,
 counts and paths are supplied by local reports. See the
 [screening handoff guide](../../../to_human/E042_SCREENING_TO_DOCKING_HANDOFF.md).
 Do not present unavailable docking/new-target stages as completed capabilities.
+
+As of E124, block-routing development is deferred; retain explicit block requests
+and historical result review. Prioritize AF3 and full-library workflow continuity.
+Use `workflow_results` for read-only KRAS E123 export reports, AF3 batch reports
+or AF3 prediction manifests. Imports are scoped to the Project or operator-set
+`--result-import-root` directories and owned by the conversation. They never
+launch calculations and do not verify remote payloads. Imported reports are
+snapshots, not resumable Chat tasks. See
+[the core integration guide](../../../to_human/E124_CHAT_CORE_PROGRESS.md).
+
+E125 extends execution beyond result import: literal-sequence AF3 monomers,
+homomers and heteromers, seed counts and ligand inputs use the existing queue.
+The trusted `target_search` tool/command prepares arbitrary explicit receptor/site
+queries and dispatches the existing full-library engine. Follow
+[the general prompt guide](../../../to_human/E125_GENERAL_PROMPT_WORKFLOWS.md).

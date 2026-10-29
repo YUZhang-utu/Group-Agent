@@ -2,13 +2,15 @@
 
 WORKFLOW_SKILLS = (
     {"name": "aidd-block-evaluation", "actions": ["receptor_assess", "plants_receptors", "protein_from_pdb", "block_sample", "block_plants_prepare", "block_plants_run", "block_analyze", "block_import_analysis", "block_adopt_scores", "block_adopt_query", "block_search_dock"],
-     "description": "Seeded E094/E095/E096 panels and shared PLANTS jobs. Adopt completed CLI EquiScore/ChemPLP results without inference. Owned leading-block continuation uses a confirmed MDM2 query and a conformer budget, then the original reviewed PLANTS setup."},
+     "description": "Development deferred; explicit block requests or historical review only. Seeded E094/E095/E096 panels and shared PLANTS jobs. Adopt completed CLI EquiScore/ChemPLP results without inference. Owned leading-block continuation uses a confirmed MDM2 query and a conformer budget, then the original reviewed PLANTS setup."},
     {"name": "aidd-3d-search", "actions": ["consensus_budget", "budget_page", "search_3d", "review_screening", "classify_screening", "full_library_screen", "condition_funnel", "benchmark_funnel", "select_screening", "export_screening", "prepare_docking", "run_docking"],
      "description": "Calibrated WEE1 full-library retrieval and Gaussian refinement; E031 annotations only."},
     {"name": "aidd-protein-preparation", "actions": ["protein_fetch", "protein_resolve", "pdb_search", "pdb_fetch", "structure_survey", "structure_diversity", "structure_consensus", "pocket_states", "pocket_adopt", "pocket_consensus", "consensus_recommend", "consensus_design", "consensus_funnel", "anchor_recommend", "anchor_design", "guided_funnel", "guided_select"],
      "description": "Verified UniProt target identity, sequences and RCSB structure evidence; no automatic receptor acceptance."},
     {"name": "aidd-alphafold3", "actions": ["af3_prepare", "af3_run"],
-     "description": "Verified single-protein plus CCD or literal user SMILES AF3 input and installed local execution; confidence is not biological validation."},
+     "description": "Literal user sequences or verified proteins; monomers, homomers, heteromers, explicit seeds or seed counts, CCD/SMILES ligands and installed AF3 execution. Independent ligand predictions require separate inputs; confidence is not biological validation."},
+    {'name':'aidd-target-search','actions':['target_query_prepare','target_library_search'],
+     'description':'Explicit user-selected receptor and posed reference; general target query construction and existing full-library guided engine. No fixed target template substitution.'},
     {"name": "aidd-prompt-workflows", "actions": [],
      "description": "English structured planning, typed dependencies, Project scope and accurate blocked/failed states."},
 )

@@ -12,6 +12,26 @@ from .pymol_bridge import write_json
 
 SYSTEM = '''You are the AIDD domain research agent, connected to this user's project,
 macrocycle library, existing scientific workflows and desktop PyMOL.
+Current development priorities are AF3 and full-library screening with explicit
+task progress and saved result provenance. Block routing/benchmark development
+is deferred: use block tools only for explicit block requests or historical
+result review, not as the default screening recommendation.
+Use workflow_results to inspect/import existing KRAS E123 or AF3 batch reports
+without launching calculations. Report schema checks do not verify remote payloads.
+For AF3, direct literal protein_sequences need no UniProt lookup. protein_steps
+can combine different verified sequences. protein_copies requests identical chains;
+seed_count optionally with seed_start expands deterministic seeds, or preserve an
+explicit seeds list. Multiple
+ligand entries in one af3_prepare step mean one complex; independent SMILES
+predictions require separate prepare/run pairs or the standalone batch runner.
+Never represent an imported report as a resumable Chat job or a GPU validation.
+For explicit receptor/reference screening of ANY target, use target_search rather
+than the fixed WEE1 search_3d action or a KRAS script. A user-selected receptor/site
+is authorization to prepare that exact hypothesis; do not force a new cohort
+survey when the user has already specified it. Use prepare when only assessing,
+start for an explicitly requested full scan, run for an owned prepared query.
+Missing site/reference/chain information requires clarification. Follow-up task
+status or result questions must not resubmit start. Preserve any specified cofactors.
 For completed CLI block docking, use block_results to attach the exact user-provided
 report, then analyze with top_n=10 unless another N is requested. Ranking uses the
 mean of the best N candidates, never the whole-block mean. Default molecule mode
@@ -180,7 +200,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             try:
                 step,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
                     system_prompt=SYSTEM+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
-                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=100000)
+                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000)
                 step=validate_step(step)
                 if step['kind']=='answer':
                     known={row['id'] for row in evidence if row['status']=='complete'}

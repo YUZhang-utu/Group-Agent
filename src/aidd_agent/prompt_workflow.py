@@ -57,7 +57,7 @@ def project_root(db, user, project):
 
 def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=None, local_plan=None):
     root = project_root(db, user, project)
-    if not isinstance(prompt, str) or not 1 <= len(prompt) <= 20000: raise ValueError("Invalid prompt length")
+    if not isinstance(prompt, str) or not 1 <= len(prompt) <= 200000: raise ValueError("Invalid prompt length")
     if sum(v is not None for v in (llm_profile, response_file, local_plan)) != 1:
         raise ValueError("Choose one LLM profile, offline fixture or local coordinator plan")
     if local_plan is not None:
@@ -70,8 +70,13 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
         plan, model = chat_plan(prompt, strict_json(Path(llm_profile).read_text(encoding="utf-8")))
         if any(set(s["params"]) & {'source_run','receptor_run','attachment_id'} for s in plan["steps"]):
             raise ValueError("Use separate chat evidence/selection/export actions for prior tasks")
+        if any(s['action'] in {'target_query_prepare','target_library_search'} for s in plan['steps']):
+            raise ValueError('Use the trusted target_search coordinator for receptor/reference requests')
     chemistry_prompt = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
     for step in plan['steps']:
+        if step['action'] == 'af3_prepare':
+            from .af3_inputs import literal_check
+            literal_check(step['params'], chemistry_prompt)
         for smiles in step['params'].get('ligand_smiles', []):
             if smiles not in chemistry_prompt:
                 raise ValueError('Ligand SMILES must be copied exactly from the user request')
@@ -158,6 +163,9 @@ def load_runtime(path):
 
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
+    if step['action'] in {'target_query_prepare','target_library_search'}:
+        from .target_search_workflow import execute
+        return execute(step['action'],step['params'],directory,execution,cfg,allow_compute,services)
     if step['action'] in {'block_adopt_scores', 'block_adopt_query', 'block_search_dock'}:
         from .block_campaign import execute
         output = directory / 'blocks'
@@ -295,7 +303,7 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         (directory / "protein.fasta").write_text(f">{record['accession']}\n{record['sequence']}\n", encoding="utf-8")
         return dict(accession=record["accession"], organism=record["organism"], length=record["length"],
                     sequence_sha256=record["sequence_sha256"], source_url=record["source_url"])
-    if action in {"pdb_search", "af3_prepare", "structure_survey", "structure_diversity"}:
+    if action in {"pdb_search", "structure_survey", "structure_diversity"}:
         protein = ev.read(execution / params["protein_step"] / "protein.json")
     if action=='structure_diversity':
         from .structure_diversity import run
@@ -315,17 +323,17 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
     if action == "pdb_fetch":
         return services.pdb_fetch(params["pdb_id"], directory)
     if action == "af3_prepare":
-        sequence = protein["sequence"]
-        start, end = params.get("start", 1), params.get("end", len(sequence))
-        if end > len(sequence): raise ValueError("Construct exceeds verified protein sequence")
-        path = write_alphafold3_input(params["name"], [sequence[start-1:end]], directory / "af3-input.json",
-                                      directory, seeds=params.get("seeds", [1]))
+        from .af3_inputs import resolve, seeds
+        sequences, proteins = resolve(params, execution)
+        copies = params.get('protein_copies', 1)
+        path = write_alphafold3_input(params["name"], sequences, directory / "af3-input.json",
+                                      directory, seeds=seeds(params))
         payload = ev.read(path)
         for index, code in enumerate(params.get("ligand_ccd", [])):
             component = services.fetch_json(f"https://data.rcsb.org/rest/v1/core/chemcomp/{code}")
             if component.get("chem_comp", {}).get("id") != code: raise ValueError("CCD identity mismatch")
             _atomic_json(directory / f"ccd-{index}.json", component)
-            payload["sequences"].append({"ligand": {"id": chr(66+index), "ccdCodes": [code]}})
+            payload["sequences"].append({"ligand": {"id": chr(65+len(payload['sequences'])), "ccdCodes": [code]}})
         from .af3_analysis import ligand_evidence
         chemistry = []
         for smiles in params.get('ligand_smiles', []):
@@ -336,10 +344,12 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         if chemistry:
             _atomic_json(directory / 'ligand-chemistry.json', chemistry)
         _atomic_json(path, payload)
-        evidence = dict(accession=protein["accession"], source_url=protein["source_url"],
+        evidence = dict(accession=proteins[0]['accession'], source_url=proteins[0]['source_url'],
                         evidence_mode=services.mode,
-                        full_sequence_sha256=protein["sequence_sha256"], start=start, end=end,
-                        construct_sequence_sha256=hashlib.sha256(sequence[start-1:end].encode()).hexdigest(),
+                        protein_copies=copies, protein_chain_ids=[p['chain_id'] for p in proteins], proteins=proteins,
+                        full_sequence_sha256=proteins[0]['full_sequence_sha256'], start=proteins[0]['start'], end=proteins[0]['end'],
+                        construct_sequence_sha256=proteins[0]['construct_sequence_sha256'],
+                        model_seeds=seeds(params),
                         input_sha256=ev.sha(path), ligand_chemistry=chemistry, status="prepared_not_predicted")
         _atomic_json(directory / "input-provenance.json", evidence)
         return evidence
@@ -434,6 +444,12 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
+                if step['action'] in {'target_query_prepare','target_library_search'}:
+                    from .target_search_workflow import request_file
+                    entry=request_file(execution,step['params'])
+                    request=ev.read(entry)
+                    dependencies.extend([entry,*map(Path,request['input_hashes'])])
+                    if request.get('query_report'): dependencies.append(Path(request['query_report']))
                 if step['action'] in {'block_adopt_scores','block_adopt_query','block_search_dock'}:
                     entry = ensure_within(root/'block-campaigns'/(step['params']['request_id']+'.json'), root)
                     request = ev.read(entry)
@@ -449,10 +465,12 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                     attachment = ensure_within(root / 'block-results' / (step['params']['attachment_id'] + '.json'), root)
                     source = ensure_within(Path(ev.read(attachment)['report']), root)
                     dependencies.extend([attachment, source])
-                for ref in ("protein_step", "input_step", "sample_step", "prepared_step", "docking_step", "adoption_step"):
+                for ref in ("protein_step", "input_step", "sample_step", "prepared_step", "docking_step", "adoption_step", "query_step"):
                     if ref in step["params"]:
                         parent = execution / step["params"][ref]
                         dependencies.extend(p for p in parent.rglob("*") if p.is_file())
+                for ref in step['params'].get('protein_steps', []):
+                    dependencies.extend(p for p in (execution/ref).rglob('*') if p.is_file())
                 def operation():
                     result = execute_step(step, directory, execution, results, cfg, allow_compute, services)
                     _atomic_json(directory / "result.json", result)

@@ -11,11 +11,11 @@ function render(state){$('task-count').textContent=state.tasks.length;$('task-co
 const key=JSON.stringify(state.messages);if(key!==last){$('messages').replaceChildren();for(const m of state.messages){const box=node('div',undefined,'message '+m.role);box.append(node('span',m.role==='user'?'You':'MEDCHEM Agent', 'role'),node('span',m.text));$('messages').append(box);}if(!state.messages.length)$('messages').append(node('p','Ask a research question.','empty'));$('messages').scrollTop=$('messages').scrollHeight;last=key;}
 $('coverage').replaceChildren();for(const w of state.workflows){const n=node('div',undefined,'coverage-item');n.append(node('strong',w.name),node('div',w.status),node('div',w.scope));$('coverage').append(n);}
 $('tasks').replaceChildren();if(!state.tasks.length)$('tasks').append(node('p','Your tasks will appear here.','empty'));for(const t of [...state.tasks].reverse()){const card=node('article',undefined,'task '+t.status);card.append(node('div',t.status+' / '+t.provider,'task-status'),node('p',t.request),node('div','Task '+t.id,'path'));for(const k of ['plan','report','log'])if(t[k]){card.append(node('div',k+': '+t[k],'path'));const b=node('button','Copy '+k+' path');b.onclick=()=>navigator.clipboard.writeText(t[k]).catch(e=>$('error').textContent=e.message);card.append(b);}if(t.error)card.append(node('p',t.error));if(t.details){const d=node('details');d.append(node('summary','Steps and result artifacts'),node('pre',JSON.stringify(t.details,null,2)));card.append(d);}if(t.progress){const d=node('details');d.append(node('summary','Execution log'),node('pre',t.progress));card.append(d);}const action=['queued','planning','running'].includes(t.status)?'Cancel':'Resume';const b=node('button',action+' task');b.onclick=()=>send('/'+action.toLowerCase()+' '+t.id);card.append(b);$('tasks').append(card);}}
-async function refresh(){if(polling)return;polling=true;try{const state=await api('/api/state'+(session?'?session='+encodeURIComponent(session):''));render(state);renderDocking(state.docking_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);$('connection').textContent='Connected';}catch(e){$('connection').textContent='Disconnected';$('error').textContent=e.message;}finally{polling=false;}}
+async function refresh(){if(polling)return;polling=true;try{const state=await api('/api/state'+(session?'?session='+encodeURIComponent(session):''));render(state);renderDocking(state.docking_results);renderWorkflowResults(state.workflow_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);$('connection').textContent='Connected';}catch(e){$('connection').textContent='Disconnected';$('error').textContent=e.message;}finally{polling=false;}}
 $('new').onclick=()=>newSession().catch(e=>$('error').textContent=e.message);$('compose').onsubmit=e=>{e.preventDefault();if($('prompt').value.trim())send($('prompt').value);};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('compose').requestSubmit();}};
 refresh();setInterval(refresh,2000);
 
-$('attach').onclick=async()=>{try{if(!session)await newSession();if($('attachment-kind').value==='equiscore')await api('/api/block-campaign',{session,arguments:{operation:'import',report:$('existing').value.trim()}});else if($('attachment-kind').value==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};
+$('attach').onclick=async()=>{try{if(!session)await newSession();const kind=$('attachment-kind').value;if(['kras_export','af3_batch','af3_prediction'].includes(kind))await api('/api/workflow-results',{session,arguments:{operation:'attach',kind,report:$('existing').value.trim()}});else if(kind==='equiscore')await api('/api/block-campaign',{session,arguments:{operation:'import',report:$('existing').value.trim()}});else if(kind==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};
 
 function renderViewer(viewer){
 if(!viewer||(!viewer.connected&&!viewer.latest))return;
@@ -53,8 +53,25 @@ $('tasks').prepend(card);
 // Examples fill the composer; only Send submits a request.
 for(const button of document.querySelectorAll('[data-prompt]'))button.onclick=()=>{$('prompt').value=button.dataset.prompt;$('prompt').focus();};
 $('attachment-kind').append(new Option('Completed EquiScore analysis','equiscore'));
-$('attachment-kind').onchange=()=>{const kind=$('attachment-kind').value;$('existing-label').textContent=kind==='equiscore'?'EquiScore analysis report.json path':kind==='docking'?'PLANTS report.json path':'Existing plan.json path';$('existing').placeholder=kind==='equiscore'?'/project/runs/.../equiscore-analysis/report.json':kind==='docking'?'/project/runs/.../plants-final/report.json':'/project/runs/PROMPT-.../plan.json';};
+$('attachment-kind').onchange=()=>{const kind=$('attachment-kind').value;const external=['kras_export','af3_batch','af3_prediction'].includes(kind);$('existing-label').textContent=external?'Report or manifest JSON path on this host':kind==='equiscore'?'EquiScore analysis report.json path':kind==='docking'?'PLANTS report.json path':'Existing plan.json path';$('existing').placeholder=external?'/configured/import/root/report.json':kind==='equiscore'?'/project/runs/.../equiscore-analysis/report.json':kind==='docking'?'/project/runs/.../plants-final/report.json':'/project/runs/PROMPT-.../plan.json';};
 const coverage=$('coverage-menu');let coveragePinned=false;
+for(const [value,label] of [['kras_export','KRAS pool export report'],['af3_batch','AF3 ligand batch report'],['af3_prediction','AF3 prediction manifest']])$('attachment-kind').append(new Option(label,value));
+const workflowResults=node('div');workflowResults.id='workflow-results';$('docking-results').before(workflowResults);
+const sourceChecks=new Map();
+let workflowResultsKey=null;
+function renderWorkflowResults(rows){
+const key=JSON.stringify(rows||[]);if(key===workflowResultsKey)return;workflowResultsKey=key;
+workflowResults.replaceChildren();
+for(const row of rows||[]){
+const card=node('article',undefined,'task');
+card.append(node('strong',row.kind+' / '+row.summary.status),node('div',row.source,'path'),node('p','Saved report evidence. Model and MOL2 file contents have not been verified.'));
+if(row.summary.targets)for(const [name,data] of Object.entries(row.summary.targets))card.append(node('p',name+': '+data.processed.toLocaleString()+' processed; '+data.exported.toLocaleString()+' exported; '+data.quarantined.toLocaleString()+' quarantined; '+data.batch_count+' MOL2 files.'));
+if(row.summary.mode)card.append(node('p',row.summary.recorded_jobs+' recorded jobs; '+row.summary.generated_models+' reported models; '+row.summary.failed_jobs+' failed jobs.'));
+const details=node('details');details.append(node('summary','Counts, confidence and reported file paths'),node('pre',JSON.stringify(row.summary,null,2)));card.append(details);
+const check=node('button','Check source report');const feedback=node('p',sourceChecks.get(row.id)||'');check.onclick=async()=>{check.disabled=true;try{const result=await api('/api/workflow-results',{session,arguments:{operation:'check',attachment_id:row.id}});const message=result.source_status+' (checked '+new Date(result.checked_at*1000).toLocaleTimeString()+')';sourceChecks.set(row.id,message);feedback.textContent=message;}catch(e){feedback.textContent=e.message;}finally{check.disabled=false;}};
+card.append(check,feedback);workflowResults.append(card);
+}
+}
 coverage.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')coverage.open=true;});
 coverage.addEventListener('pointerleave',()=>{if(!coveragePinned&&!coverage.contains(document.activeElement))coverage.open=false;});
 coverage.addEventListener('focusin',()=>{coverage.open=true;});
@@ -81,7 +98,7 @@ document.addEventListener('pointerdown',event=>{if(!resultsMenu.contains(event.t
 
 // Explicit controls use the same owned tool contract as research chat.
 const campaignPanel=node('details',undefined,'attach-menu');
-campaignPanel.append(node('summary','Leading blocks to 3D search'));
+campaignPanel.append(node('summary','Block workflows (development deferred)'));
 const campaignFields={};
 function campaignField(key,label,options){
   const control=node(options?'select':'input');control.id='campaign-'+key;

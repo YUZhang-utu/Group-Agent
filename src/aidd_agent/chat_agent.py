@@ -40,7 +40,25 @@ WORKFLOWS = [
     {"name": "Flexible docking", "status": "Glide preparation/execution adapter; workstation validation pending", "scope": "Derive pocket from crystal ligand, prepare inputs, explicitly run licensed preparation and reference-gated docking. Block panels have a separate PLANTS adapter; cross-docking validation remains pending."},
     {"name": "Biological enrichment and final selection", "status": "not validated", "scope": "Requires held-out active/decoy labels, diversity/property criteria and experimental evidence."},
 ]
+for _workflow in WORKFLOWS:
+    if 'block' in _workflow['name'].lower():
+        _workflow['status'] = 'Development deferred; explicit requests and historical review only'
+    if _workflow['name'] == 'AF3 prediction':
+        _workflow['scope'] = ('Literal protein sequences or verified proteins; monomers, homomers, heteromers, CCD/SMILES ligands, explicit seeds or seed counts. '
+            'Native/Apptainer execution; separate independent ligand jobs. Optimized shared-MSA batch execution remains CLI-only. '
+            'External AF3 reports can be attached read-only; live Chat/GPU acceptance pending.')
+WORKFLOWS.insert(0, dict(name='Saved AF3 and KRAS results', status='Read-only report bridge',
+    scope='Attach AF3 batch/manifest or completed KRAS E123 export reports. Session-owned snapshots, counters, confidence and source checks. '
+          'No rerun; referenced MOL2/model payloads are not verified or loaded into PyMOL by attachment.'))
+WORKFLOWS.sort(key=lambda item: 'block' in item['name'].lower())
+WORKFLOWS.insert(0,dict(name='General receptor/reference full-library search',status='Typed Chat query and full-scan adapter',
+    scope='User-selected PDB/mmCIF receptor and posed SDF/MOL2 reference, or PDB ID plus exact ligand instance. '
+          'All catalog conformers considered using existing guided engine; required residues rechecked in one pose. '
+          'No target-name template substitution; finite poses and exploratory policy, not affinity validation.'))
+
 ROUTER = """You are an AIDD conversational task coordinator. Return JSON only with exactly
+Block-routing development is deferred. Prefer the requested AF3/full-library workflow;
+use block workflows only for explicit block requests or historical review.
 intent, message, task_id, request, plus a selection object for select or a design object for design.
 intent is run/status/results/resume/cancel/capabilities/clarify/evidence/classify/full_count/funnel/benchmark/coarse/select/export/prepare_docking/run_docking/recommend/adopt/design/guided.
 For a pre-search protein/ligand PDB survey use run requesting protein verification and structure_survey.
@@ -293,7 +311,7 @@ def validate_route(value):
     if value["intent"] not in {"run", "status", "results", "resume", "cancel", "capabilities", "clarify", "evidence", "classify", "full_count", "funnel", "benchmark", "coarse", "select", "export", "prepare_docking", "run_docking", "recommend", "adopt", "design", "guided", "consensus", "pockets"}:
         raise ValueError("Unsupported chat intent")
     for field in ("message", "request"):
-        if not isinstance(value[field], str) or len(value[field]) > 12000:
+        if not isinstance(value[field], str) or len(value[field]) > (100000 if field=='request' else 12000):
             raise ValueError("Invalid chat text")
     if contains_han(value["message"]): raise ValueError("Agent replies must be English")
     if value["task_id"] is not None and not isinstance(value["task_id"], str):
@@ -489,7 +507,7 @@ def screening_feedback(summary):
 
 
 class ChatAgent:
-    def __init__(self, storage, runtime=None, config_dir=None, allow_compute=False, *, planner=create_plan, router=None, start=True, domain_planner=None):
+    def __init__(self, storage, runtime=None, config_dir=None, allow_compute=False, *, planner=create_plan, router=None, start=True, domain_planner=None, result_import_roots=()):
         self.root = Path(storage).resolve() / "chat"
         self.root.mkdir(parents=True, exist_ok=True)
         self.db = self.root / "conversations.sqlite3"
@@ -497,6 +515,7 @@ class ChatAgent:
         self.runtime = Path(runtime).resolve() if runtime else None
         self.config_dir = config_dir
         self.allow_compute = allow_compute
+        self.result_import_roots = tuple(Path(p).resolve() for p in result_import_roots)
         self.planner, self.router = planner, router
         self.domain_planner = domain_planner
         self.stop = threading.Event()
@@ -620,8 +639,10 @@ class ChatAgent:
         from .structure_chains import rows
         from .block_results import handle
         attachments = handle(self, sid, {'operation': 'list'})['attachments'] if sid else []
+        from .workflow_results import handle as workflow_results
+        imported = workflow_results(self, sid, {'operation': 'list'})['attachments'] if sid else []
         return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,docking_results=attachments,
-                    compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
+                    workflow_results=imported, compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
 
     def review_action(self,sid,decision):
         from . import structure_review as review
@@ -662,7 +683,7 @@ class ChatAgent:
     def ask(self, sid, text, provider):
         self.session(sid)
         if provider not in {"gpt", "deepseek"}: raise ValueError("Unknown provider")
-        if not isinstance(text, str) or not 1 <= len(text.strip()) <= 8000: raise ValueError("Message must contain 1-8000 characters")
+        if not isinstance(text, str) or not 1 <= len(text.strip()) <= 100000: raise ValueError("Message must contain 1-100000 characters")
         # Serialize decisions, not scientific execution. Session messages stay ordered.
         with self.lock:
             self.message(sid, "user", text)
@@ -670,6 +691,20 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command == '/target_search':
+                from .target_search_workflow import handle
+                answer=json.dumps(handle(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
+                self.message(sid,'assistant',answer)
+                return answer
+            if command == '/workflow_results':
+                from .workflow_results import handle
+                try:
+                    result = handle(self, sid, json.loads(text.strip()[len(command):].strip() or '{}'))
+                    answer = json.dumps(result, indent=2)
+                except (ValueError, KeyError, OSError) as exc:
+                    answer = 'Workflow results: ' + str(exc)
+                self.message(sid, 'assistant', answer)
+                return answer
             if command == '/block_campaign':
                 from .block_campaign import handle
                 try:
@@ -904,9 +939,8 @@ class ChatAgent:
             log = str(self.root / (jid + ".log"))
             # Preserve literal chemistry alongside the router's contextual rewrite.
             request = decision['request']
-            if 'smiles' in (request+' '+text).lower():
-                literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user')
-                request += '\nOriginal user request (preserve literal SMILES):\n' + literal
+            literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user') or text
+            request += '\nOriginal user request (preserve literal SMILES):\n' + literal
             with self.connect() as db:
                 db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,log,created) VALUES(?,?,?,?,?,?,?,?)",
                            (jid,sid,request,provider,str(profile),"queued",log,time.time()))
