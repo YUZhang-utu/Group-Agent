@@ -240,7 +240,16 @@ class DomainTools:
                 if row.get('result',{}).get('report'):
                     path=ensure_within(Path(row['result']['report']),self.project);data=self.json_file(path)
                 else:data=row
+            from .af3_analysis import assess_chain_mapping
+            rows = data.get('steps', {}) if isinstance(data, dict) else {}
+            if args.get('step_id') and isinstance(data, dict) and 'result' in data:
+                rows = {args['step_id']: data}
+            mappings = {key: assess_chain_mapping(row['result']['confidence'])
+                        for key, row in rows.items()
+                        if isinstance(row, dict) and isinstance(row.get('result'), dict)
+                        and isinstance(row['result'].get('confidence'), dict)}
             return dict(task_id=job['id'],task_status=job['status'],source=str(path),
+                confidence_chain_mapping=mappings,
                 sha256=hashlib.sha256(path.read_bytes()).hexdigest(),content=page(data,args),
                 artifacts=self.discover(data,self.project),step_ids=list(data.get('steps',{})) if isinstance(data,dict) else [])
         if name in {'read_artifact','viewer_read'}:

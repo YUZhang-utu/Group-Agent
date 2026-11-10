@@ -414,6 +414,7 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
                     manifest=str((directory/'prediction-manifest.json').resolve()),output_directory=str(prediction_dir.resolve()),
                     structure_sha256=manifest["structure_sha256"], confidence=manifest["confidence"],
                     confidence_analysis=str(directory / 'confidence-analysis.json'),
+                    confidence_warnings=analysis['chain_mapping']['warnings'],
                     pose_quality="not_independently_validated")
     if action == "search_3d":
         search = cfg.get("search")

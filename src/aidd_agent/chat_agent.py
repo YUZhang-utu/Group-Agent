@@ -981,6 +981,11 @@ class ChatAgent:
                                 lines.append(f"{key}: {value}")
                         result = step.get("result", {})
                         confidence = result.get("confidence", {})
+                        from .af3_analysis import assess_chain_mapping, compact_confidence
+                        if confidence:
+                            for warning in assess_chain_mapping(confidence)['warnings']:
+                                lines.append(f"Confidence mapping warning: {warning}")
+                            confidence = compact_confidence(confidence)
                         for key in ("iptm", "ptm", "ranking_score", "fraction_disordered", "has_clash", "chain_pair_iptm", "chain_ids"):
                             if key in confidence: lines.append(f"{key}: {confidence[key]}")
                         nested = result.get("report")

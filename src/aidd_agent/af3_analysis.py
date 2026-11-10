@@ -1,5 +1,6 @@
 """Validate supplied ligand chemistry and explain recorded AF3 confidence."""
 import math
+from collections import Counter
 
 
 def validate_smiles_list(values):
@@ -43,6 +44,55 @@ MEANINGS = {
 }
 
 
+def assess_chain_mapping(confidence):
+    """Validate summary labels without inferring matrix order from input or counts."""
+    labels = confidence.get('chain_ids')
+    valid_labels = (isinstance(labels, list) and bool(labels)
+                    and all(isinstance(x, str) and bool(x) for x in labels))
+    warnings = []
+    counts = dict(Counter(labels)) if valid_labels else {}
+    if not valid_labels:
+        warnings.append('Summary chain_ids are absent or invalid; matrix chain mapping is unverified.')
+    elif len(counts) != len(labels):
+        warnings.append('Summary chain_ids contain repeated labels. They are not a unique chain list; '
+                        'do not deduplicate them to assign matrix order. Token/atom granularity is unverified.')
+    dimensions = {}
+    for key in ('chain_iptm', 'chain_ptm', 'chain_pair_iptm', 'chain_pair_pae_min'):
+        if key not in confidence:
+            continue
+        value = confidence[key]
+        if key.startswith('chain_pair_'):
+            shape_ok = (isinstance(value, list) and all(isinstance(row, list) and len(row) == len(value)
+                                                       for row in value))
+        else:
+            shape_ok = isinstance(value, list) and all(not isinstance(x, (dict, list)) for x in value)
+        if not isinstance(value, list) or not value or not shape_ok:
+            warnings.append(f'{key} has an invalid chain-level shape.')
+            dimensions[key] = None
+        else:
+            dimensions[key] = len(value)
+    sizes = {size for size in dimensions.values() if size is not None}
+    if len(sizes) > 1 or (valid_labels and any(size != len(labels) for size in sizes)):
+        warnings.append('Chain-level score dimensions do not match each other or summary chain_ids.')
+    verified = valid_labels and not warnings
+    return dict(status='summary_labels_consistent' if verified else 'unverified',
+                matrix_chain_ids=list(labels) if verified else None,
+                label_count=len(labels) if isinstance(labels, list) else None,
+                label_counts=counts, metric_dimensions=dimensions, warnings=warnings)
+
+
+def compact_confidence(confidence):
+    """Return a display copy; raw arrays remain in the recorded source artifacts."""
+    result = dict(confidence)
+    for key in ('chain_ids', 'token_chain_ids', 'atom_chain_ids'):
+        labels = result.get(key)
+        if (isinstance(labels, list) and all(isinstance(x, str) for x in labels)
+                and (len(labels) > 16 or len(set(labels)) != len(labels))):
+            result[key] = dict(representation='label_counts_not_matrix_order',
+                               total_entries=len(labels), counts=dict(Counter(labels)))
+    return result
+
+
 def explain_confidence(confidence, chain_ids=()):
     def clean(value):
         if isinstance(value, float) and not math.isfinite(value): return None
@@ -50,10 +100,11 @@ def explain_confidence(confidence, chain_ids=()):
         if isinstance(value, dict): return {k:clean(v) for k,v in value.items()}
         return value
     return dict(metrics={key:dict(value=clean(value), meaning=MEANINGS.get(key, 'Raw AF3 output field.'))
-                         for key,value in confidence.items()},
+                         for key,value in compact_confidence(confidence).items()},
+                chain_mapping=assess_chain_mapping(confidence),
                 input_chain_ids=list(chain_ids),
                 additional_metrics={key:MEANINGS[key] for key in ('plddt','pae')},
                 limitations=['No affinity, activity or validated binding conclusion follows from confidence alone.',
                              'No universal ligand acceptance threshold is applied.',
-                             'Use summary chain_ids for matrix order when present; otherwise verify full output mapping, not just input chain order.'],
+                             'Only use unique, dimension-consistent summary chain_ids for matrix order. Repeated labels and input chain order are not verified matrix mappings.'],
                 documentation='https://github.com/google-deepmind/alphafold3/blob/main/docs/output.md')

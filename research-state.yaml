@@ -1,3 +1,14 @@
+af3_chain_labels_e128:
+  date: 2026-11-10
+  protocol: experiments/E128-af3-confidence-chain-labels.md
+  guide: to_human/E128_CONFIDENCE_CHAIN_LABELS.md
+  software_tests: 95_passed
+  existing_results: read_time_diagnostics_without_reexecution
+  raw_outputs: preserved
+  live_completion: user_returned_report_not_independently_inspected
+  repeated_summary_label_origin: unverified_installed_af3_version
+  delivery_target: origin/feature/structure-guided-chat
+
 task_reliability_e127:
   date: 2026-11-10
   protocol: experiments/E127-af3-task-reliability.md
