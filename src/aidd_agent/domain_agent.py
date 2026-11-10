@@ -175,11 +175,13 @@ def pending(value):
     return value.get('status') in {'queued','running','planning'} or value.get('pending') is True or pending(value.get('result'))
 
 
-def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
+def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event=None):
     from .chat_agent import ROUTER,WORKFLOWS,read_json
     from .llm_profiles import select_llm_profile
     profile=read_json(select_llm_profile(provider,config_dir=app.config_dir))
+    native_planner = planner is None
     planner=planner or chat_plan;tools=tools or DomainTools(app,sid,request,provider)
+    emit = on_event or (lambda event: None)
     with app.connect() as db:
         history=[dict(row) for row in db.execute('SELECT role,text FROM messages WHERE session=? ORDER BY id DESC LIMIT 10',(sid,))][::-1]
     history=[dict(role=row['role'],text=row['text'][:1500]) for row in history]
@@ -193,6 +195,16 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
     try:
         for iteration in range(max_steps):
             if time.time()-audit['started']>180:break
+            emit(dict(type='status',text='Reading evidence and choosing the next step.'))
+            streamed_content = []
+            streamed_answer = ['']
+            def content_delta(delta):
+                from .chat_stream import answer_prefix
+                streamed_content.append(delta)
+                answer = answer_prefix(''.join(streamed_content))
+                if answer.startswith(streamed_answer[0]) and len(answer) > len(streamed_answer[0]):
+                    emit(dict(type='answer_delta',text=answer[len(streamed_answer[0]):]))
+                    streamed_answer[0] = answer
             context=dict(request=request,conversation=history,evidence=evidence[-6:],
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
@@ -200,7 +212,8 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
             try:
                 step,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
                     system_prompt=SYSTEM+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
-                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000)
+                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000,
+                    **({'on_content': content_delta} if native_planner and on_event else {}))
                 step=validate_step(step)
                 if step['kind']=='answer':
                     known={row['id'] for row in evidence if row['status']=='complete'}
@@ -208,8 +221,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                     answer=step['answer'];audit.update(status='pending' if waiting else 'complete',answer=answer,evidence_ids=step['evidence_ids'])
                     audit['steps'].append(dict(step=step,model=metadata));save();break
             except (ValueError,SyntaxError) as exc:
+                emit(dict(type='answer_reset'))
                 last_error=str(exc);audit['steps'].append(dict(status='invalid_plan',error=last_error));save();continue
             last_error=None;name=step['tool'];args=step['arguments']
+            emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
                 if name == 'block_campaign' and args.get('operation') in {'import','import_query','start','compare'} and waiting:
@@ -238,6 +253,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10):
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
+            emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
             if name == 'block_campaign' and args.get('operation') == 'compare' and record['status'] == 'complete':
                 answer='Independent search-only comparison arms recorded (no docking):\n'+json.dumps(result,indent=2)
                 answer+='\nInspect /status TASK_ID and /results TASK_ID. Each arm stops after a complete block reaches the conformer budget; Top-5 and Top-10 may return the same prefix.'

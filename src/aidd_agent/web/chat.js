@@ -2,17 +2,73 @@ const $=id=>document.getElementById(id);
 const fragment=new URLSearchParams(location.hash.slice(1));
 if(fragment.get('token')){sessionStorage.setItem('aidd-token',fragment.get('token'));history.replaceState(null,'',location.pathname);}
 if(fragment.get('session'))sessionStorage.setItem('aidd-session',fragment.get('session'));
-let session=sessionStorage.getItem('aidd-session'),last='',polling=false;
+let session=sessionStorage.getItem('aidd-session'),last='',polling=null, busy=false,lastState='';
+let attachedFiles=[];
+function markdown(value){const body=node('div',undefined,'markdown');body.innerHTML=AiddMarkdown.render(value);return body;}
+function setBusy(value){busy=value;for(const id of ['send','new','provider','upload-files'])if($(id))$(id).disabled=value;for(const b of $('sessions').querySelectorAll('button'))b.disabled=value;}
 async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(data.error||'Request failed');return data;}
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
-async function newSession(){const r=await api('/api/session',{});session=r.session;sessionStorage.setItem('aidd-session',session);last='';await refresh();}
-async function send(text){if($('send').disabled)return;$('error').textContent='';$('send').disabled=true;try{if(!session)await newSession();await api('/api/message',{session,text,provider:$('provider').value});if($('prompt').value===text)$('prompt').value='';await refresh();}catch(e){$('error').textContent=e.message;}finally{$('send').disabled=false;}}
-function render(state){$('task-count').textContent=state.tasks.length;$('task-count').hidden=!state.tasks.length;$('compute').textContent=state.compute_enabled?'Compute enabled':'Preparation only';$('sessions').replaceChildren();for(const s of state.sessions){const b=node('button',s.title,s.id===session?'selected':'');b.onclick=()=>{session=s.id;sessionStorage.setItem('aidd-session',session);last='';refresh();};$('sessions').append(b);}
-const key=JSON.stringify(state.messages);if(key!==last){$('messages').replaceChildren();for(const m of state.messages){const box=node('div',undefined,'message '+m.role);box.append(node('span',m.role==='user'?'You':'MEDCHEM Agent', 'role'),node('span',m.text));$('messages').append(box);}if(!state.messages.length)$('messages').append(node('p','Ask a research question.','empty'));$('messages').scrollTop=$('messages').scrollHeight;last=key;}
+async function newSession(){const r=await api('/api/session',{});session=r.session;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';await refresh();}
+async function send(text){
+if(busy)return;setBusy(true);$('error').textContent='';
+let finished=false,answer='',submitted=false;
+const originalAttachments=[...attachedFiles];
+live.hidden=false;live.replaceChildren(node('span','MEDCHEM Agent','role'));const status=node('div','Connecting...','stream-status');const preview=markdown('');live.append(status,preview);
+try{
+  if(!session)await newSession();
+  submitted=true;
+  const response=await fetch('/api/message/stream',{method:'POST',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/json'},body:JSON.stringify({session,text,provider:$('provider').value,attachments:originalAttachments.map(file=>file.id)})});
+  if(!response.ok){const error=await response.json();throw Error(error.error||'Request failed');}
+  if($('prompt').value===text)$('prompt').value='';
+  attachedFiles=[];renderAttachments();
+  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+  function event(row){
+    if(row.type==='answer_delta'){answer+=row.text;preview.innerHTML=AiddMarkdown.render(answer);status.textContent='Writing response...';}
+    else if(row.type==='answer_reset'){answer='';preview.replaceChildren();}
+    else if(row.type==='done'){finished=true;answer=row.text;preview.innerHTML=AiddMarkdown.render(answer);status.textContent='Response complete';}
+    else if(row.type==='error')throw Error(row.text);
+    else if(row.text)status.textContent=row.text;
+  }
+  while(true){const {value,done}=await reader.read();buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});let end;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end);buffer=buffer.slice(end+1);if(line.trim())event(JSON.parse(line));}if(done)break;}
+  if(buffer.trim())event(JSON.parse(buffer));
+  if(!finished)throw Error('Connection ended before the final response. Check saved tasks before resubmitting.');
+}catch(e){$('error').textContent=e.message+(submitted?' Existing tasks and uploaded files remain on this host.':'');}
+finally{setBusy(false);await refresh(true);live.hidden=true;}
+}
+function render(state){$('task-count').textContent=state.tasks.length;$('task-count').hidden=!state.tasks.length;$('compute').textContent=state.compute_enabled?'Compute enabled':'Preparation only';$('sessions').replaceChildren();for(const s of state.sessions){const b=node('button',s.title,s.id===session?'selected':'');b.disabled=busy;b.onclick=()=>{session=s.id;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';refresh();};$('sessions').append(b);}
+const key=JSON.stringify(state.messages);if(key!==last){$('messages').replaceChildren();for(const m of state.messages){const box=node('div',undefined,'message '+m.role);box.append(node('span',m.role==='user'?'You':'MEDCHEM Agent', 'role'),m.role==='assistant'?markdown(m.text):node('span',m.text));$('messages').append(box);}if(!state.messages.length)$('messages').append(node('p','Ask a research question.','empty'));$('messages').scrollTop=$('messages').scrollHeight;last=key;}
 $('coverage').replaceChildren();for(const w of state.workflows){const n=node('div',undefined,'coverage-item');n.append(node('strong',w.name),node('div',w.status),node('div',w.scope));$('coverage').append(n);}
 $('tasks').replaceChildren();if(!state.tasks.length)$('tasks').append(node('p','Your tasks will appear here.','empty'));for(const t of [...state.tasks].reverse()){const card=node('article',undefined,'task '+t.status);card.append(node('div',t.status+' / '+t.provider,'task-status'),node('p',t.request),node('div','Task '+t.id,'path'));for(const k of ['plan','report','log'])if(t[k]){card.append(node('div',k+': '+t[k],'path'));const b=node('button','Copy '+k+' path');b.onclick=()=>navigator.clipboard.writeText(t[k]).catch(e=>$('error').textContent=e.message);card.append(b);}if(t.error)card.append(node('p',t.error));if(t.details){const d=node('details');d.append(node('summary','Steps and result artifacts'),node('pre',JSON.stringify(t.details,null,2)));card.append(d);}if(t.progress){const d=node('details');d.append(node('summary','Execution log'),node('pre',t.progress));card.append(d);}const action=['queued','planning','running'].includes(t.status)?'Cancel':'Resume';const b=node('button',action+' task');b.onclick=()=>send('/'+action.toLowerCase()+' '+t.id);card.append(b);$('tasks').append(card);}}
-async function refresh(){if(polling)return;polling=true;try{const state=await api('/api/state'+(session?'?session='+encodeURIComponent(session):''));render(state);renderDocking(state.docking_results);renderWorkflowResults(state.workflow_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);$('connection').textContent='Connected';}catch(e){$('connection').textContent='Disconnected';$('error').textContent=e.message;}finally{polling=false;}}
+function refresh(force=false){
+if(polling)return force?polling.then(()=>refresh(true)):polling;
+polling=(async()=>{try{
+  const state=await api('/api/state'+(session?'?session='+encodeURIComponent(session):''));
+  const key=session+JSON.stringify(state);
+  if(key!==lastState){render(state);renderDocking(state.docking_results);renderWorkflowResults(state.workflow_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);lastState=key;}
+  $('connection').textContent='Connected';
+}catch(e){$('connection').textContent='Disconnected';$('error').textContent=e.message;}finally{polling=null;}})();
+return polling;
+}
 $('new').onclick=()=>newSession().catch(e=>$('error').textContent=e.message);$('compose').onsubmit=e=>{e.preventDefault();if($('prompt').value.trim())send($('prompt').value);};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('compose').requestSubmit();}};
+const live=node('div',undefined,'message assistant live-answer');live.hidden=true;live.setAttribute('aria-live','polite');$('messages').after(live);
+const uploadBar=node('div',undefined,'upload-bar'),uploadButton=node('button','Attach files');uploadButton.id='upload-files';uploadButton.type='button';
+const fileInput=node('input');fileInput.type='file';fileInput.multiple=true;fileInput.hidden=true;fileInput.accept='.pdb,.cif,.mmcif,.sdf,.mol2,.mol,.smi,.smiles,.csv,.tsv,.json,.fasta,.fa,.txt';
+const attachmentList=node('div',undefined,'attachment-list');attachmentList.setAttribute('aria-live','polite');
+uploadBar.append(uploadButton,node('span','Drop structures, sequences or tables here. Files stay on the Agent host.','upload-hint'),fileInput);$('prompt').before(uploadBar,attachmentList);
+function renderAttachments(){attachmentList.replaceChildren();for(const file of attachedFiles){const chip=node('div',undefined,'attachment-chip');chip.append(node('span',file.name+' ('+Math.ceil(file.bytes/1024)+' KB)'));const remove=node('button','Remove');remove.type='button';remove.disabled=busy;remove.onclick=()=>{attachedFiles=attachedFiles.filter(row=>row.id!==file.id);renderAttachments();};chip.append(remove);attachmentList.append(chip);}}
+async function uploadFiles(files){
+  if(busy)return;
+  if(attachedFiles.length+files.length>8){$('error').textContent='Attach at most eight files per message.';return;}
+  setBusy(true);$('error').textContent='';
+  try{if(!session)await newSession();for(const file of files){if(!file.size||file.size>50*1024*1024)throw Error('Use nonempty files up to 50 MiB. Keep full libraries on the host and supply their paths.');uploadButton.textContent='Uploading '+file.name+'...';const response=await fetch('/api/uploads?session='+encodeURIComponent(session)+'&name='+encodeURIComponent(file.name),{method:'POST',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/octet-stream'},body:file});const record=await response.json();if(!response.ok)throw Error(record.error||'Upload failed');attachedFiles.push(record);renderAttachments();}}
+  catch(e){$('error').textContent=e.message;}
+  finally{uploadButton.textContent='Attach files';fileInput.value='';setBusy(false);renderAttachments();}
+}
+uploadButton.onclick=()=>fileInput.click();fileInput.onchange=()=>uploadFiles([...fileInput.files]);
+for(const event of ['dragenter','dragover'])$('compose').addEventListener(event,e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();$('compose').classList.add('drop-active');}});
+$('compose').addEventListener('dragleave',e=>{if(!$('compose').contains(e.relatedTarget))$('compose').classList.remove('drop-active');});
+$('compose').addEventListener('drop',e=>{e.preventDefault();$('compose').classList.remove('drop-active');uploadFiles([...e.dataTransfer.files]);});
+document.addEventListener('click',async e=>{const button=e.target.closest('[data-copy-code]');if(!button)return;try{await navigator.clipboard.writeText(button.closest('.code-block').querySelector('code').textContent);button.textContent='Copied';setTimeout(()=>button.textContent='Copy code',1500);}catch(error){$('error').textContent='Clipboard unavailable. Select and copy the code.';}});
 refresh();setInterval(refresh,2000);
 
 $('attach').onclick=async()=>{try{if(!session)await newSession();const kind=$('attachment-kind').value;if(['kras_export','af3_batch','af3_prediction'].includes(kind))await api('/api/workflow-results',{session,arguments:{operation:'attach',kind,report:$('existing').value.trim()}});else if(kind==='equiscore')await api('/api/block-campaign',{session,arguments:{operation:'import',report:$('existing').value.trim()}});else if(kind==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};

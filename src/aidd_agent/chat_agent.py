@@ -680,8 +680,13 @@ class ChatAgent:
         result['catalog']=[{k:r[k] for k in ('id','label','kind')} for r in catalog]
         return json.dumps(result,indent=2)
 
-    def ask(self, sid, text, provider):
+    def ask(self, sid, text, provider, *, on_event=None, attachments=None):
         self.session(sid)
+        if attachments is not None and attachments != []:
+            from .chat_uploads import attach_to_prompt
+            if isinstance(text, str) and text.lstrip().startswith('/'):
+                raise ValueError('Use a natural-language request with attachments; commands require explicit paths')
+            text = attach_to_prompt(self, sid, text, attachments)
         if provider not in {"gpt", "deepseek"}: raise ValueError("Unknown provider")
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 100000: raise ValueError("Message must contain 1-100000 characters")
         # Serialize decisions, not scientific execution. Session messages stay ordered.
@@ -743,7 +748,7 @@ class ChatAgent:
                 from .domain_agent import run
                 request=text.strip()[len(command):].strip() if command=='/agent' else text
                 if not request:raise ValueError('Provide a request after /agent')
-                answer=run(self,sid,request,provider,planner=self.domain_planner)
+                answer=run(self,sid,request,provider,planner=self.domain_planner,on_event=on_event)
                 self.message(sid,'assistant',answer)
                 return answer
             if command in {'/pymol_agent','pymol_agent'}:

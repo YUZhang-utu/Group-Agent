@@ -1,3 +1,27 @@
+local_first_chat_e126:
+  date: 2026-11-10
+  guide: to_human/E126_LOCAL_FIRST_CHAT.md
+  protocol: experiments/E126-local-first-chat.md
+  checkout: D:/agent/work/e125-github-delivery
+  base_commit: 7dcc8b2
+  interface: [answer_sse_streaming, tool_progress, safe_markdown_subset, local_file_uploads]
+  uploads: {max_file_mib: 50, max_message_files: 8, provider_context: metadata_only_by_default}
+  af3_batch: explicit_resume_with_verified_completed_jobs_and_shared_protein_data
+  chat_snapshot: scientific_imports_deferred
+  python_checks: 197_passed_across_targeted_suites
+  markdown_checks: 4_passed
+  generic_retained_pool_mol2_adapter: pending
+  shared_msa_batch_chat_dispatch: pending_cli_available
+  browser_visual_acceptance: pending
+  live_provider_gpu_production_acceptance: not_run
+  delivery_target: origin/feature/structure-guided-chat
+  local_delivery_branch: delivery/e125-general-20261029
+  update_guide: to_human/E126_UPDATE_AND_TEST.md
+  isolated_ui_fixture: scripts/qa_chat_features.py
+  http_upload_tool_stream_reload: passed
+  release_affected_checks: 58_passed
+  workstation_deployment: user_pull_and_restart_required
+
 general_prompt_workflows_e125:
   date: 2026-10-29
   guide: to_human/E125_GENERAL_PROMPT_WORKFLOWS.md

@@ -159,3 +159,41 @@ def test_inference_artifact_failures_are_recorded(tmp_path,monkeypatch,failure):
     assert len(report['jobs'])==1 and report['jobs'][0]['status']=='failed'
     assert report['jobs'][0]['returncode']==1 and report['jobs'][0]['error']
     if failure!='launch_error':assert report['jobs'][0]['process_returncode']==0
+
+
+def test_resume_reuses_verified_jobs_and_shared_features(tmp_path,monkeypatch):
+    base,table=inputs(tmp_path);out=tmp_path/'batch';prep.prepare(base,table,out)
+    calls=[];fail=[True]
+    def invoke(command,log):
+        data=json.loads(Path(command[2]).read_text());calls.append((data['name'],command[-1]))
+        folder=tmp_path/('prediction'+str(len(calls)));folder.mkdir()
+        if command[-1]=='--data-only':
+            for entity in data['sequences']:
+                if 'protein' in entity:entity['protein'].update(unpairedMsa='>x\nACDEFG\n',pairedMsa='',templates=[])
+            prep.save(folder/'job_data.json',data)
+        elif data['name']=='lig2' and fail[0]:return 1,folder
+        else:
+            (folder/'job_model.cif').write_text('data_test\n')
+            prep.save(folder/'job_summary_confidences.json',{'iptm':0.5})
+        return 0,folder
+    monkeypatch.setattr(runner,'invoke',invoke)
+    with pytest.raises(RuntimeError):runner.run(out)
+    previous=next(out.glob('run_*/report.json'));fail[0]=False
+    report=runner.run(out,resume=previous)
+    assert report['status']=='complete' and report['reused_jobs']==1
+    assert calls==[('lig1','--data-only'),('lig1','--inference-only'),('lig2','--inference-only'),('lig2','--inference-only')]
+    new=next(p for p in out.glob('run_*/report.json') if p!=previous)
+    assert runner.run(out,resume=new)['reused_jobs']==2
+    assert len(calls)==4
+    Path(report['jobs'][0]['model']).write_text('modified')
+    with pytest.raises(ValueError,match='model changed'):runner.run(out,resume=new)
+
+
+def test_resume_rejects_changed_runner_before_execution(tmp_path,monkeypatch):
+    base,table=inputs(tmp_path);out=tmp_path/'batch';prep.prepare(base,table,out)
+    script=tmp_path/'runner.sh';script.write_text('# original')
+    monkeypatch.setattr(runner,'invoke',lambda *args:(1,None))
+    with pytest.raises(RuntimeError):runner.run(out,runner=script,optimize=False)
+    previous=next(out.glob('run_*/report.json'));script.write_text('# changed')
+    with pytest.raises(ValueError,match='Changed inputs/code/runtime'):
+        runner.run(out,runner=script,optimize=False,resume=previous)

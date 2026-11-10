@@ -7,8 +7,7 @@ import shutil
 import time
 import uuid
 
-from .final_work_blocks import read, sha
-from .joint_spatial_profiles import save
+from .local_files import read, sha, save
 from .project_context import ensure_within
 
 OPERATIONS = {

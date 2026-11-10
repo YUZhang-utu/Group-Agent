@@ -65,8 +65,27 @@ ligand. Covalent attachment of the newly added SMILES ligand is not implemented.
 Output inputs/ contains one JSON per ligand; manifest.json records hashes,
 literal SMILES, seeds and added chain IDs. The batch runner executes sequentially
 to avoid launching many independent AF3 jobs on the same GPU. It stops at the
-first error and writes a separate timestamped run report. It does not auto-resume:
-rerunning starts all jobs again, using fresh output directories.
+first error and writes a separate timestamped run report. A normal invocation starts
+a fresh run. Explicitly resume an existing batch with:
+
+```bash
+bash start_batch.sh --resume /path/to/jobs_TIMESTAMP_PID/run_TIMESTAMP/report.json
+# Or, when running the prepared bundle directly:
+python run_batch.py myprotein_ligands --run --resume myprotein_ligands/run_TIMESTAMP/report.json
+```
+
+Resume verifies the manifest, input files, runner/helper code, configured runtime
+paths, submitted inputs and completed model/confidence hashes. Only verified
+completed jobs are skipped. Failed or unrecorded jobs run again; matching shared
+protein data are reused. Reports are written atomically and a per-bundle process
+lock prevents overlapping runners. A new report records reused jobs and provenance.
+Legacy reports without this contract require a fresh run. Use the same `--legacy`
+setting if the original run disabled shared preparation.
+
+Runtime path equality does not verify unchanged container, weights or database
+contents at those paths. Keep these immutable while resuming; start a fresh batch
+after an in-place scientific runtime update. Interruption before a job receipt is
+saved may rerun that job even if AF3 left output files behind.
 
 Prediction output follows the existing runner convention:
 AF3_INSTALL/tests/output/LIGAND_ID/TIMESTAMP_PID/. Each job's final *_model.cif

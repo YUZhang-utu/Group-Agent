@@ -14,8 +14,7 @@ import random
 import sqlite3
 import time
 
-from .final_work_blocks import read, sha
-from .joint_spatial_profiles import save
+from .local_files import read, sha, save
 from .boundary_pair_review import readonly as open_readonly
 from .mol2 import iter_mol2_blocks, parse_mol2_block
 

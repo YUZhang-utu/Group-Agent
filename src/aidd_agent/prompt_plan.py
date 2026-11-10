@@ -342,17 +342,19 @@ def llm_http_error(exc, prompt_chars, timeout):
 
 
 def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
-              capabilities=CAPABILITIES, validator=validate_plan, max_prompt_chars=200000):
+              capabilities=CAPABILITIES, validator=validate_plan, max_prompt_chars=200000,
+              on_content=None):
     # Only trusted Python callers can raise the evidence budget; this is not a model plan field.
     if type(max_prompt_chars) is not int or not 1 <= max_prompt_chars <= 200000:
         raise ValueError('Invalid trusted prompt character budget')
     if not isinstance(prompt, str) or not 1 <= len(prompt) <= max_prompt_chars:
         raise ValueError(f"Prompt must contain 1-{max_prompt_chars} characters")
-    allowed = {"base_url", "model", "api_key_env", "json_mode", "timeout_seconds"}
+    allowed = {"base_url", "model", "api_key_env", "json_mode", "timeout_seconds", "stream"}
     if not isinstance(profile, dict) or set(profile) - allowed or not {"base_url", "model"} <= profile.keys():
         raise ValueError("Invalid LLM profile; credentials must use an environment variable")
     if not isinstance(profile["base_url"], str): raise ValueError("Invalid model endpoint")
     if "json_mode" in profile and type(profile["json_mode"]) is not bool: raise ValueError("Invalid JSON mode")
+    if "stream" in profile and type(profile["stream"]) is not bool: raise ValueError("Invalid streaming mode")
     url = profile["base_url"].rstrip("/")
     parts = urlsplit(url)
     if parts.username or parts.password or parts.query or parts.fragment or not parts.hostname:
@@ -376,19 +378,26 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
         {"role": "system", "content": system_prompt + "\n" + output_instruction + "\n" + json.dumps(capabilities, ensure_ascii=False)},
         {"role": "user", "content": prompt}]}
     if profile.get("json_mode", True): payload["response_format"] = {"type": "json_object"}
+    streaming = on_content is not None and profile.get('stream', True)
+    if streaming: payload['stream'] = True
     request = Request(url + "/chat/completions", data=json.dumps(payload).encode(), headers=headers)
     try:
         with (opener or build_opener(NoRedirect())).open(request, timeout=timeout) as response:
-            raw = response.read(2*1024*1024+1)
+            if streaming:
+                from .chat_stream import read_sse
+                result = read_sse(response, on_content)
+                raw = None
+            else:
+                raw = response.read(2*1024*1024+1)
     except HTTPError as exc:
         raise llm_http_error(exc,len(prompt),timeout) from None
     except (URLError, TimeoutError, OSError) as exc:
         timed_out=isinstance(exc,TimeoutError) or isinstance(getattr(exc,'reason',None),TimeoutError)
         category='request timed out' if timed_out else 'connection failed'
         raise LLMRequestError(f'LLM {category}; prompt characters={len(prompt)}; timeout={timeout}s. Check provider connectivity and timeout configuration; no recommendation was produced.') from None
-    if len(raw) > 2*1024*1024: raise ValueError("LLM response too large")
+    if raw is not None and len(raw) > 2*1024*1024: raise ValueError("LLM response too large")
     try:
-        result = strict_json(raw.decode("utf-8"))
+        if raw is not None: result = strict_json(raw.decode("utf-8"))
         choice = result["choices"][0]
         if choice.get("finish_reason") != "stop": raise ValueError("LLM output incomplete or refused")
         plan = validator(strict_json(choice["message"]["content"]))

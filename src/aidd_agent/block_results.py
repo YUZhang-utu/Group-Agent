@@ -8,8 +8,7 @@ import time
 import uuid
 
 from .project_context import ensure_within
-from .final_work_blocks import sha
-from .joint_spatial_profiles import save
+from .local_files import sha, save
 
 
 def read_report(path, project):

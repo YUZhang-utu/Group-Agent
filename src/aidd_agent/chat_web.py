@@ -32,6 +32,7 @@ def make_server(agent, port=8765, token=None):
         def do_GET(self):
             path = urlsplit(self.path)
             assets = {"/":("chat.html","text/html"),"/chat.js":("chat.js","text/javascript"),"/chat.css":("chat.css","text/css")}
+            assets['/markdown.js'] = ('markdown.js', 'text/javascript')
             assets['/med.png'] = ('med.png', 'image/png')
             assets.update({f'/peptide-{i}.svg': (f'peptide-{i}.svg', 'image/svg+xml') for i in range(1, 7)})
             assets.update({f'/{name}.svg': (f'{name}.svg', 'image/svg+xml') for name in ('peptide-d', 'solvent-field')})
@@ -74,9 +75,47 @@ def make_server(agent, port=8765, token=None):
                 self.send(403,{"error":"Cross-origin requests are not allowed"}); return
             try:
                 size = int(self.headers.get("Content-Length","0"))
+                route = urlsplit(self.path)
+                if route.path == '/api/uploads':
+                    from .chat_uploads import upload
+                    query = parse_qs(route.query)
+                    self.connection.settimeout(60)
+                    result = upload(agent, query['session'][0], query['name'][0], self.rfile, size)
+                    self.send(201, result)
+                    return
                 if not 0 < size <= 512000: raise ValueError("Invalid request size")
                 body = json.loads(self.rfile.read(size))
                 if not isinstance(body,dict): raise ValueError("Expected JSON object")
+                if self.path == '/api/message/stream':
+                    agent.session(body['session'])
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/x-ndjson; charset=utf-8')
+                    self.send_header('Cache-Control', 'no-store')
+                    self.send_header('X-Content-Type-Options', 'nosniff')
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
+                    self.close_connection = True
+                    connected = [True]
+                    def event(value):
+                        if not connected[0]: return
+                        try:
+                            self.wfile.write((json.dumps(value, ensure_ascii=True)+'\n').encode('utf-8'))
+                            self.wfile.flush()
+                        except OSError:
+                            # Disconnecting the browser must not duplicate or cancel scientific work.
+                            connected[0] = False
+                    event(dict(type='status',text='Connecting to the research agent.'))
+                    try:
+                        answer = agent.ask(body['session'], body['text'], body.get('provider','deepseek'),
+                                           attachments=body.get('attachments'), on_event=event)
+                        event(dict(type='done',text=answer))
+                    except (ValueError, KeyError, RuntimeError) as exc:
+                        event(dict(type='answer_reset'))
+                        event(dict(type='error',text=str(exc)))
+                    except Exception:
+                        event(dict(type='answer_reset'))
+                        event(dict(type='error',text='Request failed. Check the server and model configuration; inspect existing tasks before retrying.'))
+                    return
                 if self.path == "/api/session": result={"session":agent.new_session()}
                 elif self.path == "/api/import": result={"task":agent.attach(body["session"],body["plan"])}
                 elif self.path == '/api/workflow-results':
@@ -92,7 +131,7 @@ def make_server(agent, port=8765, token=None):
                     from .block_campaign import handle
                     result = handle(agent, body['session'], body['arguments'])
                 elif self.path == "/api/message":
-                    result={"message":agent.ask(body["session"],body["text"],body.get("provider","deepseek"))}
+                    result={"message":agent.ask(body["session"],body["text"],body.get("provider","deepseek"),attachments=body.get('attachments'))}
                 else: self.send(404,{"error":"Not found"}); return
                 self.send(200,result)
             except (ValueError,KeyError,RuntimeError) as exc: self.send(400,{"error":str(exc)})
