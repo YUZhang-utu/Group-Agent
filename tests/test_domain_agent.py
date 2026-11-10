@@ -77,17 +77,18 @@ def test_library_connection_and_exact_lookup(tmp_path):
     assert not tools.call('molecule_lookup',dict(source_name="' OR 1=1 --"))['molecules']
 
 
-def test_pending_job_prevents_duplicate_or_additional_mutations(tmp_path):
+def test_pending_job_returns_receipt_without_another_model_call(tmp_path):
     seen=[]
     decision=dict(intent='run',message='',task_id=None,request='Prepare a protein input')
     steps=[tool('workflow',decision=decision),tool('workflow',decision=decision),answer('Task queued; it has not completed.', ['E1'])]
     app=ChatAgent(tmp_path,start=False,domain_planner=scripted(steps,seen));sid=app.new_session()
     result=app.ask(sid,'Prepare a protein input','deepseek')
     assert len(app.jobs(sid))==1 and 'Execution receipts:' in result
-    assert seen[-1]['pending_execution'] is True
-    assert seen[-1]['evidence'][-1]['status']=='failed'
+    assert len(seen) == 1
+    assert 'execution are not confirmed' in result
     trace=json.loads(next((app.root/'agents'/sid).glob('*.json')).read_text())
     assert trace['status']=='pending'
+    assert len(trace['steps']) == 1
 
 
 def test_unknown_citation_repaired_and_tool_error_visible(tmp_path):

@@ -38,6 +38,7 @@ def main():
     args = parser.parse_args()
     root = Path(tempfile.mkdtemp(prefix='aidd-chat-feature-qa-'))
     app = ChatAgent(root, start=False)
+    app.interface_mode = 'isolated_test'
     domain_agent.chat_plan = fixture_planner
     server = make_server(app, args.port, token='isolated-feature-fixture')
     print('ISOLATED FIXTURE: no live provider or scientific execution', flush=True)

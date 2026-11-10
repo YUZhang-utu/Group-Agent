@@ -1,3 +1,20 @@
+task_reliability_e127:
+  date: 2026-11-10
+  protocol: experiments/E127-af3-task-reliability.md
+  guide: to_human/E127_TASK_RELIABILITY.md
+  incident_task: 0a928af2a73a479b
+  confirmed_failure: workflow_top_level_schema_before_plan_creation
+  repair_attempts: 3_total_before_dispatch
+  queue_receipt: deterministic_no_post_submission_model_call
+  diagnostics: persistent_phase_and_reason_before_execution_report
+  af3_input_contract: labelled_sequence_construct_and_seed_list_preserved
+  retained_input_artifacts: exposed_in_results_and_task_cards
+  original_failed_task_resume: tested_without_duplicate_job
+  targeted_python_cases: 187_passed_across_runs
+  markdown_checks: 4_passed
+  live_provider_gpu_validation: not_run
+  delivery_target: origin/feature/structure-guided-chat
+
 local_first_chat_e126:
   date: 2026-11-10
   guide: to_human/E126_LOCAL_FIRST_CHAT.md

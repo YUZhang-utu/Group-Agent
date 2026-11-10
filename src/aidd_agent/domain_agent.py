@@ -254,6 +254,15 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
             emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
+            if name == 'workflow' and record['status'] == 'complete' and result.get('status') == 'queued' and result.get('tasks'):
+                # Submission already succeeded. A further model call cannot improve its receipt.
+                jobs = result['tasks']
+                answer = '\n'.join('Task '+str(job['id'])+': '+str(job['status'])+'.' for job in jobs)
+                answer += ('\nThe request is recorded in the local queue. Input preparation and scientific '
+                           'execution are not confirmed by this receipt. The task panel will show actual '
+                           'progress, saved artifacts or the failure reason. Use /status TASK_ID or '
+                           '/results TASK_ID to inspect this task; do not submit the same request again.')
+                audit.update(status='pending', answer=answer, evidence_ids=[row['id']]);save();break
             if name == 'block_campaign' and args.get('operation') == 'compare' and record['status'] == 'complete':
                 answer='Independent search-only comparison arms recorded (no docking):\n'+json.dumps(result,indent=2)
                 answer+='\nInspect /status TASK_ID and /results TASK_ID. Each arm stops after a complete block reaches the conformer budget; Top-5 and Top-10 may return the same prefix.'

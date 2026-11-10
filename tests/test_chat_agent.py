@@ -39,7 +39,7 @@ def test_dialogue_clarification_routing_and_session_ownership(tmp_path):
     app.ask(sid,"Human","deepseek")
     assert any(m["text"]=="Which organism?" for m in seen[1]["conversation"])
     jid=app.task(sid)["id"]
-    assert app.task(sid)['request']=='Prepare human WEE1 input only.\nOriginal user request (preserve literal SMILES):\nPrepare WEE1 input\nHuman'
+    assert app.task(sid)['request']=='Prepare human WEE1 input only.\nOriginal user request (preserve literal SMILES):\nPrepare WEE1 input\nCurrent user request:\nHuman'
     app.ask(sid,"/status","gpt")
     assert len(app.jobs(sid))==1
     other=app.new_session()

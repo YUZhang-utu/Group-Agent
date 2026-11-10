@@ -59,6 +59,10 @@ ACTION_FIELDS = {
     "run_docking": ({"source_run"}, set()),
 }
 CAPABILITIES = {
+    "top_level_contract": {"required_fields": ["version", "summary", "clarifications", "steps"],
+        "additional_fields": False, "version": 1,
+        "step_fields": ["id", "action", "params"],
+        "note": "Return the plan itself, not a tool call, AF3 input JSON, or an envelope containing plan."},
     "workflow_skills": list(WORKFLOW_SKILLS),
     "format": "aidd-prompt-plan-v1",
     "example": {"version": 1, "summary": "Resolve human WEE1 and prepare AF3 input",
@@ -72,6 +76,10 @@ CAPABILITIES = {
 SYSTEM_PROMPT = """You are the AIDD workflow planner. Write summaries and clarification questions in English,
 regardless of the input language. Preserve exact biological identifiers. Return exactly one JSON object matching
 the supplied plan format, no Markdown. Use only allowlisted actions and fields.
+The ONLY top-level keys are version, summary, clarifications, steps. version is 1.
+Each step has exactly id, action, params. Never return kind, tool, arguments,
+status, job_name, protein or modelSeeds at the top level. You are generating a
+workflow plan, not the final AlphaFold input JSON or a conversational tool response.
 Never invent shell commands, filesystem paths, API keys, protein sequences or scientific results.
 User-supplied literal protein sequences may be copied into af3_prepare.protein_sequences.
 protein_resolve uses gene and organism taxonomy ID; when identity is ambiguous, use clarifications.
@@ -169,8 +177,13 @@ def _integer(value, low, high):
 
 
 def validate_plan(plan):
-    if not isinstance(plan, dict) or set(plan) != {"version", "summary", "clarifications", "steps"}:
-        raise ValueError("Invalid plan fields")
+    expected = {"version", "summary", "clarifications", "steps"}
+    if not isinstance(plan, dict):
+        raise ValueError('Invalid plan fields: expected an object with version, summary, clarifications, steps')
+    if set(plan) != expected:
+        raise ValueError('Invalid plan fields: missing='+','.join(sorted(expected-set(plan)))+
+                         '; extra='+','.join(sorted(set(plan)-expected))+
+                         '. Return the workflow plan itself, not a tool call, AF3 input or plan envelope.')
     if type(plan["version"]) is not int or plan["version"] != 1:
         raise ValueError("Unsupported plan version")
     if not isinstance(plan["summary"], str) or not 1 <= len(plan["summary"]) <= 2000:
@@ -186,7 +199,7 @@ def validate_plan(plan):
     seen = {}
     for step in steps:
         if not isinstance(step, dict) or set(step) != {"id", "action", "params"}:
-            raise ValueError("Invalid step fields")
+            raise ValueError('Invalid step fields: every step requires exactly id, action, params')
         sid, action, params = step["id"], step["action"], step["params"]
         if not isinstance(sid, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", sid) or sid in seen:
             raise ValueError("Invalid or duplicate step ID")
@@ -194,7 +207,9 @@ def validate_plan(plan):
             raise ValueError("Unsupported action")
         required, optional = ACTION_FIELDS[action]
         if not required <= params.keys() or params.keys() - required - optional:
-            raise ValueError(f"Invalid parameters for {action}")
+            raise ValueError(f'Invalid parameters for {action}: missing='+','.join(sorted(required-set(params)))+
+                             '; extra='+','.join(sorted(set(params)-required-optional))+
+                             '; allowed='+','.join(sorted(required|optional)))
         if action in {'target_query_prepare','target_library_search'}:
             for key,size in (('request_id',24),('request_sha256',64)):
                 if not isinstance(params[key],str) or not re.fullmatch('[a-f0-9]{'+str(size)+'}',params[key]):
@@ -320,6 +335,10 @@ class LLMRequestError(RuntimeError):
     """Locally generated, credential-free transport diagnostics safe for reports."""
 
 
+class LLMResponseError(ValueError):
+    """A completed provider exchange produced invalid structured output; safe to repair before dispatch."""
+
+
 def llm_http_error(exc, prompt_chars, timeout):
     hints={400:'Provider rejected the request; check model parameters and context capacity',
            401:'Authentication failed; check the configured API-key environment variable',
@@ -399,9 +418,11 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
     try:
         if raw is not None: result = strict_json(raw.decode("utf-8"))
         choice = result["choices"][0]
-        if choice.get("finish_reason") != "stop": raise ValueError("LLM output incomplete or refused")
+        if choice.get("finish_reason") != "stop": raise LLMResponseError("LLM output incomplete or refused")
         plan = validator(strict_json(choice["message"]["content"]))
     except (KeyError, IndexError, TypeError, UnicodeError, json.JSONDecodeError):
-        raise ValueError("Malformed LLM JSON response") from None
+        raise LLMResponseError("Malformed LLM JSON response; return one JSON object matching the supplied contract") from None
+    except ValueError as exc:
+        raise LLMResponseError(str(exc)) from None
     return plan, {"provider": "openai-compatible", "model": profile["model"],
                   "response_id": result.get("id"), "usage": result.get("usage"), "context": "user_prompt_and_tool_schema_only"}

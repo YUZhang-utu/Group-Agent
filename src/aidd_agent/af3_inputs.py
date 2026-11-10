@@ -1,5 +1,6 @@
 """Validated literal sequence and chain composition for generic AF3 prompts."""
 import hashlib
+import json
 import re
 
 
@@ -57,6 +58,31 @@ def literal_check(params, prompt):
     for value in params.get('protein_sequences', []):
         if sequence(value) not in normalized:
             raise ValueError('Protein sequences must be copied from the original user request')
+    # A labelled full construct is stronger evidence than substring occurrence.
+    explicit_prompt = prompt.rsplit('\nCurrent user request:\n', 1)[-1]
+    blocks = []
+    lines = explicit_prompt.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().lower() != 'protein sequence:': continue
+        letters = []
+        for following in lines[i+1:]:
+            if not following.strip() and not letters: continue
+            if not re.fullmatch(r'[ACDEFGHIKLMNPQRSTVWY \t]+', following.strip(), re.I): break
+            letters.append(following)
+        if letters: blocks.append(sequence(''.join(letters)))
+    if len(blocks) == 1 and 'protein_sequences' in params:
+        if any(sequence(value) != blocks[0] for value in params['protein_sequences']):
+            raise ValueError('Preserve the complete labelled protein sequence; select an explicitly requested construct with start/end')
+        if re.search(r'\b(?:without|no) trimming\b', explicit_prompt, re.I):
+            if params.get('start',1) != 1 or params.get('end',len(blocks[0])) != len(blocks[0]):
+                raise ValueError('The user requested no trimming; preserve the entire labelled protein construct')
+    explicit = re.findall(r'\b(?:model\s+)?seeds\s*:\s*(\[[^\]\n]*\])', explicit_prompt, re.I)
+    if len(explicit) == 1:
+        try: expected = json.loads(explicit[0])
+        except ValueError: raise ValueError('The explicitly labelled seed list is not valid JSON') from None
+        seeds({'seeds': expected})
+        if seeds(params) != expected:
+            raise ValueError('Model seeds must match the explicit user-supplied list exactly')
 
 
 def resolve(params, execution):

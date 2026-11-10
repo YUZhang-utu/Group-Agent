@@ -642,6 +642,7 @@ class ChatAgent:
         from .workflow_results import handle as workflow_results
         imported = workflow_results(self, sid, {'operation': 'list'})['attachments'] if sid else []
         return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,docking_results=attachments,
+                    interface_mode=getattr(self,'interface_mode','configured_agent'),
                     workflow_results=imported, compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
 
     def review_action(self,sid,decision):
@@ -944,7 +945,9 @@ class ChatAgent:
             log = str(self.root / (jid + ".log"))
             # Preserve literal chemistry alongside the router's contextual rewrite.
             request = decision['request']
-            literal = '\n'.join(m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user') or text
+            history = [m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user']
+            if history and history[-1] == text: history.pop()
+            literal = '\n'.join(history) + '\nCurrent user request:\n' + text
             request += '\nOriginal user request (preserve literal SMILES):\n' + literal
             with self.connect() as db:
                 db.execute("INSERT INTO jobs(id,session,request,provider,profile,status,log,created) VALUES(?,?,?,?,?,?,?,?)",
@@ -974,7 +977,7 @@ class ChatAgent:
                     if step.get("error"): lines.append(step["error"])
                     if intent == "results":
                         for key, value in step.get("result", {}).items():
-                            if key in {"model", "report", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
+                            if key in {"model", "report", "input_json", "provenance", "manifest", "output_directory", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
                                 lines.append(f"{key}: {value}")
                         result = step.get("result", {})
                         confidence = result.get("confidence", {})
@@ -1007,6 +1010,38 @@ class ChatAgent:
         with self.connect() as db:
             db.execute("UPDATE jobs SET "+",".join(k+"=?" for k in fields)+" WHERE id=?", (*fields.values(),jid))
 
+    @staticmethod
+    def safe_error(exc):
+        from .prompt_plan import LLMRequestError
+        message = str(exc) if isinstance(exc, (ValueError, LLMRequestError)) else type(exc).__name__
+        if isinstance(exc, ModuleNotFoundError):
+            message = f'Missing Python module: {exc.name}. Worker interpreter: {sys.executable}.'
+        for name, value in os.environ.items():
+            if len(value) >= 6 and any(word in name.upper() for word in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')):
+                message = message.replace(value, '[redacted]')
+        return message[:4000]
+
+    def record_failure(self, job, exc):
+        from .local_files import save
+        current = self.task(job['session'], job['id'])
+        phase = current['status']
+        reason = self.safe_error(exc)
+        message = f'{phase}: {reason}'
+        if phase == 'planning': message += ' No scientific engine was launched.'
+        receipt = self.root / (job['id']+'.failure.json')
+        diagnostic = dict(task_id=job['id'],status='failed',phase=phase,error=reason,
+                          plan=current.get('plan'),log=current.get('log'),time=time.time())
+        try:
+            save(receipt, diagnostic)
+            if current.get('log'):
+                with Path(current['log']).open('a', encoding='utf-8') as log:
+                    log.write('\nTask failure: '+json.dumps(diagnostic)+'\n')
+        except OSError:
+            message += ' Failure diagnostic file could not be written.'
+        self.update(job['id'], status='failed', error=message)
+        self.message(job['session'], 'assistant', f"Task {job['id']} failed during {phase}.\n{message}\n"
+                     f"Log: {current.get('log') or 'unavailable'}\nUse /status {job['id']} to inspect this task before retrying.")
+
     def work(self):
         while not self.stop.wait(.25):
             from .structure_chains import tick
@@ -1016,9 +1051,7 @@ class ChatAgent:
             if job:
                 try: self.execute(dict(job))
                 except Exception as exc:
-                    # Exception bodies from remote services must not expose credentials.
-                    self.update(job["id"], status="failed", error=str(exc) if isinstance(exc, ValueError) else type(exc).__name__)
-                    self.message(job["session"], "assistant", f"Task {job['id']} failed. Check its task panel and local execution log.")
+                    self.record_failure(dict(job), exc)
 
     @staticmethod
     def terminate(process):
@@ -1038,11 +1071,15 @@ class ChatAgent:
         if job["cancel"]: self.update(jid,status="cancelled"); return
         self.update(jid,status="planning")
         ctx = self.context
+        with Path(job['log']).open('a', encoding='utf-8') as log:
+            log.write('\nPlanning/validating task '+jid+'. Scientific execution has not started.\n')
         if not job["plan"]:
             plan = self.planner(Path(ctx["db"]),ctx["user_id"],ctx["project_id"],job["request"],llm_profile=Path(job["profile"]))
             job["plan"] = str(plan)
             job["report"] = str(plan.parent / "execution/report.json")
             self.update(jid,plan=job["plan"],report=job["report"])
+            with Path(job['log']).open('a', encoding='utf-8') as log:
+                log.write('Validated workflow plan: '+job['plan']+'\n')
             envelope = read_json(plan)
             self.message(sid,"assistant",f"Task {jid}: "+envelope["plan"]["summary"])
         if self.task(sid,jid)["cancel"] or self.stop.is_set():
@@ -1068,8 +1105,14 @@ class ChatAgent:
                 report = read_json(job["report"])
                 status = report.get("status") if report else "failed"
                 if status not in {"complete","blocked","failed"} or (process.returncode != 0 and status == "complete"): status="failed"
-                self.update(jid,status=status,error=None if status=="complete" else "Inspect the task report and log; resolve configuration before retrying.")
-                self.message(sid,"assistant",f"Task {jid}: {status}. Report: {job['report']}")
+                failures = [name+': '+str(step.get('error','No error detail recorded'))
+                            for name, step in (report or {}).get('steps',{}).items()
+                            if step.get('status') in {'failed','blocked'}]
+                if not failures and status != 'complete':
+                    failures = (report or {}).get('clarifications') or [f'Worker exited with code {process.returncode}; inspect the local execution log.']
+                error = None if status == 'complete' else self.safe_error(ValueError('\n'.join(failures)))
+                self.update(jid,status=status,error=error)
+                self.message(sid,"assistant",f"Task {jid}: {status}."+('\n'+error if error else '')+f"\nReport: {job['report']}")
                 if status == "complete":
                     summary = screening_summary(job)
                     if summary: self.message(sid,"assistant",screening_feedback(summary))

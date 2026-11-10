@@ -230,7 +230,10 @@ class DomainTools:
             return dict(tasks=[{k:j[k] for k in ('id','status','request','report','error')} for j in jobs[-100:]],total=len(jobs),truncated=len(jobs)>100)
         if name=='task_report':
             job=self.app.task(self.sid,args['task_id'])
-            if not job.get('report') or not Path(job['report']).is_file():return dict(status=job['status'],message='No report exists yet')
+            if not job.get('report') or not Path(job['report']).is_file():
+                return dict(task_id=job['id'],status=job['status'],error=job.get('error'),
+                            log=job.get('log'),plan=job.get('plan'),
+                            message='No scientific execution report exists yet. A planning failure occurs before AF3 or another engine starts.')
             path=ensure_within(Path(job['report']),self.project);data=self.json_file(path)
             if args.get('step_id'):
                 row=data.get('steps',{})[args['step_id']]

@@ -35,10 +35,37 @@ try{
 }catch(e){$('error').textContent=e.message+(submitted?' Existing tasks and uploaded files remain on this host.':'');}
 finally{setBusy(false);await refresh(true);live.hidden=true;}
 }
-function render(state){$('task-count').textContent=state.tasks.length;$('task-count').hidden=!state.tasks.length;$('compute').textContent=state.compute_enabled?'Compute enabled':'Preparation only';$('sessions').replaceChildren();for(const s of state.sessions){const b=node('button',s.title,s.id===session?'selected':'');b.disabled=busy;b.onclick=()=>{session=s.id;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';refresh();};$('sessions').append(b);}
+function render(state){modeNotice.hidden=state.interface_mode!=='isolated_test';$('task-count').textContent=state.tasks.length;$('task-count').hidden=!state.tasks.length;$('compute').textContent=state.compute_enabled?'Compute enabled':'Preparation only';$('sessions').replaceChildren();for(const s of state.sessions){const b=node('button',s.title,s.id===session?'selected':'');b.disabled=busy;b.onclick=()=>{session=s.id;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';refresh();};$('sessions').append(b);}
 const key=JSON.stringify(state.messages);if(key!==last){$('messages').replaceChildren();for(const m of state.messages){const box=node('div',undefined,'message '+m.role);box.append(node('span',m.role==='user'?'You':'MEDCHEM Agent', 'role'),m.role==='assistant'?markdown(m.text):node('span',m.text));$('messages').append(box);}if(!state.messages.length)$('messages').append(node('p','Ask a research question.','empty'));$('messages').scrollTop=$('messages').scrollHeight;last=key;}
 $('coverage').replaceChildren();for(const w of state.workflows){const n=node('div',undefined,'coverage-item');n.append(node('strong',w.name),node('div',w.status),node('div',w.scope));$('coverage').append(n);}
-$('tasks').replaceChildren();if(!state.tasks.length)$('tasks').append(node('p','Your tasks will appear here.','empty'));for(const t of [...state.tasks].reverse()){const card=node('article',undefined,'task '+t.status);card.append(node('div',t.status+' / '+t.provider,'task-status'),node('p',t.request),node('div','Task '+t.id,'path'));for(const k of ['plan','report','log'])if(t[k]){card.append(node('div',k+': '+t[k],'path'));const b=node('button','Copy '+k+' path');b.onclick=()=>navigator.clipboard.writeText(t[k]).catch(e=>$('error').textContent=e.message);card.append(b);}if(t.error)card.append(node('p',t.error));if(t.details){const d=node('details');d.append(node('summary','Steps and result artifacts'),node('pre',JSON.stringify(t.details,null,2)));card.append(d);}if(t.progress){const d=node('details');d.append(node('summary','Execution log'),node('pre',t.progress));card.append(d);}const action=['queued','planning','running'].includes(t.status)?'Cancel':'Resume';const b=node('button',action+' task');b.onclick=()=>send('/'+action.toLowerCase()+' '+t.id);card.append(b);$('tasks').append(card);}}
+$('tasks').replaceChildren();
+if(!state.tasks.length)$('tasks').append(node('p','Your tasks will appear here.','empty'));
+for(const t of [...state.tasks].reverse())$('tasks').append(taskCard(t));
+}
+function taskCard(t){
+  const card=node('article',undefined,'task '+t.status),request=t.request||'';
+  card.append(node('div',t.status+' / '+t.provider,'task-status'),node('p',request.slice(0,180)+(request.length>180?'...':'')),node('div','Task '+t.id,'path'));
+  if(request.length>180){const full=node('details');full.append(node('summary','Full request'),node('pre',request));card.append(full);}
+  if(t.status==='queued')card.append(node('p','Waiting for the local worker.'));
+  if(t.status==='planning')card.append(node('p','Preparing and validating the workflow plan. Scientific execution has not started.'));
+  for(const [id,step] of Object.entries(t.details?.steps||{})){
+    card.append(node('p',id+' / '+step.action+': '+step.status));
+    for(const key of ['input_json','model','manifest','confidence_analysis'])if(step.result?.[key]){
+      const path=step.result[key];card.append(node('div',key+': '+path,'path'));
+      const button=node('button','Copy '+key+' path');button.onclick=()=>navigator.clipboard.writeText(path).catch(e=>$('error').textContent=e.message);card.append(button);
+    }
+  }
+  if(t.error)card.append(node('p',t.error,'task-error'));
+  for(const k of ['plan','report','log'])if(t[k]){card.append(node('div',k+': '+t[k],'path'));const b=node('button','Copy '+k+' path');b.onclick=()=>navigator.clipboard.writeText(t[k]).catch(e=>$('error').textContent=e.message);card.append(b);}
+  if(t.details){const d=node('details');d.append(node('summary','Full execution report'),node('pre',JSON.stringify(t.details,null,2)));card.append(d);}
+  if(t.progress){const d=node('details');d.append(node('summary','Execution log'),node('pre',t.progress));card.append(d);}
+  const active=['queued','planning','running'].includes(t.status);
+  if(active||['failed','blocked','interrupted','cancelled'].includes(t.status)){
+    const action=active?'Cancel':'Resume',b=node('button',action+' task');b.onclick=()=>send('/'+action.toLowerCase()+' '+t.id);card.append(b);
+  }
+  const results=node('button','Show results');results.onclick=()=>send('/results '+t.id);card.append(results);
+  return card;
+}
 function refresh(force=false){
 if(polling)return force?polling.then(()=>refresh(true)):polling;
 polling=(async()=>{try{
@@ -51,6 +78,7 @@ return polling;
 }
 $('new').onclick=()=>newSession().catch(e=>$('error').textContent=e.message);$('compose').onsubmit=e=>{e.preventDefault();if($('prompt').value.trim())send($('prompt').value);};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('compose').requestSubmit();}};
 const live=node('div',undefined,'message assistant live-answer');live.hidden=true;live.setAttribute('aria-live','polite');$('messages').after(live);
+const modeNotice=node('p','INTERFACE TEST: synthetic responses, no live model or scientific execution. Open the configured Agent server to run real tasks.','fixture-notice');modeNotice.hidden=true;$('messages').before(modeNotice);
 const uploadBar=node('div',undefined,'upload-bar'),uploadButton=node('button','Attach files');uploadButton.id='upload-files';uploadButton.type='button';
 const fileInput=node('input');fileInput.type='file';fileInput.multiple=true;fileInput.hidden=true;fileInput.accept='.pdb,.cif,.mmcif,.sdf,.mol2,.mol,.smi,.smiles,.csv,.tsv,.json,.fasta,.fa,.txt';
 const attachmentList=node('div',undefined,'attachment-list');attachmentList.setAttribute('aria-live','polite');
@@ -88,7 +116,7 @@ $('tasks').prepend(card);
 function renderAgent(runs){
 for(const run of [...(runs||[])].reverse()){
 const card=node('article',undefined,'task');
-card.append(node('strong','Research agent: '+run.status),node('p',run.request));
+card.append(node('strong','Research request: '+(run.status==='pending'?'submitted; see task status':run.status)),node('p',(run.request||'').slice(0,180)));
 for(const step of run.steps||[])card.append(node('div',step.tool+' / '+step.status+' ? '+(step.error||step.purpose||'')));
 const button=node('button','Download tool trace');button.onclick=async()=>{
 try{const data=await api('/api/agent/trace?session='+encodeURIComponent(session)+'&id='+encodeURIComponent(run.id));
