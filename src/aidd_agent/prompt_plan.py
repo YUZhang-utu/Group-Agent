@@ -340,6 +340,9 @@ class LLMRequestError(RuntimeError):
 
 class LLMResponseError(ValueError):
     """A completed provider exchange produced invalid structured output; safe to repair before dispatch."""
+    def __init__(self,message,diagnostics=None):
+        super().__init__(message)
+        self.diagnostics=diagnostics or {}
 
 
 def llm_http_error(exc, prompt_chars, timeout):
@@ -365,7 +368,7 @@ def llm_http_error(exc, prompt_chars, timeout):
 
 def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
               capabilities=CAPABILITIES, validator=validate_plan, max_prompt_chars=200000,
-              on_content=None):
+              on_content=None, text_answer=False):
     # Only trusted Python callers can raise the evidence budget; this is not a model plan field.
     if type(max_prompt_chars) is not int or not 1 <= max_prompt_chars <= 200000:
         raise ValueError('Invalid trusted prompt character budget')
@@ -395,11 +398,12 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
     if type(timeout) not in (int, float) or not 1 <= timeout <= 300: raise ValueError("Invalid API timeout")
     # JSON-mode providers require an explicit JSON instruction, including for custom callers.
     # Keep the output contract explicit when provider-side JSON mode is disabled as well.
-    output_instruction = "Return a single JSON object matching the required fields, without Markdown fences or surrounding text."
+    output_instruction = ("Return the final answer as plain Markdown text. Do not return JSON or tool calls." if text_answer else
+        "Return a single JSON object matching the required fields, without Markdown fences or surrounding text.")
     payload = {"model": profile["model"], "messages": [
         {"role": "system", "content": system_prompt + "\n" + output_instruction + "\n" + json.dumps(capabilities, ensure_ascii=False)},
         {"role": "user", "content": prompt}]}
-    if profile.get("json_mode", True): payload["response_format"] = {"type": "json_object"}
+    if profile.get("json_mode", True) and not text_answer: payload["response_format"] = {"type": "json_object"}
     streaming = on_content is not None and profile.get('stream', True)
     if streaming: payload['stream'] = True
     request = Request(url + "/chat/completions", data=json.dumps(payload).encode(), headers=headers)
@@ -418,14 +422,28 @@ def chat_plan(prompt, profile, opener=None, *, system_prompt=SYSTEM_PROMPT,
         category='request timed out' if timed_out else 'connection failed'
         raise LLMRequestError(f'LLM {category}; prompt characters={len(prompt)}; timeout={timeout}s. Check provider connectivity and timeout configuration; no recommendation was produced.') from None
     if raw is not None and len(raw) > 2*1024*1024: raise ValueError("LLM response too large")
+    diagnostics={}
     try:
         if raw is not None: result = strict_json(raw.decode("utf-8"))
         choice = result["choices"][0]
-        if choice.get("finish_reason") != "stop": raise LLMResponseError("LLM output incomplete or refused")
-        plan = validator(strict_json(choice["message"]["content"]))
+        content=choice['message']['content']
+        diagnostics=dict(finish_reason=choice.get('finish_reason'),content_characters=len(content) if isinstance(content,str) else None,
+                         output_mode='text' if text_answer else 'json')
+        if choice.get("finish_reason") != "stop": raise LLMResponseError("LLM output incomplete or refused",diagnostics)
+        if text_answer:
+            plan=validator(content)
+        else:
+            # Accept an entire fenced JSON object only, never extracted fragments,
+            # repaired values, duplicate keys or trailing instructions.
+            if isinstance(content,str):
+                fenced=re.fullmatch(r'\s*```(?:json)?\s*\n([\s\S]*?)\n```\s*',content)
+                if fenced:content=fenced[1]
+            plan = validator(strict_json(content))
     except (KeyError, IndexError, TypeError, UnicodeError, json.JSONDecodeError):
-        raise LLMResponseError("Malformed LLM JSON response; return one JSON object matching the supplied contract") from None
+        raise LLMResponseError("Malformed LLM response; return the requested output contract",diagnostics) from None
+    except LLMResponseError:
+        raise
     except ValueError as exc:
-        raise LLMResponseError(str(exc)) from None
+        raise LLMResponseError(str(exc),diagnostics) from None
     return plan, {"provider": "openai-compatible", "model": profile["model"],
                   "response_id": result.get("id"), "usage": result.get("usage"), "context": "user_prompt_and_tool_schema_only"}

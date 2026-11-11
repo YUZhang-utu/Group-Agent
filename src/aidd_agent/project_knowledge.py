@@ -221,7 +221,23 @@ def model_tool(app,sid,args):
     if args.get('collection','public')!='public':
         raise ValueError('Internal knowledge is unavailable to model tools. Use the local Knowledge libraries interface.')
     if args.get('operation','search') not in {'search','list','read'}:raise ValueError('Model knowledge tools are read-only')
-    with app.lock:return retrieve(app,sid,{**args,'collection':'public'})
+    with app.lock:result=retrieve(app,sid,{**args,'collection':'public'})
+    # Keep whole verified passages and machine-readable paging inside the agent's
+    # 12000-character evidence envelope. UI retrieval retains its original limits.
+    import json
+    requested=result['limit'];original_count=len(result['results'])
+    while len(json.dumps(result,ensure_ascii=False))>8500 and len(result['results'])>1:
+        result['results'].pop()
+    if len(result['results'])<original_count:
+        result.update(has_more=True,next_offset=result['offset']+len(result['results']))
+    if len(json.dumps(result,ensure_ascii=False))>10000:
+        raise ValueError('A single knowledge passage exceeds the model context budget; inspect it locally')
+    result['requested_limit']=requested
+    result['returned_count']=len(result['results'])
+    result['operation']=args.get('operation','search')
+    if args.get('document_id'):result['document_id']=args['document_id']
+    if args.get('page') is not None:result['requested_page']=args['page']
+    return result
 
 
 def control(app,sid,args):

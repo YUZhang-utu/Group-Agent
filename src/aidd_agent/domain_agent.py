@@ -7,7 +7,7 @@ import uuid
 import sqlite3
 
 from .domain_tools import DomainTools, TOOLS, argument_contracts
-from .prompt_plan import chat_plan
+from .prompt_plan import chat_plan, LLMRequestError
 from .pymol_bridge import write_json
 
 SYSTEM = '''You are the AIDD domain research agent, connected to this user's project,
@@ -228,7 +228,7 @@ def pending(value):
     return value.get('status') in {'queued','running','planning'} or value.get('pending') is True or pending(value.get('result'))
 
 
-def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event=None):
+def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event=None,finalizer=None):
     from .chat_agent import ROUTER,WORKFLOWS,read_json
     from .llm_profiles import select_llm_profile
     profile=read_json(select_llm_profile(provider,config_dir=app.config_dir))
@@ -243,11 +243,14 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
     audit=dict(id=identifier,status='running',request=request,steps=[],started=time.time(),
                validation='Tool execution traces; no live-provider quality or scientific superiority claim')
     write_json(path,audit)
-    evidence=[];mutations=set();waiting=False;last_error=None;answer=None;failed_calls={}
+    evidence=[];mutations=set();waiting=False;last_error=None;answer=None;failed_calls={};invalid_streak=0;synthesis_allowed=True
     def save():write_json(path,audit)
     try:
         for iteration in range(max_steps):
             if time.time()-audit['started']>180:break
+            from .literature_recovery import progress, GUIDE
+            reading=progress(audit['steps'])
+            if reading['successful_public_tool_calls'] and (iteration==max_steps-1 or time.time()-audit['started']>140):break
             emit(dict(type='status',text='Reading evidence and choosing the next step.'))
             streamed_content = []
             streamed_answer = ['']
@@ -264,6 +267,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
                 pending_execution=waiting,remaining_steps=max_steps-iteration)
+            if reading['successful_public_tool_calls']:context['public_read_progress']=reading
             # Never silently cut a sequence, current request or pinned requirement.
             # Drop oldest optional dialogue/evidence first, with a visible count.
             omitted=0
@@ -275,19 +279,31 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             if len(json.dumps(context,ensure_ascii=False))>60000:
                 raise ValueError('Essential task context exceeds 60000 characters; attach long inputs or narrow this request. No scientific input was truncated.')
             try:
-                step,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
-                    system_prompt=SYSTEM+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
+                call_profile=dict(profile)
+                if native_planner:
+                    planning_deadline=140 if reading['successful_public_tool_calls'] else 180
+                    call_profile['timeout_seconds']=min(profile.get('timeout_seconds',120),max(1,int(planning_deadline-(time.time()-audit['started']))))
+                step,metadata=planner(json.dumps(context,ensure_ascii=False),call_profile,
+                    system_prompt=SYSTEM+'\n'+GUIDE+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
                     capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000,
                     **({'on_content': content_delta} if native_planner and on_event else {}))
                 step=validate_step(step)
                 if step['kind']=='answer':
                     known={row['id'] for row in evidence if row['status']=='complete'}
                     if set(step['evidence_ids'])-known:raise ValueError('Answer cited unknown or failed evidence')
-                    answer=step['answer'];audit.update(status='pending' if waiting else 'complete',answer=answer,evidence_ids=step['evidence_ids'])
+                    answer=step['answer'];audit.update(status='pending' if waiting else 'complete',answer=answer,evidence_ids=step['evidence_ids'],public_read_progress=reading)
                     audit['steps'].append(dict(step=step,model=metadata));save();break
+            except LLMRequestError as exc:
+                if not reading['successful_public_tool_calls']:raise
+                emit(dict(type='answer_reset'));last_error=str(exc);synthesis_allowed=False
+                audit['steps'].append(dict(status='provider_failed',error=last_error));save();break
             except (ValueError,SyntaxError) as exc:
                 emit(dict(type='answer_reset'))
-                last_error=str(exc);audit['steps'].append(dict(status='invalid_plan',error=last_error));save();continue
+                last_error=str(exc);invalid_streak+=1
+                audit['steps'].append(dict(status='invalid_plan',error=last_error,diagnostics=getattr(exc,'diagnostics',{})));save()
+                if invalid_streak>=2:break
+                continue
+            invalid_streak=0
             last_error=None;name=step['tool'];args=step['arguments']
             emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
@@ -367,10 +383,32 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
                     audit.update(status='pending' if waiting else 'incomplete', answer=answer);save();break
             if time.time()-audit['started']>180:break
         if answer is None:
+            from .literature_recovery import progress,recovery_context,synthesize,incomplete_message
+            ledger=progress(audit['steps']);audit['public_read_progress']=ledger
+            read_evidence=any(d['passages_read'] for d in ledger['documents'])
+            if read_evidence and synthesis_allowed and not waiting and (native_planner or finalizer is not None) and time.time()-audit['started']<180:
+                emit(dict(type='answer_reset'))
+                emit(dict(type='status',text='Preparing a read-only summary from the public passages already retrieved.'))
+                try:
+                    final_profile=dict(profile,timeout_seconds=min(profile.get('timeout_seconds',120),max(1,int(180-(time.time()-audit['started'])))))
+                    final_context=recovery_context(request,evidence,audit['steps'])
+                    step,metadata=(finalizer or synthesize)(final_context,final_profile)
+                    step=validate_step(step)
+                    known={r['id'] for r in final_context['evidence']}
+                    if step['kind']!='answer' or not step['evidence_ids'] or set(step['evidence_ids'])-known:raise ValueError('Invalid final synthesis evidence contract')
+                    answer=step['answer'];audit.update(status='complete',answer=answer,evidence_ids=step['evidence_ids'],answer_mode='read_only_text_recovery')
+                    audit['steps'].append(dict(step=step,model=metadata,status='complete',phase='read_only_synthesis'));save()
+                except (ValueError,RuntimeError,OSError) as exc:
+                    last_error=str(exc);audit['steps'].append(dict(status='answer_failed',phase='read_only_synthesis',error=last_error));save()
+        if answer is None:
             audit['status']='pending' if waiting else 'incomplete'
+            audit['failure_stage']='answer_synthesis' if ledger['successful_public_tool_calls'] else 'model_planning'
             answer='The agent reached its step/time limit before producing a valid final answer. Saved tool receipts determine which operations were submitted; do not resubmit them without checking task status. '
             if waiting:answer+='A submitted operation is still pending. '
             if last_error:answer+='Planner error: '+last_error
+            if ledger['successful_public_tool_calls'] and not waiting:answer=incomplete_message(ledger,last_error)
+            elif not evidence and last_error:
+                answer+=' No tool ran in this turn. Document import and scientific task state were not checked by this failed model response.'
             audit['answer']=answer
     except Exception as exc:
         audit.update(status='failed',error=f'{type(exc).__name__}: {exc}');save();raise
@@ -390,6 +428,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
         label=record['evidence_id']
         if result.get('source'):sources.append(label+': '+result['source'])
         for paper in result.get('papers',[]):sources.append(label+': '+str(paper['title'])+' — '+paper['url'])
+        if result.get('collection')=='public':
+            for item in result.get('results',[]):
+                if item.get('source'):
+                    sources.append(label+': '+item.get('citation',item['id'])+' '+item['source'])
     if sources:answer+='\n\nEvidence sources:\n'+'\n'.join(sources[:20])
     answer+='\n\nAgent trace: '+str(path)
     return answer

@@ -50,6 +50,15 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+E138 public-literature reading returns whole passages within the model evidence
+budget. Follow next_offset exactly, not the requested limit. The trace records
+reading coverage and failure stage. A bounded tool-free text synthesis may recover
+malformed JSON answers using only retrieved public evidence; it cannot dispatch
+work. Missing reading coverage must stay explicit. See
+[the literature recovery guide](../../../to_human/E138_PUBLIC_LITERATURE_RECOVERY.md).
+Do not re-import documents merely because model answer generation failed. Use the
+local /knowledge list command to distinguish indexing from model failure.
+
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)
 for exact contracts and live acceptance. A successful scripted-provider test is
