@@ -56,6 +56,9 @@ shared across a project's chats; different projects remain isolated. Use
 research_workflow for explicitly authorized dependency goals and molecule_prepare
 for 2D/SMILES inputs. Continue from saved candidate sets without another search.
 See [the project/P0 guide](../../../to_human/E131_TARGET_PROJECTS_AND_P0.md).
+The [E132 knowledge contract](../../../to_human/E132_PROJECT_KNOWLEDGE_AND_EXECUTION.md)
+is a proposed specification and dossier template, not an implemented context
+builder. Distinguish recorded statements, verified observations and interpretations.
 Do not retry an uncertain dispatch; reconcile the existing task receipt. Missing
 site/reference/query choices must remain explicit. Notes are statements, not
 independently verified scientific findings.
@@ -88,7 +91,7 @@ ANN recall remain measured outcomes, not guarantees from a configured budget.
 Use [the conversational workbench](../../../to_human/E041_CHAT_WORKBENCH.md) when
 users want ongoing dialogue, task progress or result lookup. The queue executes
 existing Project-scoped plans; status/results are read from reports. Keep task IDs
-session-scoped. Existing owned runs can be attached without new compute. A browser
+project-scoped. Existing owned runs can be attached without new compute. A browser
 refresh must not submit the scientific request again. Cancellation retains outputs;
 resume remains bound to code/configuration and the original sealed plan.
 
@@ -106,7 +109,7 @@ As of E124, block-routing development is deferred; retain explicit block request
 and historical result review. Prioritize AF3 and full-library workflow continuity.
 Use `workflow_results` for read-only KRAS E123 export reports, AF3 batch reports
 or AF3 prediction manifests. Imports are scoped to the Project or operator-set
-`--result-import-root` directories and owned by the conversation. They never
+`--result-import-root` directories and shared across the owning project's conversations. They never
 launch calculations and do not verify remote payloads. Imported reports are
 snapshots, not resumable Chat tasks. See
 [the core integration guide](../../../to_human/E124_CHAT_CORE_PROGRESS.md).

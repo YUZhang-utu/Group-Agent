@@ -1,3 +1,12 @@
+project_knowledge_contract_e132:
+  date: 2026-11-11
+  status: specification_and_template_only
+  specification: to_human/E132_PROJECT_KNOWLEDGE_AND_EXECUTION.md
+  template: to_human/templates/TARGET_PROJECT_DOSSIER.md
+  runtime_baseline: e131_project_memory
+  proposed_next: versioned_canonical_state_rendered_dossier_bounded_task_context_and_evidence_gates
+  implementation_and_behavioral_acceptance: not_run
+
 target_project_p0_e131:
   date: 2026-11-11
   protocol: experiments/E131-project-p0.md

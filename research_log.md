@@ -2761,3 +2761,18 @@ GPU AF3 inference or production speed/recall claim. Browser visual inspection wa
 stopped by Computer Use URL-identification enforcement; visual acceptance remains
 unverified. Guide: to_human/E131_TARGET_PROJECTS_AND_P0.md. Original dirty development
 checkout was untouched; delivery target remains origin/feature/structure-guided-chat.
+
+### 2026-11-11 E132 project knowledge contract (documentation only)
+
+User identified long-context drift risk and requested a document guiding each
+target's work step by step. Audited E131: recent conversation/task/note windows
+are bounded individually, but workflow/set lists have no shared context budget;
+notes remain recorded statements rather than curated verified knowledge. Added a
+concrete specification and reusable target dossier/task-card template. Proposed
+versioned canonical records with a deterministically rendered PROJECT.md,
+task-specific bounded context, pinned active constraints, scoped evidence,
+separate interpretations and runtime/scientific validation, explicit branch gates,
+revisioned updates and acceptance cases. Corrected older skill wording about
+session-scoped access to match E131 project sharing. No runtime code changed;
+automatic dossier generation, hard context budgets and evidence-update gates are
+not yet implemented or behaviorally validated. No new scientific experiment run.

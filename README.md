@@ -19,6 +19,9 @@ Create/select a target Project in the sidebar. Its conversations share task
 evidence, attachments, decisions and local candidate sets. Durable goals can
 prepare molecules, run searches and reuse rankings for MOL2 export across tasks.
 See [target projects and P0 workflows](to_human/E131_TARGET_PROJECTS_AND_P0.md).
+The proposed [project knowledge and execution contract](to_human/E132_PROJECT_KNOWLEDGE_AND_EXECUTION.md)
+and its target dossier template define bounded task context and evidence rules;
+automatic dossier generation and the new context gates are not implemented yet.
 Generic protein/AF3 workflows are supported; calibrated full-library search remains
 WEE1-specific. Docking and new-target acceptance are explicit pending stages.
 
