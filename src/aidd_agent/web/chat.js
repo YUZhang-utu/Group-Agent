@@ -106,6 +106,38 @@ const projectSelect=node('select');projectSelect.id='project-select';
 const projectCreate=node('button','+ New project');projectCreate.id='project-create';projectCreate.type='button';
 const memoryPanel=node('details',undefined,'project-memory');memoryPanel.append(node('summary','Project knowledge'));
 const memoryBody=node('div');memoryPanel.append(memoryBody);projectBox.append(projectLabel,projectSelect,projectCreate,memoryPanel);$('new').before(projectBox);
+const knowledgeButton=node('button','Knowledge libraries');knowledgeButton.type='button';projectBox.append(knowledgeButton);
+const knowledgeDialog=node('dialog',undefined,'project-dialog direction-dialog');document.body.append(knowledgeDialog);
+let knowledgeSession=null;
+async function knowledgeCall(arguments_){return api('/api/knowledge',{session:knowledgeSession,arguments:arguments_});}
+knowledgeButton.onclick=async()=>{
+  try{
+    if(!session)await newSession();knowledgeSession=session;knowledgeDialog.replaceChildren();
+    const close=node('button','Close');close.onclick=()=>knowledgeDialog.close();
+    const state=node('p'),output=node('pre');output.setAttribute('aria-live','polite');
+    async function status(){await knowledgeCall({operation:'status'});state.textContent='Public documents can be used by the cloud model. Internal documents stay in this local interface. Cloud use for the rest of this project remains available.';}
+    const collection=node('select');collection.setAttribute('aria-label','Document classification');collection.append(new Option('Internal / group-only','internal'),new Option('Public literature','public'));
+    const source=node('input');source.type='url';source.placeholder='Public source URL (required for public documents)';source.setAttribute('aria-label','Public source URL');
+    const confirmation=node('input');confirmation.type='checkbox';const confirmationLabel=node('label','I confirm this document and its title/source contain only public information.');confirmationLabel.prepend(confirmation);
+    const file=node('input');file.type='file';file.accept='.pdf,.txt,.md,.csv,.tsv,.json';file.setAttribute('aria-label','Knowledge document');
+    const ingest=node('button','Import into selected library');ingest.onclick=async()=>{
+      ingest.disabled=true;
+      try{
+        if(!file.files.length)throw Error('Choose a document.');
+        const chosen=file.files[0];if(chosen.size>20*1024*1024)throw Error('Use a document no larger than 20 MiB.');
+        if(collection.value==='public'&&(!confirmation.checked||!source.value))throw Error('Supply a public source URL and confirm the public classification.');
+        const query=new URLSearchParams({session:knowledgeSession,name:chosen.name,collection:collection.value,source:source.value,public_confirmed:String(confirmation.checked)});
+        const r=await fetch('/api/knowledge-upload?'+query,{method:'POST',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/octet-stream'},body:chosen});
+        const result=await r.json();if(!r.ok)throw Error(result.error||'Import failed');output.textContent=JSON.stringify(result,null,2);file.value='';
+      }catch(e){output.textContent=e.message;}finally{ingest.disabled=false;await status();}
+    };
+    const query=node('input');query.placeholder='Search words in the selected library';query.setAttribute('aria-label','Local knowledge query');
+    const search=node('button','Search locally');search.onclick=async()=>{try{output.textContent=JSON.stringify(await knowledgeCall({operation:'search',collection:collection.value,query:query.value,limit:5}),null,2);}catch(e){output.textContent=e.message;}};
+    const list=node('button','List documents');list.onclick=async()=>{try{output.textContent=JSON.stringify(await knowledgeCall({operation:'list',collection:collection.value,limit:20}),null,2);}catch(e){output.textContent=e.message;}};
+    knowledgeDialog.append(close,node('h2','Public and internal knowledge'),state,node('p','Internal search results are displayed here only and are not added to chat or project memory. Do not paste internal content into ordinary cloud chat. This classification applies to documents imported here.'),collection,source,confirmationLabel,file,ingest,node('h3','Local retrieval'),query,search,list,output);
+    await status();knowledgeDialog.showModal();
+  }catch(e){$('error').textContent=e.message;}
+};
 const directionButton=node('button','Project direction & learning');directionButton.type='button';projectBox.append(directionButton);
 const directionDialog=node('dialog',undefined,'project-dialog direction-dialog'),directionBody=node('div');directionDialog.append(directionBody);document.body.append(directionDialog);
 let guidanceState=null,guidanceSession=null;

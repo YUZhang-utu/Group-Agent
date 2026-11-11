@@ -2828,3 +2828,29 @@ four Markdown tests, JS syntax, English759files and whitespace checks. Real loca
 ethanol preparation and a two-conformer library search/import/larger MOL2 export
 were exercised; providers were scripted. No live provider/GPU/production-library
 or browser visual acceptance was run. Protocol: experiments/E133-project-guidance.md.
+
+### 2026-11-11 E134 document-level public/internal knowledge
+
+User clarified the privacy boundary: internal documents must be unavailable to
+cloud models while the same project retains normal cloud use for public material.
+Implemented separate local public/internal stores and keyword retrieval with
+document IDs, source hashes and PDF page provenance. Model tools and chat commands
+read only public documents; internal retrieval stays in the authenticated local
+Knowledge libraries UI without conversation/project-memory insertion. Internal
+storage sits outside model-readable project artifact roots. Imports default to
+internal; public imports require direct user confirmation and a source URL. No
+project-wide cloud block, automatic declassification, cloud embedding or cloud OCR.
+Added optional local pypdf support and retained source originals in their selected
+store. Existing unclassified attachments and pasted chat text are outside this
+document-import boundary; no universal DLP/host isolation claim.
+
+Confirmatory checks: 208 integrated Python cases, including 15 new privacy/retrieval
+cases, four Markdown cases, JS syntax, English763files and whitespace passed.
+Captured scripted-model context excludes private document text/title/ID while
+public retrieval continues in the same project. Tests cover deny-before-index
+access, guessed IDs, project isolation, restart, local HTTP auth, absence from
+chat memory, injected document instructions and local PDF page extraction. Fixed
+an existing cancellation handle/status race found in regression. No live cloud
+provider, production retrieval-quality or browser visual acceptance performed.
+Guide: to_human/E134_PUBLIC_AND_INTERNAL_KNOWLEDGE.md; protocol:
+experiments/E134-private-knowledge.md.

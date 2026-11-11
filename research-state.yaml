@@ -1,3 +1,20 @@
+document_knowledge_privacy_e134:
+  date: 2026-11-11
+  protocol: experiments/E134-private-knowledge.md
+  guide: to_human/E134_PUBLIC_AND_INTERNAL_KNOWLEDGE.md
+  boundary: document_level_not_project_level
+  public_documents: local_index_with_model_facing_retrieval
+  internal_documents: separate_local_store_ui_only_no_chat_memory_insertion
+  same_project_cloud_access: preserved
+  retrieval: local_sqlite_fts5_bm25_no_cloud_embedding_or_ocr
+  formats: text_pdf_utf8_txt_md_csv_tsv_json
+  integrated_tests: 208_passed
+  new_knowledge_tests: 15_passed
+  markdown_tests: 4_passed
+  live_provider_and_browser_visual_acceptance: not_run
+  limitations: ordinary_chat_and_unclassified_attachments_not_automatically_protected
+  delivery_target: origin/feature/structure-guided-chat
+
 project_direction_learning_e133:
   date: 2026-11-11
   protocol: experiments/E133-project-guidance.md

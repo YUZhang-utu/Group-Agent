@@ -64,6 +64,12 @@ constraints and use prior results as the project progresses. Mission changes are
 model proposals until a direct user action applies them; user requirement acceptance
 is revision-bound. Generic semantic alignment and scientific validity remain review
 requirements. Distinguish recorded statements, report observations and interpretations.
+Use [E134](../../../to_human/E134_PUBLIC_AND_INTERNAL_KNOWLEDGE.md) for document-level
+public/internal knowledge separation. project_knowledge is public-only for model
+tools. Internal imports and retrieval stay in the local Knowledge libraries UI;
+they do not block cloud use for the rest of the same project and are not inserted
+into chat or project memory. Never reclassify internal passages to bypass this
+boundary. This does not automatically protect ordinary chat attachments or text.
 Do not retry an uncertain dispatch; reconcile the existing task receipt. Missing
 site/reference/query choices must remain explicit. Notes are statements, not
 independently verified scientific findings.

@@ -83,6 +83,16 @@ def make_server(agent, port=8765, token=None):
                     result = upload(agent, query['session'][0], query['name'][0], self.rfile, size)
                     self.send(201, result)
                     return
+                if route.path == '/api/knowledge-upload':
+                    from .project_knowledge import ingest,MAX_BYTES
+                    query=parse_qs(route.query)
+                    if not 0<size<=MAX_BYTES:raise ValueError('Knowledge upload must be 1 byte to 20 MiB')
+                    self.connection.settimeout(60)
+                    raw=self.rfile.read(size)
+                    if len(raw)!=size:raise ValueError('Knowledge upload interrupted')
+                    result=ingest(agent,query['session'][0],query['name'][0],raw,
+                        query.get('collection',['internal'])[0],query.get('source',[''])[0],query.get('public_confirmed',['false'])[0]=='true')
+                    self.send(201,result);return
                 if not 0 < size <= 512000: raise ValueError("Invalid request size")
                 body = json.loads(self.rfile.read(size))
                 if not isinstance(body,dict): raise ValueError("Expected JSON object")
@@ -125,6 +135,9 @@ def make_server(agent, port=8765, token=None):
                     from .project_guidance import handle,user_control
                     result=(handle(agent,body['session'],body['arguments']) if body['arguments'].get('operation')=='read'
                             else user_control(agent,body['session'],body['arguments']))
+                elif self.path == '/api/knowledge':
+                    from .project_knowledge import control
+                    result=control(agent,body['session'],body['arguments'])
                 elif self.path == '/api/research-workflow':
                     from .research_workflows import handle
                     if body['arguments'].get('operation') not in {'status','pause','resume','cancel'}:

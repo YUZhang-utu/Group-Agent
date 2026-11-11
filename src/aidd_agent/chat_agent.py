@@ -725,6 +725,11 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command == '/knowledge':
+                from .project_knowledge import model_tool
+                # Chat responses enter conversation memory: private retrieval is UI-only.
+                answer=json.dumps(model_tool(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
+                self.message(sid,'assistant',answer);return answer
             if command == '/project_control':
                 from .project_guidance import user_control
                 answer=json.dumps(user_control(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
@@ -1163,8 +1168,8 @@ class ChatAgent:
                 while process.poll() is None:
                     if self.stop.wait(.25) or self.task(sid,jid)["cancel"]:
                         self.terminate(process)
-                        self.update(jid,status="interrupted" if self.stop.is_set() else "cancelled")
                         self.process = None
+                        self.update(jid,status="interrupted" if self.stop.is_set() else "cancelled")
                         return
                 self.process = None
                 report = read_json(job["report"])
