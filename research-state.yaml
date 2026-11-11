@@ -1,3 +1,14 @@
+prompt_capability_audit_e129:
+  date: 2026-11-11
+  protocol: experiments/E129-prompt-capability-audit.md
+  guide: to_human/E129_PROMPT_CAPABILITY_AUDIT.md
+  af3_worker_checks: homodimer_and_heterodimer_with_and_without_ligand
+  scientific_runtime: synthetic_fixture
+  software_tests: 111_passed_across_two_runs
+  target_search_receipt: deterministic_with_same_turn_pending_guard
+  live_dimer_gpu_and_production_library_acceptance: not_run
+  delivery_target: origin/feature/structure-guided-chat
+
 af3_chain_labels_e128:
   date: 2026-11-10
   protocol: experiments/E128-af3-confidence-chain-labels.md

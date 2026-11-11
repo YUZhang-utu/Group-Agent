@@ -227,6 +227,13 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
+                if name == 'target_search':
+                    signature=hashlib.sha256(json.dumps([name,args],sort_keys=True).encode()).hexdigest()
+                    if waiting:
+                        raise ValueError('An operation is pending; inspect its task before submitting another target search')
+                    if signature in mutations:
+                        raise ValueError('This target search was already attempted; inspect its receipt before retrying')
+                    mutations.add(signature)
                 if name == 'block_campaign' and args.get('operation') in {'import','import_query','start','compare'} and waiting:
                     raise ValueError('An operation is pending; inspect its task before submitting another campaign')
                 if name == 'block_results' and args.get('operation') == 'analyze' and waiting:
@@ -254,9 +261,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
             emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
-            if name == 'workflow' and record['status'] == 'complete' and result.get('status') == 'queued' and result.get('tasks'):
+            if (name in {'workflow', 'target_search'} and record['status'] == 'complete'
+                    and result.get('status') == 'queued' and (result.get('tasks') or result.get('task_id'))):
                 # Submission already succeeded. A further model call cannot improve its receipt.
-                jobs = result['tasks']
+                jobs = result.get('tasks') or [dict(id=result['task_id'], status=result['status'])]
                 answer = '\n'.join('Task '+str(job['id'])+': '+str(job['status'])+'.' for job in jobs)
                 answer += ('\nThe request is recorded in the local queue. Input preparation and scientific '
                            'execution are not confirmed by this receipt. The task panel will show actual '
