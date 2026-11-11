@@ -50,7 +50,7 @@ function taskCard(t){
   if(t.status==='planning')card.append(node('p','Preparing and validating the workflow plan. Scientific execution has not started.'));
   for(const [id,step] of Object.entries(t.details?.steps||{})){
     card.append(node('p',id+' / '+step.action+': '+step.status));
-    for(const key of ['input_json','model','manifest','confidence_analysis'])if(step.result?.[key]){
+    for(const key of ['input_json','model','manifest','confidence_analysis','names','ranking','original_mol2_directory','posed_mol2_directory','export_manifest'])if(step.result?.[key]){
       const path=step.result[key];card.append(node('div',key+': '+path,'path'));
       const button=node('button','Copy '+key+' path');button.onclick=()=>navigator.clipboard.writeText(path).catch(e=>$('error').textContent=e.message);card.append(button);
     }

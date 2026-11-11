@@ -50,6 +50,12 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+E130 adds `ligand_library` for attached 3D SDF/MOL2 or owned prepared cocrystal
+queries, full-catalog scoring and MOL2 handoff. See [the guide](../../../to_human/E130_LIGAND_LIBRARY_SEARCH.md).
+Target-name discovery still uses the existing structure stages; reference/site
+ambiguity remains explicit. A standalone ligand search needs no receptor. File
+upload is distinct from automatic preparation of a 2D/SMILES input.
+
 For composable skill-backed desktop controls, use
 [E068](../../../to_human/E068_SKILL_DRIVEN_PYMOL.md). The pinned upstream PyMOL skill
 is packaged with the planner. The existing desktop session replaces upstream

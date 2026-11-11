@@ -977,7 +977,8 @@ class ChatAgent:
                     if step.get("error"): lines.append(step["error"])
                     if intent == "results":
                         for key, value in step.get("result", {}).items():
-                            if key in {"model", "report", "input_json", "provenance", "manifest", "output_directory", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis"}:
+                            if key in {"model", "report", "input_json", "provenance", "manifest", "output_directory", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis",
+                                       "full_coverage", "processed_conformers", "ranked_molecules", "exported_molecules", "shortfall", "ranking", "original_mol2_directory", "posed_mol2_directory", "names", "export_manifest"}:
                                 lines.append(f"{key}: {value}")
                         result = step.get("result", {})
                         confidence = result.get("confidence", {})

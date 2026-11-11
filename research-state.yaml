@@ -1,3 +1,17 @@
+ligand_library_handoff_e130:
+  date: 2026-11-11
+  protocol: experiments/E130-ligand-library-handoff.md
+  guide: to_human/E130_LIGAND_LIBRARY_SEARCH.md
+  entry: session_3d_sdf_mol2_or_owned_prepared_query
+  search: all_catalog_conformers_finite_rigid_gaussian_poses
+  delivery: unique_molecule_ranking_original_and_posed_mol2
+  integrated_tests: 93_passed
+  distinct_tests_across_runs: 96_passed
+  receptor_contacts: not_part_of_this_similarity_lane
+  live_target_discovery_and_production_library_validation: not_run
+  unattended_target_name_to_export: not_established_staged_workflow_remains
+  delivery_target: origin/feature/structure-guided-chat
+
 prompt_capability_audit_e129:
   date: 2026-11-11
   protocol: experiments/E129-prompt-capability-audit.md

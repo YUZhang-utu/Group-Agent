@@ -8,6 +8,16 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+For target-name requests, reuse protein/PDB discovery and ligand diversity/pocket/
+consensus preparation; do not require users to manually supply retrievable receptor
+files. E130 `ligand_library` inspects owned prepared cocrystal queries or takes a
+session-uploaded single 3D SDF/MOL2, scores all catalog conformers, ranks unique
+molecules and exports original/posed MOL2. See [the ligand-library guide](../../../to_human/E130_LIGAND_LIBRARY_SEARCH.md).
+Standalone ligand similarity requires no receptor. It does not perform receptor
+contact/clash checks. Combined search/export instructions authorize both stages;
+use the requested output count and keep complete ranking local. Do not conflate
+full-catalog scoring with the existing full-index ANN budget retrieval workflow.
+
 E125 adds `target_search` for an explicitly user-selected receptor and binding
 reference of any target. Use the [general guide](../../../to_human/E125_GENERAL_PROMPT_WORKFLOWS.md).
 This trusted Chat coordinator accepts PDB/mmCIF plus receptor-frame SDF/MOL2, or a

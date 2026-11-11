@@ -2,6 +2,7 @@
 from pathlib import Path
 
 STAGES = {
+    'target_query_prepare': [], 'ligand_library_search': [],
     'pdb_fetch': [], 'structure_diversity': ['pockets'],
     'pocket_states': ['adopt'], 'pocket_adopt': ['consensus'], 'pocket_consensus': ['recommend'],
     'structure_consensus': ['recommend'],
@@ -35,11 +36,14 @@ def inspect(tools, args):
                     if step.get('status')!='complete':continue
                     child_path=step.get('result',{}).get('report')
                     child=tools.json_file(ensure_within(Path(child_path),tools.project)) if child_path else {}
+                    if action in {'structure_consensus','pocket_consensus','consensus_design','target_query_prepare'}:
+                        stage['next_tools'] = ['ligand_library.inspect']
                     stage['evidence']={k:child[k] for k in (
                         'status','target','reference_site_pdb','readiness','selection','quality_site_unique_ligands',
                         'coverage_curve','template_selection','proposed_template_ids','ranked_molecules',
                         'exported_molecules','start_rank','end_rank','shortfall','review_required',
                         'limitations','outputs','clusters','sensitivity','selected_cluster_ids','pocket_state_id',
+                        'full_coverage','processed_conformers','original_mol2_directory','posed_mol2_directory','ranking','names',
                         'receptor_advice','receptor_options') if k in child}
                     if child.get('receptor_advice'):
                         from .receptor_advice import compact
@@ -72,5 +76,6 @@ def inspect(tools, args):
             'Diversity uses Morgan/Tanimoto chemical differences; consensus performs protein/pocket alignment and admission.',
             'needs_reference_instance requires reference_query and target_chain. After selection, rerun consensus from the original diversity source.',
             'Budget queries the full-library ANN index but scores retrieved molecules only, not every library pose. Use budget for budgeted delivery, guided only for a threshold funnel.',
+            'For prepared cocrystal or target-query ligands, ligand_library.inspect lists selectable queries for all-conformer similarity scoring and original/posed MOL2 export. Uploaded standalone 3D ligands use attachment_id without a receptor.',
             'Budget pages reuse rankings. Select the latest page of the intended branch to avoid repeated delivery.',
             'Supported next intents are not authorization. Preserve user requirements and all scientific prerequisites.'])

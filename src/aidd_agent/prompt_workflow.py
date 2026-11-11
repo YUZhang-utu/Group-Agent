@@ -72,7 +72,7 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
             value = validate_plan(value)
             if any(set(s['params']) & {'source_run','receptor_run','attachment_id'} for s in value['steps']):
                 raise ValueError('Use separate chat evidence/selection/export actions for prior tasks')
-            if any(s['action'] in {'target_query_prepare','target_library_search'} for s in value['steps']):
+            if any(s['action'] in {'target_query_prepare','target_library_search','ligand_library_search'} for s in value['steps']):
                 raise ValueError('Use the trusted target_search coordinator for receptor/reference requests')
             original = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
             for step in value['steps']:
@@ -191,6 +191,9 @@ def load_runtime(path):
 
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
+    if step['action'] == 'ligand_library_search':
+        from .ligand_library import execute
+        return execute(step['params'], directory, execution, cfg, allow_compute)
     if step['action'] in {'target_query_prepare','target_library_search'}:
         from .target_search_workflow import execute
         return execute(step['action'],step['params'],directory,execution,cfg,allow_compute,services)
@@ -474,6 +477,11 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
+                if step['action'] == 'ligand_library_search':
+                    from .ligand_library import request_file
+                    entry = request_file(execution, step['params'])
+                    request = ev.read(entry)
+                    dependencies.extend([entry, *map(Path, request['input_hashes'])])
                 if step['action'] in {'target_query_prepare','target_library_search'}:
                     from .target_search_workflow import request_file
                     entry=request_file(execution,step['params'])

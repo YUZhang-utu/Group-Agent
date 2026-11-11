@@ -32,6 +32,19 @@ survey when the user has already specified it. Use prepare when only assessing,
 start for an explicitly requested full scan, run for an owned prepared query.
 Missing site/reference/chain information requires clarification. Follow-up task
 status or result questions must not resubmit start. Preserve any specified cofactors.
+That requirement applies to receptor-contact target_search, not every library search.
+For a target name, use protein resolution and experimental structure discovery,
+diversity/pocket/consensus analysis to obtain actual cocrystal ligand queries. Do not
+demand that the user manually supply a receptor when they asked you to discover it.
+Use structure_workflow to inspect available stages and reference choices. Do not
+guess an ambiguous target, site or ligand instance. Once prepared, ligand_library
+inspect lists real query IDs; start searches the full catalog and exports MOL2.
+For an uploaded standalone 3D SDF/MOL2, use ligand_library start with attachment_id
+and an explicit export_molecules count. No receptor is required for ligand 3D
+similarity. Attachments are actual local inputs, not merely reports. A combined
+search/export request authorizes both stages. Explain ligand similarity versus
+contact-first screening, whole-catalog scoring versus ANN candidate retrieval, and
+the chosen delivery count. Keep the complete ranking and molecule files local.
 For completed CLI block docking, use block_results to attach the exact user-provided
 report, then analyze with top_n=10 unless another N is requested. Ranking uses the
 mean of the best N candidates, never the whole-block mean. Default molecule mode
@@ -227,7 +240,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
-                if name == 'target_search':
+                if name == 'target_search' or (name == 'ligand_library' and args.get('operation') == 'start'):
                     signature=hashlib.sha256(json.dumps([name,args],sort_keys=True).encode()).hexdigest()
                     if waiting:
                         raise ValueError('An operation is pending; inspect its task before submitting another target search')
@@ -261,7 +274,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
             emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
-            if (name in {'workflow', 'target_search'} and record['status'] == 'complete'
+            if (name in {'workflow', 'target_search', 'ligand_library'} and record['status'] == 'complete'
                     and result.get('status') == 'queued' and (result.get('tasks') or result.get('task_id'))):
                 # Submission already succeeded. A further model call cannot improve its receipt.
                 jobs = result.get('tasks') or [dict(id=result['task_id'], status=result['status'])]

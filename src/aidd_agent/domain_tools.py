@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'ligand_library': 'Ligand-led full local-library 3D similarity search and MOL2 export. inspect requires task_id of an owned completed consensus/design/target-query task and returns actual query IDs. start requires export_molecules (1..1000000) and EITHER attachment_id of a session-uploaded single 3D SDF/MOL2 OR task_id plus exact query_id from inspect. No receptor is required for uploaded ligand similarity. Scores ALL stored conformers using finite rigid poses, ranks best per molecule, retains ranking locally, exports original and posed MOL2 plus names. Export count caps delivery only. No receptor contacts, docking, affinity, guaranteed hits, implicit 2D conformer generation or unmeasured speed claim. Target-name requests first use the existing protein/experimental-structure/diversity/consensus workflow, then inspect prepared queries. Use budget instead when contact-first ANN retrieval is explicitly desired. Queued receipts are not completed exports.',
     'target_search': 'Generic receptor/reference full-library workflow, not tied to any target name. operation prepare creates a query only; start prepares and scans; run scans a previously completed query task_id. prepare/start need name, receptor_chains (explicit author chain IDs), receptor (exact user-supplied absolute PDB/mmCIF path) OR pdb_id, and reference_ligand (exact posed SDF/MOL2 path in receptor coordinates) OR ligand_instance {ccd,chain,residue}. Optional keep_residues [{chain,residue,name}] preserves specified cofactors/ions; water is excluded. Optional required_contacts [{chain,residue,feature_class?,distance?}] requires every listed residue in the SAME pose, with any supported reference feature per residue. Omitted contacts require any observed native feature, not all residues. Optional policy {minimum_score,coarse_constraints,pocket} overrides recorded broad exploratory defaults. Source files must be in Project or configured --input-root. Paths and PDB IDs must come from the user. Returns a queued task; inspect tasks/task_report for progress. No blind pocket invention, target-name template substitution, affinity or guaranteed recall. run needs task_id and optional contacts/policy only.',
     'workflow_results': 'Read-only external KRAS E123 export and AF3 evidence. operation list (default); attach requires kind kras_export, af3_batch or af3_prediction and the exact user-supplied absolute report path on this host. check requires attachment_id and checks source report freshness only. read requires attachment_id with optional pointer, offset, limit to page the immutable snapshot. Only active Project or operator-configured import roots are readable. Never launches calculations or verifies remote MOL2/model payloads. Keep report-only evidence distinct from payload validation; AF3 host checks are not inference. Imports do not become resumable Chat execution tasks.',
     'block_campaign': 'Adopt completed full EquiScore analysis into this conversation without inference. import: exact user-supplied analysis report.json path. list: campaign tasks and existing confirmed consensus query tasks. ranks/top: task_id plus optional score EquiScore or ChemPLP and scheme/receptor/block_id as appropriate. preview: task_id, scheme, receptor, optional method union/intersection/equiscore/chemplp and blocks 5 or 10; blocks are ranked by mean of Top-10 distinct molecules. start: same selection plus query_task_id, optional conformers (default 100000), dock (default true). Reuses the confirmed MDM2 query; retrieves CONFORMERS only inside leading blocks, permits multiple conformers per molecule, then docks against the selected receptor. Choose an explicit existing query task; never use WEE1 defaults. Call start only when search/docking is requested; reuse returned task ID. Ranking and search are exploratory, not affinity or experimental enrichment.',
@@ -29,6 +30,7 @@ TOOLS = {
 
 
 TOOL_ARGUMENTS = {
+    'ligand_library': {'operation','task_id','query_id','attachment_id','export_molecules'},
     'target_search': {'operation','name','receptor','pdb_id','reference_ligand','ligand_instance','receptor_chains','keep_residues','required_contacts','policy','task_id'},
     'workflow_results': {'operation', 'kind', 'report', 'attachment_id', 'pointer', 'offset', 'limit'},
     'block_campaign': {'operation','report','candidate_id','task_id','query_task_id','scheme','receptor','block_id','score','limit','method','blocks','conformers','dock','search_policy'},
@@ -79,6 +81,10 @@ def argument_contracts():
 
 
 def validate_arguments(name, args):
+    if name == 'ligand_library':
+        from .ligand_library import validate
+        validate(args)
+        return
     if name == 'target_search':
         from .target_search_workflow import validate
         validate(args)
@@ -196,6 +202,9 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name == 'ligand_library':
+            from .ligand_library import handle
+            return handle(self.app, self.sid, args)
         if name == 'target_search':
             for field in ('receptor','reference_ligand','pdb_id'):
                 supplied=args.get(field)
