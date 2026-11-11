@@ -670,3 +670,14 @@ source conformers rather than collapsing by molecule, matching the user's
 the existing 3D engine; the original reviewed PLANTS setup is inherited for the
 selected receptor. Local fixtures verify software behavior only. Real-library
 identity coverage and workstation search/docking completion remain unverified.
+
+## 2026-11-11 E136 scientific workflow integration
+
+The legacy predocking QC excluded partner protein chains; this is now corrected and
+regression-tested with a second-chain collision. General pose QC includes supplied
+assembly atoms and keeps missing evidence explicit. Chat now dispatches independent
+AF3 ligand batches and consumes saved candidate sets without rescanning. Explicit
+chemical-state lineage and finite conformer policies improve traceability, not a
+measured predictive claim. Software validation passed 199 integrated cases; actual
+AF3/provider/production-library acceptance remains assigned to user workstation
+feedback. Do not convert engineering completion into experimental acceptance.

@@ -1,3 +1,17 @@
+scientific_p0_e136:
+  date: 2026-11-11
+  protocol: experiments/E136-scientific-p0.md
+  guide: to_human/E136_SCIENTIFIC_P0_AND_TESTING.md
+  implementation: assembly_qc_screening_evaluation_chemical_states_af3_batches_live_acceptance
+  new_chat_tools: [pose_qc, screening_benchmark, af3_batch]
+  af3_batch: independent_ligands_shared_features_sealed_child_resume_uncertain_dispatch_block
+  scientific_boundary: available_geometry_checks_and_recorded_confidence_not_affinity_or_experimental_acceptance
+  local_environment: chemistry_and_structure_dependencies_available_no_configured_af3_catalog_or_provider_credential
+  workstation_acceptance: user_will_run_and_return_feedback
+  integrated_python_tests: 199_passed
+  af3_test_runtime: synthetic_not_live_inference
+  delivery_target: origin/feature/structure-guided-chat
+
 knowledge_hardening_e135:
   date: 2026-11-11
   protocol: experiments/E135-knowledge-hardening.md

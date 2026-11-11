@@ -50,6 +50,13 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
+durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)
+for exact contracts and live acceptance. A successful scripted-provider test is
+not live-provider/GPU/production-library validation. Shared-MSA batches are now
+available in Chat. Never resubmit uncertain child GPU dispatch or treat an available
+geometry-QC pass as biological acceptance.
+
 E131 binds conversations to target Projects. Use project memory/search before
 repeating work. Tasks, uploads, recorded decisions and saved candidate sets are
 shared across a project's chats; different projects remain isolated. Use

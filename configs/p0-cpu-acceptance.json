@@ -1,0 +1,10 @@
+{
+  "description": "Live provider and real local CPU worker smoke case; no GPU or biological validation.",
+  "cases": [{
+    "id": "chemical-preparation",
+    "prompt": "Prepare CC(=O)C as a project molecule with 3 conformers and seed 47. Preserve chemical state and use molecule_prepare.",
+    "requires": ["provider"],
+    "expected_actions": ["research_task"],
+    "result_expect": {"research_task": {"kind": "molecule_prepare", "prepared_molecules": 1, "failed_molecules": 0}}
+  }]
+}

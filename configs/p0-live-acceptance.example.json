@@ -1,0 +1,43 @@
+{
+  "description": "Operator-owned live acceptance. Replace all REPLACE_ fields; use an isolated storage directory. Existing task IDs are preserved on interruption.",
+  "cases": [
+    {
+      "id": "chemical-preparation",
+      "prompt": "Prepare CC(=O)C as a project molecule with 3 conformers and seed 47. Preserve chemical state and use molecule_prepare.",
+      "requires": ["provider"],
+      "expected_actions": ["research_task"],
+      "result_expect": {"research_task": {"kind": "molecule_prepare", "prepared_molecules": 1, "failed_molecules": 0}}
+    },
+    {
+      "id": "uploaded-ligand-full-library",
+      "prompt": "Use the attached 3D ligand to search every stored conformer of our configured local library. Export the top 10 unique molecules as original and posed MOL2. Use ligand_library.",
+      "attachments": ["REPLACE_path_to_query.sdf"],
+      "requires": ["provider", "library"],
+      "expected_actions": ["ligand_library_search"],
+      "result_expect": {"ligand_library_search": {"full_coverage": true, "exported_molecules": 10, "shortfall": 0}}
+    },
+    {
+      "id": "explicit-target-full-library",
+      "prompt": "Run target_search for REPLACE_target using receptor REPLACE_absolute_receptor_path and the posed reference ligand REPLACE_absolute_reference_sdf_path. Use receptor chains REPLACE_explicit_author_chain_ids. Search the full configured library with the recorded default exploratory policy. Preserve the native binding reference and report coverage.",
+      "requires": ["provider", "library"],
+      "expected_actions": ["target_query_prepare", "target_library_search"],
+      "expect": {"/status": "complete"}
+    },
+    {
+      "id": "af3-monomer",
+      "prompt": "Run AF3 for one copy of this exact protein sequence with no ligand: REPLACE_exact_protein_sequence. Use exactly model seeds: [47,48]. Preserve the complete sequence. Report the saved CIF and recorded confidence.",
+      "requires": ["provider", "af3"],
+      "expected_actions": ["af3_prepare", "af3_run"],
+      "result_expect": {"af3_run": {"status": "prediction_completed", "experimental_status": "not_assessed"}},
+      "af3_inputs": [{"protein_sequences": ["REPLACE_exact_protein_sequence"], "seeds": [47,48], "ligand_count": 0}]
+    },
+    {
+      "id": "af3-homodimer-independent-ligands",
+      "prompt": "Run an af3_batch named dimer_acceptance for exactly two copies of REPLACE_exact_protein_sequence, independently with these two ligands: CCO and CCN. Use shared MSA and exactly model seeds: [47,48]. These are separate complexes, not two co-ligands in one structure. Preserve literal chemistry. This is a runtime acceptance test, not a claim that these ligands bind.",
+      "requires": ["provider", "af3"],
+      "expected_actions": ["research_task"],
+      "result_expect": {"research_task": {"kind": "af3_batch", "status": "complete", "shared_msa": true}},
+      "af3_inputs": [{"protein_sequences": ["REPLACE_exact_protein_sequence", "REPLACE_exact_protein_sequence"], "seeds": [47,48], "ligand_count": 1}]
+    }
+  ]
+}

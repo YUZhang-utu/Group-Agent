@@ -135,7 +135,8 @@ def test_predocking_qc_exports_transformed_point_cloud_and_metrics(
     assert row["candidate_points_near_query_fraction"] == 1.0
     assert row["query_points_covered_fraction"] == 1.0
     assert row["protein_chain"] == "A"
-    assert row["minimum_protein_distance_angstrom"] == pytest.approx(0.5)
+    assert row["evaluated_protein_chains"] == ["A", "B"]
+    assert row["minimum_protein_distance_angstrom"] == pytest.approx(0.0)
     assert row["severe_protein_points"] == 2
     pose = Path(row["point_cloud_pdb"])
     assert row["point_cloud_pdb_sha256"] == _sha256(pose)

@@ -237,7 +237,8 @@ def test_af3_compute_gate_and_real_adapter_compilation(tmp_path):
     result, report = run(context, path, runtime=runtime, services=FakeAF3(), allow_compute=True)
     assert result["status"] == "complete" and len(commands) == 1
     assert commands[0][:2] == [sys.executable, str(runner)]
-    assert result["steps"]["fold"]["result"]["pose_quality"] == "not_independently_validated"
+    assert result["steps"]["fold"]["result"]["pose_quality"] == "not_assessed"
+    assert result["steps"]["fold"]["result"]["experimental_status"] == "not_assessed"
     run(context, path, runtime=runtime, services=FakeAF3(), allow_compute=True)
     assert len(commands) == 1
     runner.write_text("# changed runtime")

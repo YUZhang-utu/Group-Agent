@@ -170,6 +170,8 @@ def rank_chunks(stage, total, chunk_size, ranking, query_id):
 
 
 def execute(params, directory, execution, cfg, allow_compute):
+    measured_start = time.monotonic()
+    reused_execution = (directory/'search').exists()
     from .workflow_errors import Blocked
     from .gaussian_batch import _execute_stage
     from .full_library_screen import catalog_count
@@ -208,9 +210,12 @@ def execute(params, directory, execution, cfg, allow_compute):
         if total < 1: raise ValueError('The configured library has no conformers')
         ids = np.arange(total, dtype=np.int64)
         config_hash = hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest()
+        scoring_start = time.monotonic()
         _, stage = _execute_stage(run/'scores', 'full_library', ids, artifact_catalog=catalog,
             query_path=query, parameters=protocol['parameters'], config_hash=config_hash,
             workers=workers, chunk_size=chunk_size, resume=True, progress_every=1, merge=False)
+        scoring_seconds = time.monotonic()-scoring_start
+        ranking_start = time.monotonic()
         check_hashes(sources)
         if (run/'report.json').exists():
             ranked = read(run/'report.json'); check_hashes(ranked['outputs'])
@@ -226,7 +231,10 @@ def execute(params, directory, execution, cfg, allow_compute):
                 processed_conformers=total, ranked_molecules=count, sources=sources,
                 ranking='Best Gaussian shape/color score per molecule; single-template RRF is monotonic in rank',
                 outputs=fingerprint([run/'ranking.sqlite'])))
+        ranking_seconds = time.monotonic()-ranking_start
+        export_start = time.monotonic()
         page = directory/'mol2'; delivery = export(batch, run, page, 1, request['export_molecules'])
+        export_seconds = time.monotonic()-export_start
         result = dict(kind='ligand_library_search', status='complete', query_id=request['query_id'],
             full_coverage=True, processed_conformers=total, ranked_molecules=count,
             exported_molecules=delivery['exported_molecules'], shortfall=delivery['shortfall'],
@@ -234,6 +242,10 @@ def execute(params, directory, execution, cfg, allow_compute):
             original_mol2_directory=str(page/'original'), posed_mol2_directory=str(page/'posed'),
             names=str(page/'molecules.csv'), evidence=str(page/'molecules.jsonl'), stage=stage,
             sources=sources, export_manifest=str(page/'report.json'),
+            timing=dict(wall_seconds=time.monotonic()-measured_start,scoring_seconds=scoring_seconds,
+                ranking_and_integrity_seconds=ranking_seconds,export_seconds=export_seconds,
+                resumed_or_reused=reused_execution,scope='This invocation includes preparation, scoring, integrity, ranking and export',
+                fresh_latency_eligible=not reused_execution),
             outputs=fingerprint([page/'report.json', page/'molecules.csv', page/'molecules.jsonl', run/'ranking.sqlite']),
             limitations=['Ligand 3D shape/color similarity, not receptor contact screening or predicted affinity',
                          'All stored conformers scored with finite rigid-pose seeds; no new internal conformers generated',

@@ -17,7 +17,7 @@ def queue(app,sid,kind,args,inputs=None):
     folder=root/'research-requests'/identifier; folder.mkdir(parents=True)
     request=dict(kind=kind,arguments=args,input_hashes=inputs or {})
     path=folder/'request.json';_atomic_json(path,request)
-    title=('Prepare molecules' if kind=='molecule_prepare' else 'Candidates: '+args['operation'])
+    title=('Prepare molecules' if kind=='molecule_prepare' else 'Candidates: '+args['operation'] if kind=='candidate_sets' else kind)
     title+=' / '+str(args.get('name') or args.get('set_id') or args.get('attachment_id') or 'literal SMILES')[:160]
     plan=dict(version=1,summary=title,clarifications=[],steps=[dict(id='work',action='research_task',
         params=dict(request_id=identifier,request_sha256=sha(path)))])
@@ -36,7 +36,7 @@ def request_file(execution,params):
     return path
 
 
-def execute(params,directory,execution,cfg,compute):
+def execute(params,directory,execution,cfg,compute,services=None):
     from .screening_selection import check_hashes
     request=read(request_file(execution,params))
     # Literal SMILES live in the sealed request, without an external input file.
@@ -47,6 +47,18 @@ def execute(params,directory,execution,cfg,compute):
     elif request['kind']=='candidate_sets':
         from .candidate_sets import execute as candidates
         result=candidates(request['arguments'],directory,execution.parent.parent.parent,cfg)
+    elif request['kind']=='pose_qc':
+        from .pose_quality import execute as quality
+        result=quality(request['arguments'],directory,execution.parent.parent.parent)
+    elif request['kind']=='screening_benchmark':
+        from .screening_evaluation import execute as evaluate
+        result=evaluate(request['arguments'],directory)
+    elif request['kind']=='af3_batch':
+        from .scientific_tools import resolve_batch
+        from .af3_batch import execute as batch
+        from .prompt_workflow import Services
+        values=resolve_batch(request['arguments'],directory,execution.parent.parent.parent)
+        result=batch(values,directory,cfg,compute,services or Services())
     else:raise ValueError('Unknown research task')
     if request['input_hashes']:check_hashes(request['input_hashes'])
     result.update(report=str(directory/'report.json'))

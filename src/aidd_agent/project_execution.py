@@ -30,6 +30,8 @@ def expanded_steps(root,plan):
 
 def validate(root,plan,current,cfg):
     rules=current['rules'];actions={s['action'] for s in plan['steps']}
+    for s in expanded_steps(root,plan):
+        if s['action']=='research_task' and s['request']['kind']=='af3_batch':actions.update({'af3_prepare','af3_run'})
     if 'allowed_actions' in rules and actions-set(rules['allowed_actions']):raise ValueError('Mission action allowlist rejects: '+', '.join(sorted(actions-set(rules['allowed_actions']))))
     forbidden=actions & set(rules.get('forbidden_actions',[]))
     if forbidden:raise ValueError('Mission forbids: '+', '.join(sorted(forbidden)))
@@ -40,7 +42,11 @@ def validate(root,plan,current,cfg):
     from .af3_inputs import seeds
     for step in expanded_steps(root,plan):
         p=step['params']
-        if step['action']=='af3_prepare':
+        is_batch=step['action']=='research_task' and step['request']['kind']=='af3_batch'
+        if is_batch:
+            p=dict(step['request']['arguments'])
+            if 'ligands' in p:p['ligand_smiles']=[r['smiles'] for r in p['ligands']]
+        if step['action']=='af3_prepare' or is_batch:
             for field in ('protein_sequences','ligand_smiles'):
                 if field in rules and p.get(field)!=rules[field]:raise ValueError('Mission requires exact '+field+'; use the pinned input without substitution')
             if 'protein_copies' in rules and p.get('protein_copies',1)!=rules['protein_copies']:raise ValueError('Protein assembly/copy count differs from mission')

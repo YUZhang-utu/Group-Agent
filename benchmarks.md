@@ -374,3 +374,15 @@ and prefix-local delivered recovery separately, equal-work budgets, nested molec
 scales and fresh matched-quality timings. Full/all-block pilot equivalence is a
 prerequisite to the staged full run. Local evidence is synthetic software testing;
 actual MDM2 recovery and speedup remain pending workstation execution.
+
+## E136: saved-ranking and live workflow acceptance
+
+screening_benchmark compares ordered candidate sets against a declared reference
+universe. It reports positive attrition and exact-reference Top-K recovery separately;
+biological enrichment requires complete explicit binary labels. Assay comparability
+and held-out selection require review. Fresh full-library reports separate scoring,
+ranking/integrity and export wall times; reused runs are not fresh latency evidence.
+The golden-prompt runner checks actual task completion, configured actions, exact
+result fields, AF3 sequences/copies/seeds and available output hashes. Local coverage
+is software/CPU geometry only; production speed, recall and live GPU acceptance must
+be measured on the workstation. The reference panel may not be the full library.

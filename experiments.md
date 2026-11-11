@@ -1813,3 +1813,12 @@ checks: 33 passed. Workstation preflight and technical pilot now passed per user
 receipt (96/96 scored, zero failures, 12.190821549855173 seconds). Full-run and
 analysis launch command was provided; execution/completion is unconfirmed.
 No confirmatory model-quality conclusion exists.
+
+## E136: scientific P0 workflows and acceptance
+
+Protocol: experiments/E136-scientific-p0.md. Confirmatory software checks: 199
+integrated Python cases passed, including real CPU chemistry/catalog processing and
+fixture AF3 orchestration. Added a versioned live acceptance runner with exact
+input/result assertions and retained task IDs. Live provider, GPU and production
+library quality/performance are pending user workstation testing. See
+ to_human/E136_SCIENTIFIC_P0_AND_TESTING.md for steps and failure evidence.

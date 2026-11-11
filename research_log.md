@@ -2881,3 +2881,24 @@ public retrieval without private query/document data. Pagination, duplicate IDs,
 archive/restore, integrity mutation/repair, legacy migration, restart and Chinese
 literal retrieval passed. No live-provider, production retrieval-quality, GPU or
 browser visual acceptance performed. Protocol: experiments/E135-knowledge-hardening.md.
+
+### 2026-11-11 E136 scientific P0 delivery
+
+Implemented assembly-aware pose quality checks and corrected the legacy single-chain
+filter. Added project-scoped pose_qc, screening_benchmark and af3_batch tools, durable
+workflow node support, saved candidate MOL2 reuse, and explicit chemical-state and
+conformer policies. AF3 batches preserve inputs, share compatible protein features,
+serialize GPU use and retry only failed children; uncertain dispatch requires local
+operator reconciliation. Reports include sample confidence, seed coverage and
+exploratory aligned-pose consistency, independently of experimental acceptance.
+
+Confirmatory software validation: 199 integrated Python cases passed. This includes
+real RDKit CPU preparation, tiny catalog scoring, actual local worker execution,
+MOL2 export/QC, labelled ranking evaluation, project isolation, shared-feature and
+partial-resume fixtures, input mutation checks and acceptance assertions. AF3 output
+in tests is synthetic, explicitly not a live GPU result. The local preflight found
+no configured AF3 runtime, production catalog or provider credential. The user chose
+to run real workstation tests after pulling GitHub and return task/report feedback.
+Guide: to_human/E136_SCIENTIFIC_P0_AND_TESTING.md. Protocol:
+experiments/E136-scientific-p0.md. No affinity, enrichment superiority or production
+speedup is claimed. Existing public/internal knowledge boundaries remain unchanged.

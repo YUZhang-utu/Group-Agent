@@ -9,6 +9,15 @@ current evidence before selecting an experiment or claiming acceptance.
 ## Choose the execution path
 
 E131 adds project-shared molecular preparation and immutable candidate sets.
+E136 adds explicit chemical state policies and adaptive finite conformer sampling,
+`pose_qc` for supplied assemblies/saved candidate poses, and `screening_benchmark`
+for positive attrition and exact-reference recovery. Enrichment requires complete
+binary labels; unlabelled molecules are not negatives. Whole-library timings
+identify fresh versus resumed invocations. Read the
+[P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md).
+The legacy predocking QC now includes all protein chains in the supplied assembly.
+General pose_qc also includes supplied cofactors/waters unless explicitly excluded;
+neither path infers a missing biological assembly or establishes affinity.
 Use molecule_prepare for a literal SMILES or uploaded table/2D structure, then
 inspect the actual prepared queries. Save completed rankings with candidate_sets;
 filter/combine/group/export these without rescanning. A research_workflow can

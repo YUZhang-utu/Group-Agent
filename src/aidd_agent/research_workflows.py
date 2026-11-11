@@ -4,7 +4,7 @@ import re
 import time
 import uuid
 
-TOOLS = {'molecule_prepare','ligand_library','candidate_sets','workflow','target_search'}
+TOOLS = {'molecule_prepare','ligand_library','candidate_sets','workflow','target_search','af3_batch','pose_qc','screening_benchmark'}
 REFERENCE = re.compile(r'\{\{(task|query|set):([A-Za-z][A-Za-z0-9_-]{0,39})\}\}')
 
 

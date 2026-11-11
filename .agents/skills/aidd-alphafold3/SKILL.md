@@ -26,9 +26,14 @@ Explicit seed lists support 1..100 distinct integers. `seed_count` optionally
 with `seed_start` expands a deterministic range (default start 1); never combine
 the list and count modes. Literal sequences are not database-verified identities.
 
-All ligand entries in one input are co-ligands in one complex. Independent SMILES
-predictions need separate prepare/run pairs; the shared-MSA batch runner remains
-CLI-only. Read-only external batch/manifest import uses `workflow_results` and
+All ligand entries in one input are co-ligands in one complex. E136 exposes
+`af3_batch` in Chat and durable research workflows for independent literal,
+uploaded or candidate-set compounds. It uses shared compatible protein features,
+sequential GPU locking, sealed child attempts and failed-child resume. Reuse exact
+assembly through protein_task_id, or supply literal sequences/copies. See
+[the P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md).
+Uncertain interrupted GPU dispatch requires operator reconciliation after checking
+the old process exited. Never automatically relaunch it. Read-only external batch/manifest import uses `workflow_results` and
 does not verify model payloads or create resumable Chat execution tasks.
 
 DNA/RNA, custom CCD/covalent bonds and automatic domain
@@ -58,4 +63,7 @@ acceptance. Resume only matching plans/configuration/code and valid output recei
 
 Chat confidence explanations and desktop PyMOL controls are documented in
 [the structure review guide](../../../to_human/E066_CHAT_STRUCTURE_REVIEW.md).
+E136 adds recorded sample confidence, exploratory aligned-pose consistency and
+independent available geometry checks. Missing chemistry/mapping is not assessed,
+not passed. No strain-energy, affinity or experimental acceptance follows.
 Local adapter tests do not establish successful AF3 inference or desktop GUI operation.

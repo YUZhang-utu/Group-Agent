@@ -203,7 +203,7 @@ def plan_runtime(plan, runtime):
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     if step['action'] == 'research_task':
         from .research_tasks import execute
-        return execute(step['params'], directory, execution, cfg, allow_compute)
+        return execute(step['params'], directory, execution, cfg, allow_compute, services)
     if step['action'] == 'ligand_library_search':
         from .ligand_library import execute
         return execute(step['params'], directory, execution, cfg, allow_compute)
@@ -417,7 +417,16 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         if profile.get("execution") == "apptainer":
             prediction_dir.mkdir(parents=True)
         _atomic_json(directory / "command.json", dict(argv=command, source="local_operator_profile"))
-        services.run_command(command, directory / "execution.log")
+        import tempfile
+        resource_lock = file_lock(Path(tempfile.gettempdir()) / 'aidd-af3-gpu.lock')
+        try:
+            resource_lock.__enter__()
+        except OSError as exc:
+            raise Blocked('AF3 resource occupied; resume after the active prediction exits') from exc
+        try:
+            services.run_command(command, directory / "execution.log")
+        finally:
+            resource_lock.__exit__(None, None, None)
         payload = ev.read(input_path)
         manifest = inspect_alphafold3_output(prediction_dir, construct_name=payload["name"],
                     model_version=str(profile.get("version", "local_unspecified")),
@@ -426,12 +435,25 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         from .af3_analysis import explain_confidence
         analysis = explain_confidence(manifest['confidence'], manifest['chain_ids'])
         _atomic_json(directory / 'confidence-analysis.json', analysis)
+        from .af3_batch import sample_summary, validate_sample_coverage
+        from .pose_quality import af3_ligands
+        samples = sample_summary(prediction_dir)
+        validate_sample_coverage(samples, payload)
+        from .pose_consistency import summarize as pose_consistency
+        samples['pose_consistency'] = pose_consistency(samples['samples'], payload)
+        _atomic_json(directory / 'sample-summary.json', samples)
+        try:
+            quality = af3_ligands(manifest['structure_path'], input_path)
+        except Exception as exc:
+            quality = dict(qc_status='not_assessed', error=str(exc))
+        _atomic_json(directory / 'pose-quality.json', quality)
         return dict(status="prediction_completed", model=manifest["structure_path"],
                     manifest=str((directory/'prediction-manifest.json').resolve()),output_directory=str(prediction_dir.resolve()),
                     structure_sha256=manifest["structure_sha256"], confidence=manifest["confidence"],
                     confidence_analysis=str(directory / 'confidence-analysis.json'),
                     confidence_warnings=analysis['chain_mapping']['warnings'],
-                    pose_quality="not_independently_validated")
+                    pose_quality=quality['qc_status'], pose_quality_report=str(directory / 'pose-quality.json'),
+                    sample_summary=str(directory / 'sample-summary.json'), experimental_status='not_assessed')
     if action == "search_3d":
         search = cfg.get("search")
         if not search or not {'e034','coarse_chunk','bounded_pair_seeds'}<=set(search): raise Blocked("Configure batch and E034 evidence in the trusted local search profile")

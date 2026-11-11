@@ -216,7 +216,7 @@ def run_predocking_pocket_qc(
     chemistry_reader = None
     if chemical_companion is not None:
         chemistry_reader = ChemicalCompanionReader(Path(chemical_companion))
-    receptor_cache: dict[tuple[str, str], tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+    receptor_cache = {}
     rows: list[dict] = []
     pml_lines = [
         "reinitialize",
@@ -230,16 +230,17 @@ def run_predocking_pocket_qc(
         if cache_key not in receptor_cache:
             receptor_path = receptor_paths[receptor_id]
             query_xyz, model, excluded = _query_instance(receptor_path, query_id)
-            protein = [atom for atom in _protein_atoms(receptor_path, model, excluded)
-                       if atom["chain"] == excluded[1]]
+            # Include every protein chain present in the supplied assembly.
+            # A ligand at a dimer interface can collide with the partner chain.
+            protein = _protein_atoms(receptor_path, model, excluded)
             protein_xyz = np.asarray([atom["xyz"] for atom in protein], dtype=np.float64)
             protein_atomic_numbers = np.asarray([
                 ATOMIC_NUMBERS.get(str(atom["element"]).upper(), 6) for atom in protein],
                 dtype=np.uint8)
             if not len(protein_xyz):
                 raise ValueError(f"receptor has no protein heavy atoms: {receptor_path}")
-            receptor_cache[cache_key] = query_xyz, protein_xyz, protein_atomic_numbers
-        query_xyz, protein_xyz, protein_atomic_numbers = receptor_cache[cache_key]
+            receptor_cache[cache_key] = query_xyz, protein_xyz, protein_atomic_numbers, sorted({a['chain'] for a in protein})
+        query_xyz, protein_xyz, protein_atomic_numbers, evaluated_chains = receptor_cache[cache_key]
 
         candidate = reader.get(int(task["global_id"]))
         if (candidate.molecule_id != str(task["molecule_id"])
@@ -292,6 +293,7 @@ def run_predocking_pocket_qc(
             "candidate_heavy_points": len(moved),
             "query_heavy_atoms": len(query_xyz),
             "protein_chain": query_id.split(":")[2],
+            "evaluated_protein_chains": evaluated_chains,
             "centroid_distance_angstrom": float(np.linalg.norm(
                 moved.mean(axis=0) - query_xyz.mean(axis=0))),
             "candidate_points_near_query_fraction": float(np.mean(

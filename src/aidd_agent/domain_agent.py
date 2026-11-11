@@ -61,7 +61,9 @@ can combine different verified sequences. protein_copies requests identical chai
 seed_count optionally with seed_start expands deterministic seeds, or preserve an
 explicit seeds list. Multiple
 ligand entries in one af3_prepare step mean one complex; independent SMILES
-predictions require separate prepare/run pairs or the standalone batch runner.
+predictions use af3_batch with separate ligands, uploaded ligand tables or a saved
+candidate set. Use its shared MSA option for compatible protein chains. Keep
+execution status, available pose QC and experimental acceptance separate.
 Never represent an imported report as a resumable Chat job or a GPU validation.
 For explicit receptor/reference screening of ANY target, use target_search rather
 than the fixed WEE1 search_3d action or a KRAS script. A user-selected receptor/site
@@ -290,7 +292,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
-                if name in {'target_search','molecule_prepare'} or (name == 'ligand_library' and args.get('operation') == 'start') or (name == 'candidate_sets' and args.get('operation') not in {'list','show'}) or (name=='research_workflow' and args.get('operation')!='status'):
+                if name in {'target_search','molecule_prepare','af3_batch','pose_qc','screening_benchmark'} or (name == 'ligand_library' and args.get('operation') == 'start') or (name == 'candidate_sets' and args.get('operation') not in {'list','show'}) or (name=='research_workflow' and args.get('operation')!='status'):
                     signature=hashlib.sha256(json.dumps([name,args],sort_keys=True).encode()).hexdigest()
                     if waiting:
                         raise ValueError('An operation is pending; inspect its task before submitting another target search')
@@ -332,7 +334,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             if name=='research_workflow' and record['status']=='complete' and result.get('workflow_id'):
                 answer='Project workflow '+result['workflow_id']+': '+result['status']+'. '+result.get('message','')
                 audit.update(status='pending' if result['status']=='active' else 'complete',answer=answer,evidence_ids=[row['id']]);save();break
-            if (name in {'workflow', 'target_search', 'ligand_library','molecule_prepare','candidate_sets'} and record['status'] == 'complete'
+            if (name in {'workflow', 'target_search', 'ligand_library','molecule_prepare','candidate_sets','af3_batch','pose_qc','screening_benchmark'} and record['status'] == 'complete'
                     and result.get('status') == 'queued' and (result.get('tasks') or result.get('task_id'))):
                 # Submission already succeeded. A further model call cannot improve its receipt.
                 jobs = result.get('tasks') or [dict(id=result['task_id'], status=result['status'])]

@@ -59,6 +59,17 @@ TOOL_ARGUMENTS = {
     'literature_search': {'query', 'limit'}, 'viewer_status': set(), 'workflow': {'decision'},
 }
 
+from .scientific_tools import FIELDS as SCIENTIFIC_FIELDS, DESCRIPTIONS as SCIENTIFIC_DESCRIPTIONS
+TOOL_ARGUMENTS.update(SCIENTIFIC_FIELDS)
+TOOLS.update(SCIENTIFIC_DESCRIPTIONS)
+TOOLS['pose_qc'] += ' Alternatively specify set_id and count (1..1000) to check saved candidate poses, reusing original/posed MOL2 exports without rescanning.'
+TOOLS['af3_batch'] += ' Instead of literal protein_sequences, protein_task_id may reuse the exact assembly from one completed project AF3 preparation task; never multiply those copies again.'
+TOOLS['research_workflow'] += ' Additional queued node tools: af3_batch, pose_qc, screening_benchmark.'
+TOOL_ARGUMENTS['molecule_prepare'].update({'fragment_policy','tautomer_policy','max_states','conformer_policy','state_smiles'})
+TOOLS['molecule_prepare'] += (' Explicit policies: fragment_policy reject/largest; tautomer_policy preserve/enumerate; '
+    'max_states 1..20; conformer_policy fixed/adaptive. Optional state_smiles supplies exact user-provided '
+    'protonation/tautomer states of the literal parent. No automatic pH prediction. Preserve original inputs and state lineage.')
+
 BLOCK_OPERATIONS = {
     'list': (set(), set()),
     'attach': ({'report'}, set()),
@@ -217,6 +228,9 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name in SCIENTIFIC_FIELDS:
+            from .scientific_tools import handle
+            return handle(self.app,self.sid,name,args,self.request)
         if name=='project_knowledge':
             from .project_knowledge import model_tool
             return model_tool(self.app,self.sid,args)
@@ -227,6 +241,8 @@ class DomainTools:
             from .research_workflows import handle
             return handle(self.app,self.sid,args,self.provider,self.request)
         if name == 'molecule_prepare':
+            if any(not isinstance(s,str) or s not in self.request for s in args.get('state_smiles',[])):
+                raise ValueError('Chemical states must be copied literally from the user')
             if 'smiles' in args and (not isinstance(args['smiles'],str) or args['smiles'] not in self.request):
                 raise ValueError('Use the exact SMILES supplied in the request, or a project attachment')
             from .molecule_preparation import handle
