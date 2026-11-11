@@ -121,7 +121,8 @@ def test_completed_read_removes_previous_continuation_cursor(library):
     assert ledger['continuation_cursors']==[] and ledger['documents'][0]['passages_read']==public['chunks']
 
 
-def test_native_domain_path_recovers_through_text_transport(library,monkeypatch):
+@pytest.mark.parametrize('needs_correction',[False,True])
+def test_native_domain_path_recovers_through_text_transport(library,monkeypatch,needs_correction):
     from aidd_agent import domain_agent,prompt_plan
     app,sid,public,private=library;planner,calls=failing_reader(public)
     monkeypatch.setattr(domain_agent,'chat_plan',planner)
@@ -131,13 +132,15 @@ def test_native_domain_path_recovers_through_text_transport(library,monkeypatch)
             payload=json.loads(request.data);captured.append(payload)
             assert 'response_format' not in payload
             assert 'PRIVATE_SENTINEL_873' not in request.data.decode()
-            return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason='stop',message=dict(content='Public page 1 contains binding evidence. Coverage is partial. [E1]'))])).encode())
+            answer='Public page 1 contains binding evidence. Coverage is partial.'
+            if not needs_correction or len(captured)>1:answer+=' [E1]'
+            return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason='stop',message=dict(content=answer))])).encode())
     monkeypatch.setattr(prompt_plan,'build_opener',lambda *a:Opener())
     from aidd_agent.llm_profiles import select_llm_profile
     profile=json.loads(select_llm_profile('deepseek',config_dir=app.config_dir).read_text())
     if profile.get('api_key_env'):monkeypatch.setenv(profile['api_key_env'],'fixture-secret-never-in-content')
     reply=run(app,sid,'Review the public paper','deepseek')
-    assert 'Public page 1 contains' in reply and len(captured)==1 and calls[0]==3
+    assert 'Public page 1 contains' in reply and len(captured)==(2 if needs_correction else 1) and calls[0]==3
     assert not app.jobs(sid)
 
 
@@ -167,3 +170,78 @@ def test_listing_alone_never_triggers_scientific_synthesis(library):
         finalizer=lambda *a:pytest.fail('Listing is not paper evidence'))
     assert 'metadata only' in reply and 'scientific literature summary is incomplete' in reply
     assert public['document_id'] in reply
+
+
+def citation_context():
+    doc='a'*32
+    rows=[dict(id=doc,page=page,part=part,text='Reported public observation.',citation=f'{doc}:page-{page}:part-{part}')
+          for page,part in [(6,0),(9,1)]]
+    return dict(request='Review public paper',evidence=[dict(id='E1',tool='project_knowledge',status='complete',
+        result=dict(collection='public',results=rows))])
+
+
+class TextReplies:
+    def __init__(self,*replies):self.replies=iter(replies);self.payloads=[];self.timeouts=[]
+    def open(self,request,timeout):
+        self.payloads.append(json.loads(request.data));self.timeouts.append(timeout)
+        return io.BytesIO(json.dumps(dict(choices=[dict(finish_reason='stop',message=dict(content=next(self.replies)))] )).encode())
+
+
+@pytest.mark.parametrize('citation',['[E1; E1]','[ E1 ]','['+'a'*32+':page-6:part-0]',
+    '['+'a'*32+', p. 9]','['+'a'*32+':page-6]'])
+def test_known_citation_variants_resolve_without_second_provider_call(citation):
+    opener=TextReplies('Observation '+citation)
+    answer,metadata=synthesize(citation_context(),dict(base_url='http://localhost:1',model='fixture'),opener)
+    assert answer['evidence_ids']==['E1'] and '[E1]' in answer['answer']
+    assert metadata['citation_attempts']==1 and len(opener.payloads)==1
+
+
+def test_missing_citation_gets_one_tool_free_correction():
+    opener=TextReplies('Observation on page 6.', 'Observation on page 6. [E1]')
+    answer,metadata=synthesize(citation_context(),dict(base_url='http://localhost:1',model='fixture'),opener)
+    assert answer['evidence_ids']==['E1'] and metadata['citation_attempts']==2
+    assert metadata['citation_failures']==['citation_missing']
+    first,second=[json.loads(p['messages'][1]['content']) for p in opener.payloads]
+    assert second['evidence']==first['evidence']
+    assert second['citation_reference_table'][0]['page']==6
+    assert second['citation_correction']['draft']=='Observation on page 6.'
+    assert all('tools' not in p and 'response_format' not in p for p in opener.payloads)
+
+
+@pytest.mark.parametrize('text,code',[
+    ('No references','citation_missing'),('Observation [E1, E99]','citation_unknown'),
+    ('Observation [E1] ['+'a'*32+', p. 7]','citation_unresolved'),
+    ('Observation [E1] ['+'b'*32+':page-6:part-0]','citation_unresolved')])
+def test_invalid_citations_remain_rejected_after_bounded_correction(text,code):
+    opener=TextReplies(text,text)
+    with pytest.raises(LLMResponseError,match=code) as exc:
+        synthesize(citation_context(),dict(base_url='http://localhost:1',model='fixture'),opener)
+    assert len(opener.payloads)==2 and exc.value.diagnostics['citation_failures']==[code,code]
+
+
+def test_listing_id_cannot_be_used_as_scientific_citation():
+    context=citation_context()
+    context['evidence'].append(dict(id='E2',tool='project_knowledge',status='complete',
+        result=dict(collection='public',results=[dict(id='b'*32,page=2)])))
+    opener=TextReplies('Observation [E2]','Observation [E2]')
+    with pytest.raises(LLMResponseError,match='citation_unknown'):
+        synthesize(context,dict(base_url='http://localhost:1',model='fixture'),opener)
+
+
+def test_citation_correction_does_not_extend_deadline(monkeypatch):
+    from aidd_agent import literature_recovery
+    ticks=iter([0,0,10.5]);monkeypatch.setattr(literature_recovery.time,'monotonic',lambda:next(ticks))
+    opener=TextReplies('No citations')
+    with pytest.raises(LLMResponseError,match='time budget exhausted'):
+        synthesize(citation_context(),dict(base_url='http://localhost:1',model='fixture',timeout_seconds=10),opener)
+    assert len(opener.payloads)==1 and opener.timeouts==[6.5]
+
+
+def test_synthesis_transport_failure_is_not_retried():
+    from urllib.error import URLError
+    calls=[]
+    class Unavailable:
+        def open(self,*a,**k):calls.append(1);raise URLError('fixture unavailable')
+    with pytest.raises(LLMRequestError):
+        synthesize(citation_context(),dict(base_url='http://localhost:1',model='fixture'),Unavailable())
+    assert len(calls)==1

@@ -58,6 +58,10 @@ work. Missing reading coverage must stay explicit. See
 [the literature recovery guide](../../../to_human/E138_PUBLIC_LITERATURE_RECOVERY.md).
 Do not re-import documents merely because model answer generation failed. Use the
 local /knowledge list command to distinguish indexing from model failure.
+E139 supplies a passage citation reference table, resolves exact document/page
+citations and grouped evidence IDs, and allows one bounded tool-free citation
+correction. Do not invent references or silently attach evidence to uncited prose.
+Citation resolution checks source identity; scientific support requires review.
 
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)

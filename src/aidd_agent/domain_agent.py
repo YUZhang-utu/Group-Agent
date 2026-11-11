@@ -399,7 +399,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                     answer=step['answer'];audit.update(status='complete',answer=answer,evidence_ids=step['evidence_ids'],answer_mode='read_only_text_recovery')
                     audit['steps'].append(dict(step=step,model=metadata,status='complete',phase='read_only_synthesis'));save()
                 except (ValueError,RuntimeError,OSError) as exc:
-                    last_error=str(exc);audit['steps'].append(dict(status='answer_failed',phase='read_only_synthesis',error=last_error));save()
+                    last_error=str(exc);audit['steps'].append(dict(status='answer_failed',phase='read_only_synthesis',error=last_error,diagnostics=getattr(exc,'diagnostics',{})));save()
         if answer is None:
             audit['status']='pending' if waiting else 'incomplete'
             audit['failure_stage']='answer_synthesis' if ledger['successful_public_tool_calls'] else 'model_planning'

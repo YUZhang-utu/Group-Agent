@@ -70,6 +70,19 @@ the original PDF during workstation acceptance.
 
 ## Verification boundary
 
+E139 update: synthesis receives an explicit evidence/document/page reference table.
+It accepts grouped IDs such as [E1, E2] and exact retrieved passage citations;
+document/page aliases resolve only to pages present in the supplied passages.
+Bare prose without resolvable citations is not silently assigned a source. A
+citation failure permits one tool-free correction with the same public evidence,
+within the existing synthesis time budget. Unknown IDs, unread-page references
+and metadata-only citations remain invalid. Failures distinguish citation_missing,
+citation_unknown and citation_unresolved in the trace. Citation resolution verifies
+source identity, not that each scientific claim is entailed by that source.
+
+After updating and restarting the server, use the same document ID in the focused
+review prompt above. There is no need to import or index the document again.
+
 Tests cover whole-passage paging, cursor completion, malformed model JSON, the
 native fallback path with a captured provider HTTP request, known evidence IDs,
 no tool dispatch during synthesis, internal-data exclusion and preservation of
