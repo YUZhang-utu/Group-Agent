@@ -18,7 +18,7 @@ from .ai_recommendation import create_ai_review_request, import_ai_recommendatio
 from .expanded_wee1 import checked_stage, fingerprint
 from .gaussian_batch import _atomic_json
 from .prediction import write_alphafold3_input, load_model_profile, prediction_command, inspect_alphafold3_output
-from .project_context import require_project_owner, require_active_project, ensure_within
+from .project_context import require_project_owner, require_active_project, ensure_within, owned_project_operation
 from .prompt_plan import CAPABILITIES, SYSTEM_PROMPT, chat_plan, strict_json, validate_plan, LLMRequestError, LLMResponseError
 from .protein_data import fetch_protein, resolve_protein, get_json
 from .rcsb import search_structures
@@ -51,10 +51,10 @@ def file_lock(path):
 def project_root(db, user, project):
     with connect(db) as connection:
         row = require_project_owner(connection, user, project)
-        require_active_project(connection, user, project)
         return Path(row["workspace_path"]).resolve()
 
 
+@owned_project_operation
 def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=None, local_plan=None):
     root = project_root(db, user, project)
     if not isinstance(prompt, str) or not 1 <= len(prompt) <= 200000: raise ValueError("Invalid prompt length")
@@ -72,7 +72,7 @@ def create_plan(db, user, project, prompt, *, llm_profile=None, response_file=No
             value = validate_plan(value)
             if any(set(s['params']) & {'source_run','receptor_run','attachment_id'} for s in value['steps']):
                 raise ValueError('Use separate chat evidence/selection/export actions for prior tasks')
-            if any(s['action'] in {'target_query_prepare','target_library_search','ligand_library_search'} for s in value['steps']):
+            if any(s['action'] in {'target_query_prepare','target_library_search','ligand_library_search','research_task'} for s in value['steps']):
                 raise ValueError('Use the trusted target_search coordinator for receptor/reference requests')
             original = prompt.split('\nOriginal user request (preserve literal SMILES):\n', 1)[-1]
             for step in value['steps']:
@@ -191,6 +191,9 @@ def load_runtime(path):
 
 
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
+    if step['action'] == 'research_task':
+        from .research_tasks import execute
+        return execute(step['params'], directory, execution, cfg, allow_compute)
     if step['action'] == 'ligand_library_search':
         from .ligand_library import execute
         return execute(step['params'], directory, execution, cfg, allow_compute)
@@ -441,6 +444,7 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
     raise ValueError("Unsupported action")
 
 
+@owned_project_operation
 def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False, services=None):
     root = project_root(db, user, project)
     path = ensure_within(Path(plan_path), root)
@@ -477,6 +481,11 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
                 sid = step["id"]
                 directory = ensure_within(execution / sid, execution); directory.mkdir(exist_ok=True)
                 dependencies = [protocol_path, path, seal_path, *config_inputs]
+                if step['action'] == 'research_task':
+                    from .research_tasks import request_file
+                    entry = request_file(execution, step['params'])
+                    request = ev.read(entry)
+                    dependencies.extend([entry, *map(Path, request['input_hashes'])])
                 if step['action'] == 'ligand_library_search':
                     from .ligand_library import request_file
                     entry = request_file(execution, step['params'])

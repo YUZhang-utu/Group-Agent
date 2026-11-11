@@ -29,7 +29,8 @@ def test_chat_budget_queues_owned_search_and_next_page(tmp_path):
     step=json.loads(Path(queued['plan']).read_text())['plan']['steps'][0]
     assert step['action']=='consensus_budget'
     assert step['params']==dict(source_run=folder.name)
-    with pytest.raises(ValueError):app.ask(app.new_session(),'/budget '+job['id'],'deepseek')
+    from test_research_projects import create
+    with pytest.raises(ValueError):app.ask(create(app,sid,'Different target')['session'],'/budget '+job['id'],'deepseek')
     app.router=lambda *args:dict(intent='budget',message='',request='',task_id=job['id'],budget=dict(retrieval_molecules=500000,export_molecules=100000,chunk_conformers=4048,workers=20))
     app.ask(sid,'Search and deliver the top 100000 molecules','deepseek')
     natural=json.loads(Path(app.task(sid)['plan']).read_text())['plan']['steps'][0]

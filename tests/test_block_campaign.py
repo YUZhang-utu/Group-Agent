@@ -23,7 +23,7 @@ from test_block_evaluation import fixture, raw, plants_profile, fake_plants
 
 @pytest.fixture
 def imported(engine, tmp_path, monkeypatch):
-    monkeypatch.setenv('PYTHONPATH',str(Path(__file__).resolve().parents[1]/'src'))
+    monkeypatch.setenv('PYTHONPATH',os.pathsep.join(filter(None,[str(Path(__file__).resolve().parents[1]/'src'),os.environ.get('PYTHONPATH')])) )
     _, profile, calls = engine
     app = ChatAgent(tmp_path/'chat', start=False)
     sid = app.new_session()
@@ -57,7 +57,9 @@ def test_import_runs_in_real_queue_without_inference_and_inspects(imported):
     assert len(campaign.handle(app,sid,{})['tasks'])==1
     assert campaign.select_blocks(path,'E095','R1','intersection',1)['block_ids']==[]
     assert campaign.select_blocks(path,'E095','R1','union',1)['block_ids']==['A','B']
-    other=app.new_session()
+    from test_research_projects import create
+    assert campaign.handle(app,app.new_session(),dict(operation='ranks',task_id=job['id'],scheme='E095',receptor='R1'))['blocks']
+    other=create(app,sid,'Different target')['session']
     with pytest.raises(ValueError):
         campaign.handle(app,other,dict(operation='ranks',task_id=job['id']))
 
@@ -258,7 +260,9 @@ def test_config_retry_preserves_receipt_and_is_idempotent(tmp_path):
         assert retry['task_id']!=job['id'] and retry['status']=='queued'
         assert campaign.handle(app,sid,args)['task_id']==retry['task_id']
         assert app.task(sid,job['id'])['status']=='blocked'
-        with pytest.raises(ValueError): campaign.handle(app,app.new_session(),args)
+        from test_research_projects import create
+        assert campaign.handle(app,app.new_session(),args)['task_id']==retry['task_id']
+        with pytest.raises(ValueError): campaign.handle(app,create(app,sid,'Different target')['session'],args)
         with pytest.raises(ValueError): campaign.handle(app,sid,dict(operation='retry_config',task_id=retry['task_id']))
         (report.parent/'campaign/blocks/protocol.json').write_text('{}')
         with pytest.raises(ValueError,match='artifacts'): campaign.handle(app,sid,args)

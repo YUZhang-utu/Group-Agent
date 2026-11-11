@@ -55,8 +55,11 @@ def test_import_snapshot_dedup_freshness_and_no_compute(setup):
 def test_sessions_paths_and_model_invented_paths_rejected(setup, tmp_path):
     app, sid, path = setup
     result = handle(app, sid, dict(operation='attach', kind='kras_export', report=str(path)))
-    with pytest.raises(ValueError, match='session'):
-        handle(app, app.new_session(), dict(operation='read', attachment_id=result['attachment_id']))
+    from test_research_projects import create
+    assert handle(app,app.new_session(),dict(operation='read',attachment_id=result['attachment_id']))['attachment_id']==result['attachment_id']
+    other=create(app,sid,'Different target')['session']
+    with pytest.raises(ValueError, match='project'):
+        handle(app, other, dict(operation='read', attachment_id=result['attachment_id']))
     foreign = tmp_path / 'foreign.json'; foreign.write_text(path.read_text())
     with pytest.raises(ValueError, match='outside'):
         handle(app, sid, dict(operation='attach', kind='kras_export', report=str(foreign)))

@@ -54,7 +54,9 @@ def test_owned_report_paths_and_discovered_artifacts(tmp_path):
     report=tools.call('task_report',dict(task_id='known-task'))
     aid=report['artifacts'][0]['artifact_id']
     assert tools.call('read_artifact',dict(artifact_id=aid,pointer='/sampled_molecules'))['content']['value']==256
-    other=app.new_session()
+    from test_research_projects import create
+    assert DomainTools(app,app.new_session(),'inspect','deepseek').call('task_report',dict(task_id='known-task'))['task_id']=='known-task'
+    other=create(app,sid,'Different target')['session']
     with pytest.raises(ValueError):DomainTools(app,other,'inspect','deepseek').call('task_report',dict(task_id='known-task'))
     outside=tmp_path/'outside.json';outside.write_text('{}')
     (root/'result.json').write_text(json.dumps(dict(steps=dict(screen=dict(result=dict(report=str(outside)))))))

@@ -68,9 +68,11 @@ def test_ownership_wrong_report_and_changed_report(completed, tmp_path):
     with pytest.raises(ValueError, match='escapes'):
         handle(app, sid, dict(operation='attach', report=str(tmp_path / 'report.json')))
     row = handle(app, sid, dict(operation='attach', report=str(source)))['attachment']
-    other = app.new_session()
+    from test_research_projects import create
+    assert handle(app,app.new_session(),dict(operation='list'))['attachments'][0]['id']==row['id']
+    other = create(app,sid,'Different target')['session']
     assert handle(app, other, dict(operation='list'))['attachments'] == []
-    with pytest.raises(ValueError, match='conversation'):
+    with pytest.raises(ValueError, match='project'):
         handle(app, other, dict(operation='analyze', attachment_id=row['id']))
     source.write_text(source.read_text() + ' ')
     with pytest.raises(ValueError, match='changed'):
@@ -174,8 +176,10 @@ def test_owned_top_n_inspection_and_changed_options(completed):
     assert top['candidates'][0]['score'] <= top['candidates'][-1]['score']
     answer = json.loads(app.ask(sid, f'/block_ranks {task}', 'deepseek'))
     assert answer['groups'] == groups['groups']
+    from test_research_projects import create
+    assert handle(app, app.new_session(), top_args)['candidates']==top['candidates']
     with pytest.raises(ValueError):
-        handle(app, app.new_session(), top_args)
+        handle(app, create(app,sid,'Different target')['session'], top_args)
     assert handle(app, sid, args)['reused']
     changed = handle(app, sid, dict(args, top_n=5))
     assert changed['tasks'][0]['id'] != task
@@ -206,4 +210,4 @@ def test_repair_attach_arguments_then_return_queue_receipt_without_more_planning
     listing=json.loads(app.ask(sid,'/dock_results','deepseek'))
     assert listing['analysis_tasks'][0]['id']==job['id']
     assert listing['argument_contract_version']=='top-n-arguments-v1'
-    assert handle(app,app.new_session(),dict(operation='list'))['analysis_tasks']==[]
+    assert handle(app,app.new_session(),dict(operation='list'))['analysis_tasks'][0]['id']==job['id']

@@ -40,7 +40,7 @@ def validate(args):
 
 def queries(app, sid, task_id):
     from .prompt_workflow import project_root
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     job = app.task(sid, task_id)
     if job['status'] != 'complete' or not job.get('report'):
@@ -49,12 +49,15 @@ def queries(app, sid, task_id):
     result = []
     for step in read(report_path).get('steps', {}).values():
         if step.get('status') != 'complete' or step.get('action') not in {
-                'structure_consensus', 'pocket_consensus', 'target_query_prepare', 'consensus_design'}:
+                'structure_consensus', 'pocket_consensus', 'target_query_prepare', 'consensus_design', 'research_task'}:
             continue
         path = ensure_within(Path(step['result']['report']), project)
         child = read(path); check_hashes(child.get('sources', {}))
         rows = child.get('prepared_complexes', child.get('templates', []))
         if child.get('kind') == 'target_query': rows = [child['query']]
+        if child.get('kind') == 'molecule_prepare':
+            check_hashes(child['outputs'])
+            rows = child['prepared_queries']
         for row in rows:
             if not row.get('query_npz') or not row.get('query_id'): continue
             query = ensure_within(Path(row['query_npz']), project)
@@ -71,7 +74,7 @@ def handle(app, sid, args):
     from .prompt_workflow import project_root, create_plan
     validate(args); app.session(sid)
     if args['operation'] == 'inspect': return dict(queries=queries(app, sid, args['task_id']))
-    ctx = app.context; project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
+    ctx = app.context_for(sid); project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     request = dict(export_molecules=args['export_molecules'])
     if 'attachment_id' in args:
         record = attachment(app, sid, args['attachment_id'])

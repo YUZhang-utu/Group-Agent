@@ -68,10 +68,12 @@ def test_sse_provider_error_is_not_success():
 
 def test_upload_bytes_ownership_and_tamper_checks(tmp_path):
     app = ChatAgent(tmp_path, start=False)
-    sid, other = app.new_session(), app.new_session()
+    from test_research_projects import create
+    sid=app.new_session();other=create(app,sid,'Different target')['session']
     payload = b'@<TRIPOS>MOLECULE\r\nligand\r\n'
     row = upload(app, sid, 'ligand.mol2', io.BytesIO(payload), len(payload))
     assert Path(row['path']).read_bytes() == payload
+    assert attachment(app,app.new_session(),row['id'])['path']==row['path']
     prompt = attach_to_prompt(app, sid, 'Inspect this ligand', [row['id']])
     assert json.loads(prompt.split('\n')[-1])[0]['path'] == row['path'] and '@<TRIPOS>' not in prompt
     with pytest.raises(ValueError, match='unavailable'):attachment(app, other, row['id'])

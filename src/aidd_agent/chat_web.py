@@ -116,7 +116,16 @@ def make_server(agent, port=8765, token=None):
                         event(dict(type='answer_reset'))
                         event(dict(type='error',text='Request failed. Check the server and model configuration; inspect existing tasks before retrying.'))
                     return
-                if self.path == "/api/session": result={"session":agent.new_session()}
+                if self.path == "/api/session": result={"session":agent.new_session(project_id=body.get('project_id'))}
+                elif self.path == '/api/project':
+                    from .research_projects import handle
+                    sid = body.get('session') or agent.new_session()
+                    result = handle(agent,sid,body['arguments'])
+                elif self.path == '/api/research-workflow':
+                    from .research_workflows import handle
+                    if body['arguments'].get('operation') not in {'status','pause','resume','cancel'}:
+                        raise ValueError('Use the research prompt to create or resolve a workflow')
+                    result=handle(agent,body['session'],body['arguments'])
                 elif self.path == "/api/import": result={"task":agent.attach(body["session"],body["plan"])}
                 elif self.path == '/api/workflow-results':
                     from .workflow_results import handle

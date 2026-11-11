@@ -10,6 +10,10 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'molecule_prepare': 'Prepare project-owned SMILES or uploaded CSV/TSV/SMI/SDF/MOL/MOL2 as explicit 3D conformers. Exactly one attachment_id or literal smiles. Optional name, conformers (default 1, max 100), seed (default 47), smiles_column/name_column, allow_unspecified_stereo (default false). Preserve original 3D coordinates; generated conformers use ETKDGv3/MMFF. No implicit salt stripping, protonation or tautomer changes. Reports per-record failures and actual query IDs. Queues a task; inspect ligand_library after completion.',
+    'candidate_sets': 'Local project candidate collections without rescanning. operations list; show(set_id,offset,limit); import(task_id,name,optional limit) from one completed ranking; union/intersection/difference(set_id,other_set_id,name); filter(set_id,name,optional limit,score_min,exclude_labels); diverse(set_id,name,optional max_per_scaffold,limit) uses Murcko groups; label(set_id,molecule_ids,label,optional note); export(set_id,count,optional start_rank) reuses saved poses and original MOL2. Mutations except label queue tasks. Preserve source rank, no cross-method score fusion. IDs must come from project evidence.',
+    'research_workflow': 'Durable project goal across tasks. create requires objective and nodes (max 20), each {id,tool,arguments,depends_on}; tools molecule_prepare,ligand_library,candidate_sets,workflow,target_search. Use {{task:node_id}} for a preceding task ID, {{query:node_id}} for its sole prepared query (multiple choices block), {{set:node_id}} for its candidate set. Dependencies must precede a node. Background worker advances automatically, including after chat closes/restart; never resubmits uncertain dispatch. status lists goals; pause/resume/cancel require workflow_id. resolve requires workflow_id,node_id,arguments to replace an unsubmitted blocked node. reconcile requires workflow_id,node_id,task_id to bind an uncertain dispatch to its verified existing task. Pause/cancel stops future steps, not a running scientific task. Scientific choices must be explicit or resolved from evidence; do not guess a ligand/reference.',
+    'project': 'Long-lived target project shared across conversations/tasks. Operations list; create requires name,target,objective and optional organism, returns a NEW conversation; open requires project_id and returns a new conversation in it. memory reads target/objective, notes and executed task evidence across this project. assets lists shared project uploads. note appends kind decision/constraint/finding/next_step, text and optional task_id provenance. User statements must not be presented as verified scientific findings. Never silently mix targets. Existing conversations remain bound to their original project.',
     'ligand_library': 'Ligand-led full local-library 3D similarity search and MOL2 export. inspect requires task_id of an owned completed consensus/design/target-query task and returns actual query IDs. start requires export_molecules (1..1000000) and EITHER attachment_id of a session-uploaded single 3D SDF/MOL2 OR task_id plus exact query_id from inspect. No receptor is required for uploaded ligand similarity. Scores ALL stored conformers using finite rigid poses, ranks best per molecule, retains ranking locally, exports original and posed MOL2 plus names. Export count caps delivery only. No receptor contacts, docking, affinity, guaranteed hits, implicit 2D conformer generation or unmeasured speed claim. Target-name requests first use the existing protein/experimental-structure/diversity/consensus workflow, then inspect prepared queries. Use budget instead when contact-first ANN retrieval is explicitly desired. Queued receipts are not completed exports.',
     'target_search': 'Generic receptor/reference full-library workflow, not tied to any target name. operation prepare creates a query only; start prepares and scans; run scans a previously completed query task_id. prepare/start need name, receptor_chains (explicit author chain IDs), receptor (exact user-supplied absolute PDB/mmCIF path) OR pdb_id, and reference_ligand (exact posed SDF/MOL2 path in receptor coordinates) OR ligand_instance {ccd,chain,residue}. Optional keep_residues [{chain,residue,name}] preserves specified cofactors/ions; water is excluded. Optional required_contacts [{chain,residue,feature_class?,distance?}] requires every listed residue in the SAME pose, with any supported reference feature per residue. Omitted contacts require any observed native feature, not all residues. Optional policy {minimum_score,coarse_constraints,pocket} overrides recorded broad exploratory defaults. Source files must be in Project or configured --input-root. Paths and PDB IDs must come from the user. Returns a queued task; inspect tasks/task_report for progress. No blind pocket invention, target-name template substitution, affinity or guaranteed recall. run needs task_id and optional contacts/policy only.',
     'workflow_results': 'Read-only external KRAS E123 export and AF3 evidence. operation list (default); attach requires kind kras_export, af3_batch or af3_prediction and the exact user-supplied absolute report path on this host. check requires attachment_id and checks source report freshness only. read requires attachment_id with optional pointer, offset, limit to page the immutable snapshot. Only active Project or operator-configured import roots are readable. Never launches calculations or verifies remote MOL2/model payloads. Keep report-only evidence distinct from payload validation; AF3 host checks are not inference. Imports do not become resumable Chat execution tasks.',
@@ -17,7 +21,7 @@ TOOLS = {
     'block_results': 'Completed CLI PLANTS results without redocking. operation list (default); attach: exact user-supplied report path in active Project. analyze: attachment_id, optional top_n (1..100, default 10), ranking_unit (molecule default, or conformer). Queues sealed Top-N mean rankings, never whole-block-mean ranking; includes Top-5/10. molecule mode uses best in-block conformer per molecule. ranks: task_id, optional scheme/receptor (omit to discover groups), top_n, limit (default 5). top: task_id, scheme, receptor, block_id, optional limit (default 5), top_n. Returns saved candidates/poses. Rank within scheme/receptor only; incomplete or insufficient panels are unranked. Scores are ChemPLP, not rescoring or affinity. Reuse task IDs.',
     'structure_chain': 'Persist explicitly authorized automatic continuation from an existing diversity/consensus/recommendation/design task. operation start requires task_id, goal recommendation or budget, optional reference {reference_query,target_chain,maximum_templates}, budget settings. Other operations: status, pause/resume/cancel with chain_id. Controls continuation, not the current scientific task. No automatic recovery of uncertain dispatch.',
     'structure_workflow': 'Inspect PDB/diversity/consensus/library stages, source branches, real reference proposals and next supported intents. Arguments: optional task_id. Read-only; call before continuing this workflow.',
-    'tasks': 'List current-session task IDs, state and report availability. Arguments: {}.',
+    'tasks': 'List current-project task IDs across conversations, state and report availability. Arguments: {}.',
     'task_report': 'Read an owned task report or one child step report. Arguments: task_id, optional step_id, optional pointer (JSON pointer), offset (default 0), limit (1..100, default 20). Returns child step IDs and discoverable artifacts.',
     'read_artifact': 'Read a discovered JSON or CSV result by artifact_id; optional pointer, offset, limit. No arbitrary paths. Large arrays are paginated.',
     'library_status': 'Inspect configured search.batch catalogs and registry availability without a full-library scan. Arguments: {}.',
@@ -29,7 +33,14 @@ TOOLS = {
 }
 
 
+TOOLS['project'] += ' search requires query and optional offset/limit; finds earlier task requests, notes and conversation records across this project. Use it when recent memory omits prior work.'
+TOOLS['ligand_library'] = TOOLS['ligand_library'].replace('session-uploaded','project-uploaded')
+
 TOOL_ARGUMENTS = {
+    'molecule_prepare': {'attachment_id','smiles','name','conformers','seed','smiles_column','name_column','allow_unspecified_stereo'},
+    'candidate_sets': {'operation','name','task_id','set_id','other_set_id','limit','score_min','exclude_labels','max_per_scaffold','start_rank','count','offset','molecule_ids','label','note'},
+    'research_workflow': {'operation','objective','nodes','workflow_id','node_id','arguments','task_id'},
+    'project': {'operation','name','target','organism','objective','project_id','kind','text','task_id','query','limit','offset'},
     'ligand_library': {'operation','task_id','query_id','attachment_id','export_molecules'},
     'target_search': {'operation','name','receptor','pdb_id','reference_ligand','ligand_instance','receptor_chains','keep_residues','required_contacts','policy','task_id'},
     'workflow_results': {'operation', 'kind', 'report', 'attachment_id', 'pointer', 'offset', 'limit'},
@@ -156,7 +167,7 @@ class DomainTools:
     def __init__(self,app,sid,request,provider,fetch=None):
         from .prompt_workflow import project_root
         self.app=app;self.sid=sid;self.request=request;self.provider=provider
-        ctx=app.context
+        ctx=app.context_for(sid)
         self.project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id']).resolve()
         self.viewer=(app.root/'viewers'/sid).resolve()
         self.artifacts={};self.fetch=fetch or self.fetch_json
@@ -202,6 +213,20 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name == 'research_workflow':
+            from .research_workflows import handle
+            return handle(self.app,self.sid,args,self.provider,self.request)
+        if name == 'molecule_prepare':
+            if 'smiles' in args and (not isinstance(args['smiles'],str) or args['smiles'] not in self.request):
+                raise ValueError('Use the exact SMILES supplied in the request, or a project attachment')
+            from .molecule_preparation import handle
+            return handle(self.app,self.sid,args)
+        if name == 'candidate_sets':
+            from .candidate_sets import handle
+            return handle(self.app,self.sid,args)
+        if name == 'project':
+            from .research_projects import handle
+            return handle(self.app, self.sid, args)
         if name == 'ligand_library':
             from .ligand_library import handle
             return handle(self.app, self.sid, args)
@@ -235,7 +260,7 @@ class DomainTools:
             from .structure_workflow_context import inspect
             return inspect(self,args)
         if name=='tasks':
-            jobs=self.app.jobs(self.sid)
+            jobs=self.app.project_jobs(self.sid)
             return dict(tasks=[{k:j[k] for k in ('id','status','request','report','error')} for j in jobs[-100:]],total=len(jobs),truncated=len(jobs)>100)
         if name=='task_report':
             job=self.app.task(self.sid,args['task_id'])

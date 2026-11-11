@@ -2738,3 +2738,26 @@ Audited generic full-library search and AF3 monomer/homodimer/heterodimer Chat r
 ### 2026-11-11 E130 corrected full-library scope and MOL2 handoff
 
 User clarified target-to-cocrystal-ligand analysis or uploaded small-molecule structure, then local whole-library 3D search and MOL2 delivery. The earlier receptor-required framing was too narrow. Preserved existing target discovery/consensus/contact-budget workflows; added trusted ligand_library for session-owned single 3D SDF/MOL2 or prepared queries from completed owned tasks. Reused full-catalog Gaussian chunk scoring, stable best-conformer molecule ranking and verified original/posed MOL2 exporter. Complete ranking remains local; output quota is not a retrieval cap. Chat receipts, task paths and workflow navigation expose the new route. Target identity/site ambiguity and staged continuation remain explicit; unattended target-name-to-export was not established. 96 distinct tests passed across runs, including actual small-library geometry/export and real upload-path worker; four Markdown checks, JS syntax and English743files passed. No production speed/recall, live PDB/provider or browser visual acceptance. Guide: to_human/E130_LIGAND_LIBRARY_SEARCH.md.
+
+### 2026-11-11 E131 target projects and P0 continuity
+
+Implemented the requested one-target Project with multiple conversations/tasks,
+project-shared uploads, task evidence, notes and searchable discussion history.
+Legacy sessions retain their original default project and sealed paths. Explicit
+owned-project binding prevents concurrent tasks from following global UI context.
+New experiments can reference a completed same-project task's recorded literal
+inputs. Added sidebar project creation/selection/knowledge and direct continuation
+controls. Added sealed molecular preparation for SMILES/tables/2D-3D inputs with
+per-record failures, no silent chemistry changes and preserved original 3D poses.
+Added immutable local candidate collections, set algebra, labels, scaffold groups
+and original/posed MOL2 reuse. Durable dependency workflows continue via the
+existing worker, persist progress across restarts and block ambiguous query choice
+or uncertain dispatch without duplicate submission.
+
+Confirmatory software validation: 189 integrated tests passed; final HTTP/UI
+contract subset 30 passed, four Markdown checks and JS syntax passed. Real tiny
+library geometry/export and subprocess execution were exercised. No live provider,
+GPU AF3 inference or production speed/recall claim. Browser visual inspection was
+stopped by Computer Use URL-identification enforcement; visual acceptance remains
+unverified. Guide: to_human/E131_TARGET_PROJECTS_AND_P0.md. Original dirty development
+checkout was untouched; delivery target remains origin/feature/structure-guided-chat.

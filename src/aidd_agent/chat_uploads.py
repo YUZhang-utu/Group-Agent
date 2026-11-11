@@ -24,7 +24,7 @@ def upload(app, sid, filename, stream, size):
         raise ValueError('Use a structure, sequence, SMILES table or JSON/text report')
     if type(size) is not int or not 0 < size <= MAX_BYTES:
         raise ValueError('Files must be nonempty and at most 50 MiB; keep larger libraries on the host')
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     identifier = uuid.uuid4().hex
     folder = ensure_within(project / 'uploads' / sid / identifier, project)
@@ -57,9 +57,11 @@ def attachment(app, sid, identifier):
     app.session(sid)
     if not isinstance(identifier, str) or not re.fullmatch(r'[a-f0-9]{32}', identifier):
         raise ValueError('Invalid attachment ID')
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
-    folder = ensure_within(project / 'uploads' / sid / identifier, project)
+    matches = list((project/'uploads').glob('*/'+identifier+'/attachment.json'))
+    if len(matches) != 1: raise ValueError('Attachment is unavailable in this project')
+    folder = ensure_within(matches[0].parent, project)
     try:
         record = json.loads((folder / 'attachment.json').read_text(encoding='utf-8'))
         path = ensure_within(Path(record['path']), folder)
@@ -67,7 +69,7 @@ def attachment(app, sid, identifier):
         with path.open('rb') as handle:
             for block in iter(lambda: handle.read(1024 * 1024), b''):
                 digest.update(block)
-        if record['session'] != sid or record['id'] != identifier or digest.hexdigest() != record['sha256']:
+        if app.context_for(record['session'])['project_id'] != ctx['project_id'] or record['id'] != identifier or digest.hexdigest() != record['sha256']:
             raise ValueError('Attachment identity or contents changed')
         return record
     except (OSError, KeyError, json.JSONDecodeError):

@@ -49,7 +49,7 @@ def summary(report):
 def handle(app, sid, args):
     from .prompt_workflow import project_root, create_plan
     app.session(sid)
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     root = project / 'block-results'
     operation = args.get('operation', 'list')
@@ -75,9 +75,9 @@ def handle(app, sid, args):
         raise ValueError('Choose attach, list, analyze, ranks or top')
     if operation == 'list':
         rows = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(root.glob('*.json'))]
-        owned = [r for r in rows if r.get('session') == sid]
+        owned = [r for r in rows if app.context_for(r['session'])['project_id']==ctx['project_id']]
         ids = {r['id'] for r in owned}
-        jobs = [j for j in app.jobs(sid) if any(identifier in (j.get('request') or '') for identifier in ids)]
+        jobs = [j for j in app.project_jobs(sid) if any(identifier in (j.get('request') or '') for identifier in ids)]
         return dict(attachments=owned, analysis_tasks=[{k: j.get(k) for k in ('id', 'status', 'request', 'report', 'error')} for j in jobs],
                     argument_contract_version='top-n-arguments-v1')
     with app.lock:
@@ -91,17 +91,17 @@ def handle(app, sid, args):
                                 summary=summary(report), verification='Report counters only; all output seals are checked by analysis.'))
             return dict(status='attached', attachment=json.loads(dest.read_text(encoding='utf-8')), computation_launched=False)
         rows = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(root.glob('*.json'))]
-        rows = [r for r in rows if r.get('session') == sid]
+        rows = [r for r in rows if app.context_for(r['session'])['project_id']==ctx['project_id']]
         selected = [r for r in rows if r['id'] == args.get('attachment_id')]
         if len(selected) != 1:
-            raise ValueError('Choose an attachment ID from this conversation')
+            raise ValueError('Choose an attachment ID from this project')
         row = selected[0]
         if sha(Path(row['report'])) != row['report_sha256']:
             raise ValueError('Source report changed; attach its final version before analysis')
         from .block_ranking import options
         ranking_options = options(args.get('top_n', 10), args.get('ranking_unit', 'molecule'))
         title = 'Top-N v1 analyze attached docking ' + row['id'] + ' ' + json.dumps(ranking_options, sort_keys=True)
-        existing = [j for j in app.jobs(sid) if j['request'] == title]
+        existing = [j for j in app.project_jobs(sid) if j['request'] == title]
         if existing and existing[-1]['status'] in {'queued', 'running', 'complete'}:
             job = existing[-1]
             return dict(status=job['status'], tasks=[dict(id=job['id'], status=job['status'])], reused=True)

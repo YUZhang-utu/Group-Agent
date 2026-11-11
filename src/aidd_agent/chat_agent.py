@@ -51,6 +51,12 @@ WORKFLOWS.insert(0, dict(name='Saved AF3 and KRAS results', status='Read-only re
     scope='Attach AF3 batch/manifest or completed KRAS E123 export reports. Session-owned snapshots, counters, confidence and source checks. '
           'No rerun; referenced MOL2/model payloads are not verified or loaded into PyMOL by attachment.'))
 WORKFLOWS.sort(key=lambda item: 'block' in item['name'].lower())
+WORKFLOWS.insert(0,dict(name='Target projects and shared knowledge',status='Project-scoped conversations and tasks',
+    scope='Create/open a target project, share uploads and completed work across its conversations, record decisions and constraints, search earlier project discussions. Legacy conversations keep their existing default project.'))
+WORKFLOWS.insert(1,dict(name='Durable research goals',status='Explicit dependency workflows',
+    scope='Prepare molecules, search a library, save/filter candidate sets and export in successive background tasks. Pause/resume future dispatch; missing query/reference choices block explicitly.'))
+WORKFLOWS.insert(2,dict(name='Molecule preparation and saved candidate sets',status='Local preparation and reusable rankings',
+    scope='SMILES/tables/2D-3D structures to recorded conformers; preserve original 3D coordinates. Set union/intersection/difference, labels, scaffold groups and MOL2 re-export without rescoring. No activity or recall claim.'))
 WORKFLOWS.insert(0,dict(name='General receptor/reference full-library search',status='Typed Chat query and full-scan adapter',
     scope='User-selected PDB/mmCIF receptor and posed SDF/MOL2 reference, or PDB ID plus exact ligand instance. '
           'All catalog conformers considered using existing guided engine; required residues rechecked in one pose. '
@@ -530,6 +536,10 @@ class ChatAgent:
             db.execute("UPDATE jobs SET status='interrupted',error='Server stopped during execution; explicitly resume this task.' WHERE status IN ('planning','running')")
         from .structure_chains import initialize
         initialize(self)
+        from .research_projects import initialize as initialize_projects
+        initialize_projects(self)
+        from .research_workflows import initialize as initialize_workflows
+        initialize_workflows(self)
         if start:
             self.worker = threading.Thread(target=self.work, daemon=True)
             self.worker.start()
@@ -548,10 +558,23 @@ class ChatAgent:
             if db.execute("SELECT 1 FROM sessions WHERE id=?", (sid,)).fetchone() is None:
                 raise ValueError("Unknown session")
 
-    def new_session(self):
+    def context_for(self, sid):
+        from .research_projects import context
+        return context(self, sid)
+
+    def project_jobs(self, sid):
+        from .research_projects import project_jobs
+        return project_jobs(self, sid)
+
+    def new_session(self, project_id=None):
         sid = uuid.uuid4().hex
+        project_id = project_id or self.context['project_id']
+        from .registry import connect
+        from .project_context import require_project_owner
+        with connect(Path(self.context['db'])) as db:
+            require_project_owner(db,self.context['user_id'],project_id)
         with self.connect() as db:
-            db.execute("INSERT INTO sessions VALUES(?,?,?)", (sid, "New conversation", time.time()))
+            db.execute("INSERT INTO sessions(id,title,created,project_id) VALUES(?,?,?,?)", (sid, "New conversation", time.time(), project_id))
         return sid
 
     def message(self, sid, role, text):
@@ -563,11 +586,11 @@ class ChatAgent:
             return [dict(r) for r in db.execute("SELECT * FROM jobs WHERE session=? ORDER BY created", (sid,))]
 
     def task(self, sid, jid=None):
-        jobs = self.jobs(sid)
+        jobs = self.project_jobs(sid) if jid else self.jobs(sid)
         if jid is None and jobs: return jobs[-1]
         for job in jobs:
             if job["id"] == jid: return job
-        raise ValueError("No matching task in this conversation")
+        raise ValueError("No matching task in this project")
 
     def attach(self, sid, plan_path):
         """Attach an existing owned Project run for inspection without rerunning it."""
@@ -575,7 +598,7 @@ class ChatAgent:
         from .project_context import ensure_within
         from .library_acceptance import sha
         self.session(sid)
-        ctx = self.context
+        ctx = self.context_for(sid)
         path = ensure_within(Path(plan_path).resolve(), project_root(Path(ctx["db"]),ctx["user_id"],ctx["project_id"]))
         envelope = read_json(path)
         seal = read_json(path.parent / "plan-seal.json")
@@ -599,14 +622,16 @@ class ChatAgent:
         return jid
 
     def snapshot(self, sid=None):
+        from .research_projects import projects, memory
+        active = self.context_for(sid)['project_id'] if sid else self.context['project_id']
         with self.connect() as db:
-            sessions = [dict(r) for r in db.execute("SELECT * FROM sessions ORDER BY created DESC")]
+            sessions = [dict(r) for r in db.execute("SELECT * FROM sessions WHERE project_id=? ORDER BY created DESC", (active,))]
             messages = []
             if sid:
                 self.session(sid)
                 messages = [dict(r) for r in db.execute("SELECT role,text FROM messages WHERE session=? ORDER BY id", (sid,))]
         tasks = []
-        for job in self.jobs(sid) if sid else []:
+        for job in self.project_jobs(sid) if sid else []:
             report = read_json(job["report"]) if job["report"] else None
             tail = ""
             if job["log"]:
@@ -642,6 +667,7 @@ class ChatAgent:
         from .workflow_results import handle as workflow_results
         imported = workflow_results(self, sid, {'operation': 'list'})['attachments'] if sid else []
         return dict(sessions=sessions, messages=messages, tasks=tasks, workflows=WORKFLOWS,viewer=viewer,docking_results=attachments,
+                    projects=projects(self), project_id=active, project_memory=memory(self,sid) if sid else None,
                     interface_mode=getattr(self,'interface_mode','configured_agent'),
                     workflow_results=imported, compute_enabled=self.allow_compute,agent_runs=agent_runs,structure_chains=rows(self,sid) if sid else [])
 
@@ -649,7 +675,7 @@ class ChatAgent:
         from . import structure_review as review
         from .pymol_bridge import submit, bridge_status, write_json
         from .prompt_workflow import project_root
-        ctx=self.context;project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
+        ctx=self.context_for(sid);project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
         intent=decision['intent'];root=self.root/'viewers'/sid
         if intent=='pymol' and decision['view']['operation']=='status':
             result=bridge_status(root)
@@ -770,6 +796,7 @@ class ChatAgent:
                 profile = select_llm_profile(provider, config_dir=self.config_dir)
                 snapshot = self.snapshot(sid)
                 context = dict(conversation=snapshot["messages"][-12:], tasks=[{k: j[k] for k in ("id","status","request")} for j in snapshot["tasks"][-10:]])
+                context['project_memory']=snapshot['project_memory']
                 # Bounded dialogue context; no files, sequences or execution logs sent to provider.
                 for item in context["conversation"]: item["text"] = item["text"][:1000]
                 for item in context["tasks"]: item["request"] = item["request"][:300]
@@ -837,7 +864,7 @@ class ChatAgent:
             if stage=='evaluate':
                 steps.extend([dict(id='dock',action='block_plants_run',params=dict(prepared_step='prepare')),
                               dict(id='analysis',action='block_analyze',params=dict(docking_step='dock'))])
-            plan=dict(version=1,summary='Block evaluation: '+stage,clarifications=[],steps=steps); ctx=self.context
+            plan=dict(version=1,summary='Block evaluation: '+stage,clarifications=[],steps=steps); ctx=self.context_for(sid)
             path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
             jid=uuid.uuid4().hex[:16]
             with self.connect() as db:
@@ -896,7 +923,7 @@ class ChatAgent:
                 params.update(decision['pocket_selection'])
             plan=dict(version=1,summary='Structure-guided workflow: '+intent,clarifications=[],
                       steps=[dict(id='guided',action=action,params=params)])
-            ctx=self.context
+            ctx=self.context_for(sid)
             path=create_plan(Path(ctx['db']),ctx['user_id'],ctx['project_id'],text,local_plan=plan)
             jid=uuid.uuid4().hex[:16]
             with self.connect() as db:
@@ -929,7 +956,7 @@ class ChatAgent:
             local_plan = dict(version=1, summary={"evidence":"Review crystal anchors and search counts", "classify":"Classify crystal-derived 3D feature hypotheses", "full_count":"Evaluate all library conformers against classified features without Top-K or Top-N", "funnel":"Check all library conformers with necessary conditions before uncapped precise matching", "coarse":"Audit joint coarse selectivity without generating poses", "benchmark":"Compare equivalent CPU and available CUDA pose scoring on a bounded spread-out pilot",
                 "select":"Preview explicit same-pose anchor selection", "export":"Export the confirmed selection for docking preparation", "prepare_docking":"Prepare crystal-derived pocket and Glide workflow", "run_docking":"Execute prepared Glide validation and gated docking"}[intent],
                 clarifications=[], steps=[dict(id="screening", action=action, params=params)])
-            ctx = self.context
+            ctx = self.context_for(sid)
             plan = create_plan(Path(ctx["db"]), ctx["user_id"], ctx["project_id"], text, local_plan=local_plan)
             jid = uuid.uuid4().hex[:16]
             with self.connect() as db:
@@ -947,6 +974,12 @@ class ChatAgent:
             request = decision['request']
             history = [m['text'] for m in self.snapshot(sid)['messages'][-12:] if m['role']=='user']
             if history and history[-1] == text: history.pop()
+            if decision.get('task_id'):
+                source=self.task(sid,decision['task_id'])
+                marker='\nOriginal user request (preserve literal SMILES):\n'
+                if source['status']!='complete' or marker not in source['request']:
+                    raise ValueError('Input reuse requires a completed project task with its recorded original user input; resume failed work by its existing ID')
+                history.insert(0,'Referenced original input from task '+source['id']+':\n'+source['request'].split(marker,1)[1])
             literal = '\n'.join(history) + '\nCurrent user request:\n' + text
             request += '\nOriginal user request (preserve literal SMILES):\n' + literal
             with self.connect() as db:
@@ -978,7 +1011,7 @@ class ChatAgent:
                     if intent == "results":
                         for key, value in step.get("result", {}).items():
                             if key in {"model", "report", "input_json", "provenance", "manifest", "output_directory", "source_url", "status", "accession", "pose_quality", "biological_quality", "confidence_analysis",
-                                       "full_coverage", "processed_conformers", "ranked_molecules", "exported_molecules", "shortfall", "ranking", "original_mol2_directory", "posed_mol2_directory", "names", "export_manifest"}:
+                                       "full_coverage", "processed_conformers", "ranked_molecules", "exported_molecules", "shortfall", "ranking", "original_mol2_directory", "posed_mol2_directory", "names", "export_manifest", "set_id", "count", "members", "details", "failures", "prepared_molecules", "failed_molecules"}:
                                 lines.append(f"{key}: {value}")
                         result = step.get("result", {})
                         confidence = result.get("confidence", {})
@@ -1015,6 +1048,9 @@ class ChatAgent:
     def update(self, jid, **fields):
         with self.connect() as db:
             db.execute("UPDATE jobs SET "+",".join(k+"=?" for k in fields)+" WHERE id=?", (*fields.values(),jid))
+        if 'status' in fields:
+            from .research_projects import remember_status
+            remember_status(self,jid,fields['status'])
 
     @staticmethod
     def safe_error(exc):
@@ -1050,6 +1086,8 @@ class ChatAgent:
 
     def work(self):
         while not self.stop.wait(.25):
+            from .research_workflows import tick as tick_workflows
+            tick_workflows(self)
             from .structure_chains import tick
             tick(self)
             with self.connect() as db:
@@ -1076,7 +1114,7 @@ class ChatAgent:
         jid, sid = job["id"], job["session"]
         if job["cancel"]: self.update(jid,status="cancelled"); return
         self.update(jid,status="planning")
-        ctx = self.context
+        ctx = self.context_for(sid)
         with Path(job['log']).open('a', encoding='utf-8') as log:
             log.write('\nPlanning/validating task '+jid+'. Scientific execution has not started.\n')
         if not job["plan"]:

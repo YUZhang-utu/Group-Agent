@@ -132,7 +132,8 @@ def test_attachment_ownership_and_compute_gate(tmp_path):
     from aidd_agent.workflow_errors import Blocked
     app = ChatAgent(tmp_path/'chat', start=False)
     try:
-        sid = app.new_session(); other = app.new_session()
+        from test_research_projects import create
+        sid = app.new_session(); other = create(app,sid,'Different target')['session']
         file = upload(app, sid, 'ligand.sdf', io.BytesIO(b'not yet parsed'), 14)
         with pytest.raises(ValueError, match='unavailable'):
             search.handle(app, other, dict(operation='start', attachment_id=file['id'], export_molecules=2))

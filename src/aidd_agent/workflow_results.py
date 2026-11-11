@@ -131,11 +131,11 @@ def summarize(kind, report):
     raise ValueError('Unsupported workflow result kind')
 
 
-def source_path(app, supplied):
+def source_path(app, supplied, sid):
     from .prompt_workflow import project_root
     if not isinstance(supplied, str) or not supplied or not Path(supplied).is_absolute():
         raise ValueError('Provide an exact absolute report path on the Chat host')
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id']).resolve()
     path = Path(supplied).resolve()
     roots = [project, *getattr(app, 'result_import_roots', ())]
@@ -157,10 +157,13 @@ def handle(app, sid, args):
     if not isinstance(operation, str) or operation not in fields or set(args) - fields[operation] - {'operation'}:
         raise ValueError('Invalid workflow_results operation or fields')
     root = app.root / 'workflow-results' / sid
+    pid=app.context_for(sid)['project_id']
+    with app.connect() as db:
+        sessions=[r['id'] for r in db.execute('SELECT id FROM sessions WHERE project_id=?',(pid,))]
     with app.lock:
         if operation == 'list':
             attachments = []
-            for path in sorted(root.glob('*.json')):
+            for path in sorted(p for s in sessions for p in (app.root/'workflow-results'/s).glob('*.json')):
                 item, _ = read(path, MAX_BYTES * 4)
                 attachments.append({key: value for key, value in item.items() if key != 'report_snapshot'})
             return dict(attachments=attachments, computation_launched=False)
@@ -168,7 +171,7 @@ def handle(app, sid, args):
             kind = args.get('kind')
             if kind not in KINDS:
                 raise ValueError('Choose kras_export, af3_batch or af3_prediction')
-            path = source_path(app, args.get('report'))
+            path = source_path(app, args.get('report'), sid)
             report, sha = read(path)
             summary = summarize(kind, report)
             identifier = hashlib.sha256((sid + kind + str(path) + sha).encode()).hexdigest()[:24]
@@ -185,16 +188,17 @@ def handle(app, sid, args):
         identifier = args.get('attachment_id')
         if not isinstance(identifier, str) or not re.fullmatch('[a-f0-9]{24}', identifier):
             raise ValueError('Invalid attachment ID')
-        saved = root / (identifier + '.json')
-        if not saved.is_file():
-            raise ValueError('Attachment does not belong to this session')
+        matches=[app.root/'workflow-results'/s/(identifier+'.json') for s in sessions if (app.root/'workflow-results'/s/(identifier+'.json')).is_file()]
+        if len(matches)!=1:
+            raise ValueError('Attachment does not belong to this project')
+        saved=matches[0]
         row, _ = read(saved, MAX_BYTES * 4)
         if operation == 'read':
             from .domain_tools import page
             return dict(attachment_id=identifier, report_sha256=row['report_sha256'],
                         content=page(row['report_snapshot'], args), computation_launched=False)
         try:
-            _, sha = read(source_path(app, row['source']))
+            _, sha = read(source_path(app, row['source'], sid))
             state = 'unchanged' if sha == row['report_sha256'] else 'changed_reimport_to_update'
         except (OSError, ValueError):
             state = 'unavailable_or_invalid'

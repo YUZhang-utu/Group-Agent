@@ -1,3 +1,19 @@
+target_project_p0_e131:
+  date: 2026-11-11
+  protocol: experiments/E131-project-p0.md
+  guide: to_human/E131_TARGET_PROJECTS_AND_P0.md
+  unit: one_target_project_multiple_conversations_and_tasks
+  memory: project_scoped_notes_task_evidence_and_searchable_discussions
+  inputs: smiles_tables_2d_3d_with_explicit_chemistry_policy
+  candidates: immutable_local_sets_and_mol2_export_reuse
+  continuation: durable_dependencies_with_ambiguity_and_uncertain_dispatch_blocks
+  integrated_tests: 189_passed
+  final_http_ui_contract_subset: 30_passed
+  markdown_tests: 4_passed
+  browser_visual_acceptance: blocked_by_computer_use_url_identification
+  live_provider_gpu_and_production_library_acceptance: not_run
+  delivery_target: origin/feature/structure-guided-chat
+
 ligand_library_handoff_e130:
   date: 2026-11-11
   protocol: experiments/E130-ligand-library-handoff.md

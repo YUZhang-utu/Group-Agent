@@ -42,7 +42,9 @@ def test_dialogue_clarification_routing_and_session_ownership(tmp_path):
     assert app.task(sid)['request']=='Prepare human WEE1 input only.\nOriginal user request (preserve literal SMILES):\nPrepare WEE1 input\nCurrent user request:\nHuman'
     app.ask(sid,"/status","gpt")
     assert len(app.jobs(sid))==1
-    other=app.new_session()
+    from test_research_projects import create
+    assert app.task(app.new_session(),jid)['id']==jid
+    other=create(app,sid,'Different target')['session']
     with pytest.raises(ValueError,match="No matching"):
         app.ask(other,"/cancel "+jid,"deepseek")
     assert app.task(sid)["cancel"]==0

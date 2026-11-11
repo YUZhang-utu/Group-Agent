@@ -15,6 +15,10 @@ Campaigns are optional branches inside a Project.
 Start the persistent chat UI with `bash scripts/run_chat_agent.sh --allow-compute`.
 Select GPT or DeepSeek, submit tasks, ask for progress/results and attach existing
 owned runs. See [chat setup and acceptance](to_human/E041_CHAT_WORKBENCH.md).
+Create/select a target Project in the sidebar. Its conversations share task
+evidence, attachments, decisions and local candidate sets. Durable goals can
+prepare molecules, run searches and reuse rankings for MOL2 export across tasks.
+See [target projects and P0 workflows](to_human/E131_TARGET_PROJECTS_AND_P0.md).
 Generic protein/AF3 workflows are supported; calibrated full-library search remains
 WEE1-specific. Docking and new-target acceptance are explicit pending stages.
 

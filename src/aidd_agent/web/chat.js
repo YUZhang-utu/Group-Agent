@@ -4,11 +4,13 @@ if(fragment.get('token')){sessionStorage.setItem('aidd-token',fragment.get('toke
 if(fragment.get('session'))sessionStorage.setItem('aidd-session',fragment.get('session'));
 let session=sessionStorage.getItem('aidd-session'),last='',polling=null, busy=false,lastState='';
 let attachedFiles=[];
+let projectId=null;
 function markdown(value){const body=node('div',undefined,'markdown');body.innerHTML=AiddMarkdown.render(value);return body;}
-function setBusy(value){busy=value;for(const id of ['send','new','provider','upload-files'])if($(id))$(id).disabled=value;for(const b of $('sessions').querySelectorAll('button'))b.disabled=value;}
+function setBusy(value){busy=value;for(const id of ['send','new','provider','upload-files','project-select','project-create'])if($(id))$(id).disabled=value;for(const b of $('sessions').querySelectorAll('button'))b.disabled=value;}
 async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(data.error||'Request failed');return data;}
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
-async function newSession(){const r=await api('/api/session',{});session=r.session;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';await refresh();}
+function selectSession(id){session=id;attachedFiles=[];renderAttachments();sessionStorage.setItem('aidd-session',session);last='';lastState='';}
+async function newSession(){const r=await api('/api/session',projectId?{project_id:projectId}:{});selectSession(r.session);await refresh();}
 async function send(text){
 if(busy)return;setBusy(true);$('error').textContent='';
 let finished=false,answer='',submitted=false;
@@ -25,6 +27,7 @@ try{
   function event(row){
     if(row.type==='answer_delta'){answer+=row.text;preview.innerHTML=AiddMarkdown.render(answer);status.textContent='Writing response...';}
     else if(row.type==='answer_reset'){answer='';preview.replaceChildren();}
+    else if(row.type==='project_opened'){projectId=row.project_id;selectSession(row.session);}
     else if(row.type==='done'){finished=true;answer=row.text;preview.innerHTML=AiddMarkdown.render(answer);status.textContent='Response complete';}
     else if(row.type==='error')throw Error(row.text);
     else if(row.text)status.textContent=row.text;
@@ -71,7 +74,7 @@ if(polling)return force?polling.then(()=>refresh(true)):polling;
 polling=(async()=>{try{
   const state=await api('/api/state'+(session?'?session='+encodeURIComponent(session):''));
   const key=session+JSON.stringify(state);
-  if(key!==lastState){render(state);renderDocking(state.docking_results);renderWorkflowResults(state.workflow_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);lastState=key;}
+  if(key!==lastState){render(state);renderProjects(state);renderDocking(state.docking_results);renderWorkflowResults(state.workflow_results);renderViewer(state.viewer);renderAgent(state.agent_runs);renderChains(state.structure_chains);lastState=key;}
   $('connection').textContent='Connected';
 }catch(e){$('connection').textContent='Disconnected';$('error').textContent=e.message;}finally{polling=null;}})();
 return polling;
@@ -97,6 +100,30 @@ for(const event of ['dragenter','dragover'])$('compose').addEventListener(event,
 $('compose').addEventListener('dragleave',e=>{if(!$('compose').contains(e.relatedTarget))$('compose').classList.remove('drop-active');});
 $('compose').addEventListener('drop',e=>{e.preventDefault();$('compose').classList.remove('drop-active');uploadFiles([...e.dataTransfer.files]);});
 document.addEventListener('click',async e=>{const button=e.target.closest('[data-copy-code]');if(!button)return;try{await navigator.clipboard.writeText(button.closest('.code-block').querySelector('code').textContent);button.textContent='Copied';setTimeout(()=>button.textContent='Copy code',1500);}catch(error){$('error').textContent='Clipboard unavailable. Select and copy the code.';}});
+const projectBox=node('section',undefined,'project-box');projectBox.setAttribute('aria-label','Research project');
+const projectLabel=node('label','TARGET PROJECT');projectLabel.htmlFor='project-select';
+const projectSelect=node('select');projectSelect.id='project-select';
+const projectCreate=node('button','+ New project');projectCreate.id='project-create';projectCreate.type='button';
+const memoryPanel=node('details',undefined,'project-memory');memoryPanel.append(node('summary','Project knowledge'));
+const memoryBody=node('div');memoryPanel.append(memoryBody);projectBox.append(projectLabel,projectSelect,projectCreate,memoryPanel);$('new').before(projectBox);
+const projectDialog=node('dialog',undefined,'project-dialog');const projectForm=node('form');const projectError=node('p',undefined,'task-error');projectError.setAttribute('role','alert');
+projectForm.append(node('h2','New target project'),node('p','Conversations, tasks and saved knowledge belong to this target.'));
+for(const [key,label] of [['name','Project name'],['target','Target / accession'],['organism','Organism (optional)'],['objective','Research objective']]){const l=node('label',label);l.htmlFor='project-'+key;const input=node(key==='objective'?'textarea':'input');input.id='project-'+key;input.name=key;input.required=key!=='organism';input.maxLength=2000;projectForm.append(l,input);}
+const createSubmit=node('button','Create project');createSubmit.type='submit';const cancelProject=node('button','Cancel');cancelProject.type='button';cancelProject.onclick=()=>projectDialog.close();projectForm.append(projectError,createSubmit,cancelProject);projectDialog.append(projectForm);document.body.append(projectDialog);
+projectCreate.onclick=()=>{projectError.textContent='';projectDialog.showModal();};
+async function openProject(arguments_){setBusy(true);try{const result=await api('/api/project',{session,arguments:arguments_});projectId=result.project_id;selectSession(result.session);await refresh(true);return true;}catch(e){$('error').textContent=e.message;return false;}finally{setBusy(false);}}
+projectSelect.onchange=()=>openProject({operation:'open',project_id:projectSelect.value});
+projectForm.onsubmit=async e=>{e.preventDefault();projectError.textContent='';createSubmit.disabled=true;const args={operation:'create'};for(const key of ['name','target','organism','objective'])if($('project-'+key).value.trim())args[key]=$('project-'+key).value.trim();try{if(await openProject(args))projectDialog.close();else projectError.textContent=$('error').textContent;}finally{createSubmit.disabled=false;}};
+async function controlResearchFlow(id,operation){setBusy(true);try{await api('/api/research-workflow',{session,arguments:{operation,workflow_id:id}});await refresh(true);}catch(e){$('error').textContent=e.message;}finally{setBusy(false);}}
+function renderProjects(state){
+  projectId=state.project_id;projectSelect.replaceChildren();
+  for(const p of state.projects||[]){const option=node('option',p.name+(p.target?' / '+p.target:''));option.value=p.project_id;option.selected=p.project_id===projectId;projectSelect.append(option);}
+  memoryBody.replaceChildren();const memory=state.project_memory;if(!memory)return;
+  memoryBody.append(node('p',memory.project.objective||'No objective recorded.'),node('p',memory.total_tasks+' project tasks'));
+  for(const note of memory.notes||[])memoryBody.append(node('p',note.kind+': '+note.text+(note.task_id?' (task '+note.task_id+')':'')));
+  for(const set of memory.candidate_sets||[])memoryBody.append(node('p',set.name+' / '+set.count+' molecules'),node('div',set.set_id,'path'));
+  for(const flow of memory.workflows||[]){const entry=node('div',undefined,'project-flow');entry.append(node('strong',flow.status+': '+flow.objective),node('div',flow.id,'path'));if(flow.error)entry.append(node('p',flow.error,'task-error'));for(const step of flow.nodes)entry.append(node('p',step.id+': '+step.status+(step.task_id?' / '+step.task_id:'')));if(['active','blocked','paused'].includes(flow.status)){const action=flow.status==='active'?'pause':'resume';const b=node('button',action==='pause'?'Pause continuation':'Resume continuation');b.disabled=busy;b.onclick=()=>controlResearchFlow(flow.id,action);entry.append(b);}memoryBody.append(entry);}
+}
 refresh();setInterval(refresh,2000);
 
 $('attach').onclick=async()=>{try{if(!session)await newSession();const kind=$('attachment-kind').value;if(['kras_export','af3_batch','af3_prediction'].includes(kind))await api('/api/workflow-results',{session,arguments:{operation:'attach',kind,report:$('existing').value.trim()}});else if(kind==='equiscore')await api('/api/block-campaign',{session,arguments:{operation:'import',report:$('existing').value.trim()}});else if(kind==='docking')await api('/api/block-results',{session,arguments:{operation:'attach',report:$('existing').value.trim()}});else await api('/api/import',{session,plan:$('existing').value.trim()});await refresh();}catch(e){$('error').textContent=e.message;}};

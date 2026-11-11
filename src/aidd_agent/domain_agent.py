@@ -12,6 +12,23 @@ from .pymol_bridge import write_json
 
 SYSTEM = '''You are the AIDD domain research agent, connected to this user's project,
 macrocycle library, existing scientific workflows and desktop PyMOL.
+One project represents one target and contains multiple tasks/conversations.
+Use the supplied project_memory and project tools before repeating work. Preserve
+target identity, decisions, constraints and artifact provenance across chats.
+When the user requests a NEW experiment reusing inputs of a completed project
+task, inspect that task and set workflow decision.intent=run and task_id to the
+source task; the coordinator carries its recorded literal user inputs into the
+new plan. This is new computation, not resume. Ask when source constructs differ.
+For a different target, create/open its project rather than mixing results.
+Record meaningful user decisions and next steps as project notes; do not convert
+unverified user statements or model speculation into confirmed scientific results.
+For an authorized multi-stage goal, create a research_workflow with concrete
+dependencies so execution continues after this message and across restarts.
+Use molecule_prepare for SMILES/tables/2D structures, ligand_library for full
+3D search and candidate_sets to retain/filter/combine/export existing results.
+Reuse saved project tasks and sets. Multiple possible queries/references must
+be explicitly resolved; never choose the first just to continue. Queue receipts
+are not scientific results. A workflow may block with a specific missing choice.
 Current development priorities are AF3 and full-library screening with explicit
 task progress and saved result provenance. Block routing/benchmark development
 is deferred: use block tools only for explicit block requests or historical
@@ -218,7 +235,9 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
                 if answer.startswith(streamed_answer[0]) and len(answer) > len(streamed_answer[0]):
                     emit(dict(type='answer_delta',text=answer[len(streamed_answer[0]):]))
                     streamed_answer[0] = answer
+            from .research_projects import memory
             context=dict(request=request,conversation=history,evidence=evidence[-6:],
+                project_memory=memory(app,sid),
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
                 pending_execution=waiting,remaining_steps=max_steps-iteration)
@@ -240,7 +259,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             emit(dict(type='tool_start',tool=name,text=step.get('purpose', name)))
             record=dict(step=step,model=metadata,status='started');audit['steps'].append(record);save()
             try:
-                if name == 'target_search' or (name == 'ligand_library' and args.get('operation') == 'start'):
+                if name in {'target_search','molecule_prepare'} or (name == 'ligand_library' and args.get('operation') == 'start') or (name == 'candidate_sets' and args.get('operation') not in {'list','show'}) or (name=='research_workflow' and args.get('operation')!='status'):
                     signature=hashlib.sha256(json.dumps([name,args],sort_keys=True).encode()).hexdigest()
                     if waiting:
                         raise ValueError('An operation is pending; inspect its task before submitting another target search')
@@ -274,7 +293,15 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
             emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
-            if (name in {'workflow', 'target_search', 'ligand_library'} and record['status'] == 'complete'
+            if name == 'project' and record['status'] == 'complete' and result.get('session'):
+                emit(dict(type='project_opened',session=result['session'],project_id=result['project_id']))
+                answer='Opened project '+result['project_id']+'. Continue in its conversation; prior tasks and knowledge remain in their original project.'
+                app.message(result['session'],'assistant',answer)
+                audit.update(status='complete',answer=answer,evidence_ids=[row['id']]);save();break
+            if name=='research_workflow' and record['status']=='complete' and result.get('workflow_id'):
+                answer='Project workflow '+result['workflow_id']+': '+result['status']+'. '+result.get('message','')
+                audit.update(status='pending' if result['status']=='active' else 'complete',answer=answer,evidence_ids=[row['id']]);save();break
+            if (name in {'workflow', 'target_search', 'ligand_library','molecule_prepare','candidate_sets'} and record['status'] == 'complete'
                     and result.get('status') == 'queued' and (result.get('tasks') or result.get('task_id'))):
                 # Submission already succeeded. A further model call cannot improve its receipt.
                 jobs = result.get('tasks') or [dict(id=result['task_id'], status=result['status'])]

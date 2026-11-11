@@ -56,7 +56,10 @@ def test_permissions_duplicate_and_ownership(tmp_path):
     with pytest.raises(ValueError):start(app,sid)
     identifier=start(app,sid,'recommendation')['chain_id']
     with pytest.raises(ValueError):start(app,sid,'recommendation')
-    with pytest.raises(ValueError):control(app,app.new_session(),'deepseek','pause',dict(operation='pause',chain_id=identifier))
+    from test_research_projects import create
+    other=create(app,sid,'Different target')['session']
+    with pytest.raises(ValueError):control(app,other,'deepseek','pause',dict(operation='pause',chain_id=identifier))
+    assert control(app,app.new_session(),'deepseek','pause',dict(operation='pause',chain_id=identifier))['chain']['status']=='paused'
 
 
 def test_dispatch_failure_is_not_retried(tmp_path,monkeypatch):

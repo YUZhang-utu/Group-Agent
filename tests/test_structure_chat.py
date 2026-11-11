@@ -108,7 +108,9 @@ def test_catalog_ownership_and_confidence_chat(tmp_path,monkeypatch):
     report=dump(root/'execution/report.json',dict(steps=dict(fold=dict(action='af3_run',status='complete',result=dict(model=str(model),confidence=dict(iptm=.8))))))
     app.update(job['id'],status='complete',plan=str(root/'plan.json'),report=str(report))
     assert '.8' in app.ask(sid,'/confidence '+job['id'],'deepseek')
-    with pytest.raises(ValueError):app.ask(app.new_session(),'/confidence '+job['id'],'deepseek')
+    from test_research_projects import create
+    assert '.8' in app.ask(app.new_session(),'/confidence '+job['id'],'deepseek')
+    with pytest.raises(ValueError):app.ask(create(app,sid,'Different target')['session'],'/confidence '+job['id'],'deepseek')
     from aidd_agent import pymol_bridge
     requests=[]
     monkeypatch.setattr(pymol_bridge,'submit',lambda root,view,catalog,executable:requests.append(view) or dict(status='queued'))

@@ -50,6 +50,16 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+E131 binds conversations to target Projects. Use project memory/search before
+repeating work. Tasks, uploads, recorded decisions and saved candidate sets are
+shared across a project's chats; different projects remain isolated. Use
+research_workflow for explicitly authorized dependency goals and molecule_prepare
+for 2D/SMILES inputs. Continue from saved candidate sets without another search.
+See [the project/P0 guide](../../../to_human/E131_TARGET_PROJECTS_AND_P0.md).
+Do not retry an uncertain dispatch; reconcile the existing task receipt. Missing
+site/reference/query choices must remain explicit. Notes are statements, not
+independently verified scientific findings.
+
 E130 adds `ligand_library` for attached 3D SDF/MOL2 or owned prepared cocrystal
 queries, full-catalog scoring and MOL2 handoff. See [the guide](../../../to_human/E130_LIGAND_LIBRARY_SEARCH.md).
 Target-name discovery still uses the existing structure stages; reference/site

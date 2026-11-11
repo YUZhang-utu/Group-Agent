@@ -15,7 +15,7 @@ STAGES = {
 def inspect(tools, args):
     from .project_context import ensure_within
     requested=args.get('task_id')
-    jobs=[tools.app.task(tools.sid,requested)] if requested else tools.app.jobs(tools.sid)[-100:]
+    jobs=[tools.app.task(tools.sid,requested)] if requested else tools.app.project_jobs(tools.sid)[-100:]
     rows=[]
     for job in jobs:
         row=dict(task_id=job['id'],task_status=job['status'],request=job['request'],stages=[])
@@ -70,7 +70,7 @@ def inspect(tools, args):
         if row['stages'] or requested or job['status'] in {'queued','planning','running'}:rows.append(row)
     by_run={r['run_id']:r['task_id'] for r in rows if r.get('run_id')}
     for row in rows:row['source_task_ids']=[by_run[r] for r in row.get('source_run_ids',[]) if r in by_run]
-    return dict(tasks=rows,scope='Current-session tasks; no computation dispatched; source_run IDs preserve branches',
+    return dict(tasks=rows,scope='Current-project tasks across conversations; no computation dispatched; source_run IDs preserve branches',
         instructions=[
             'Use the exact source task ID. Never join unrelated targets or branches. Ask if several branches fit.',
             'Diversity uses Morgan/Tanimoto chemical differences; consensus performs protein/pocket alignment and admission.',

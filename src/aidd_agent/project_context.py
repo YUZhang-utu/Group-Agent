@@ -3,10 +3,27 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sqlite3
+from contextvars import ContextVar
+from functools import wraps
 from typing import Any
 
 from .context import AccessDeniedError, _require_user, slugify
 from .registry import stable_id, utc_now
+
+_BOUND_PROJECT = ContextVar('aidd_owned_project_operation', default=None)
+
+
+def owned_project_operation(function):
+    """Bind explicit owned workflow operations without changing another thread's project."""
+    @wraps(function)
+    def run(db, user, project, *args, **kwargs):
+        from .registry import connect
+        with connect(db) as connection:
+            require_project_owner(connection, user, project)
+        token = _BOUND_PROJECT.set((str(Path(db).resolve()), user, project))
+        try: return function(db, user, project, *args, **kwargs)
+        finally: _BOUND_PROJECT.reset(token)
+    return run
 
 
 def ensure_within(path: Path, root: Path) -> Path:
@@ -69,7 +86,8 @@ def create_scientific_project(connection: sqlite3.Connection, user_id: str, name
         raise ValueError("Project name and objective are required")
     roots = initialize_storage_root(storage_root)
     project_id = stable_id("PRJ")
-    project_slug = slugify(name)
+    try: project_slug = slugify(name)
+    except ValueError: project_slug = 'research-project'
     workspace = ensure_within(
         Path(roots["users"]) / user["username"] / "projects" /
         f"{project_id.lower()}-{project_slug}", Path(roots["users"]),
@@ -130,6 +148,13 @@ def active_project(connection: sqlite3.Connection, user_id: str) -> dict[str, An
 
 def require_active_project(connection: sqlite3.Connection, user_id: str,
                            expected_project_id: str | None = None) -> dict[str, Any]:
+    bound = _BOUND_PROJECT.get()
+    database = connection.execute('PRAGMA database_list').fetchone()[2]
+    if bound and bound[:2] == (str(Path(database).resolve()), user_id):
+        if expected_project_id and bound[2] != expected_project_id:
+            raise AccessDeniedError('Explicit workflow project does not match required Project')
+        project = require_project_owner(connection, user_id, bound[2])
+        return dict(project_id=bound[2], project_root=project['workspace_path'], name=project['name'])
     current = active_project(connection, user_id)
     if not current:
         raise AccessDeniedError(

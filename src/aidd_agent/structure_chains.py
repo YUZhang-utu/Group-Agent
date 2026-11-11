@@ -11,9 +11,10 @@ def initialize(app):
 
 
 def rows(app,sid):
+    pid=app.context_for(sid)['project_id']
     with app.connect() as db:
         return [dict(json.loads(r['payload']),id=r['id'],status=r['status']) for r in
-                db.execute('SELECT * FROM structure_chains WHERE session=? ORDER BY updated',(sid,))]
+                db.execute('SELECT c.* FROM structure_chains c JOIN sessions s ON c.session=s.id WHERE s.project_id=? ORDER BY c.updated',(pid,))]
 
 
 def save(app,chain,status):

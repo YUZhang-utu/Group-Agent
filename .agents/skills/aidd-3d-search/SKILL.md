@@ -8,6 +8,13 @@ current evidence before selecting an experiment or claiming acceptance.
 
 ## Choose the execution path
 
+E131 adds project-shared molecular preparation and immutable candidate sets.
+Use molecule_prepare for a literal SMILES or uploaded table/2D structure, then
+inspect the actual prepared queries. Save completed rankings with candidate_sets;
+filter/combine/group/export these without rescanning. A research_workflow can
+continue explicitly parameterized stages, blocking on ambiguous query selection.
+See [the project guide](../../../to_human/E131_TARGET_PROJECTS_AND_P0.md).
+
 For target-name requests, reuse protein/PDB discovery and ligand diversity/pocket/
 consensus preparation; do not require users to manually supply retrievable receptor
 files. E130 `ligand_library` inspects owned prepared cocrystal queries or takes a

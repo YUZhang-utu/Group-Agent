@@ -69,7 +69,7 @@ def import_file(app, project, supplied, destination, suffixes):
 def handle(app, sid, args):
     from .prompt_workflow import project_root, create_plan
     validate(args);app.session(sid)
-    ctx=app.context;project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
+    ctx=app.context_for(sid);project=project_root(Path(ctx['db']),ctx['user_id'],ctx['project_id'])
     with app.lock:
         identifier=uuid.uuid4().hex[:24]
         folder=project/'target-search'/'requests'/identifier;folder.mkdir(parents=True)

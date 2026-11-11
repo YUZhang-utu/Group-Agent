@@ -123,7 +123,7 @@ def select_blocks(path, scheme, receptor, method='union', blocks=5):
 
 def queue(app, sid, project, request, action):
     from .prompt_workflow import create_plan
-    ctx = app.context
+    ctx = app.context_for(sid)
     key = hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest()[:24]
     root = project / 'block-campaigns'
     root.mkdir(exist_ok=True)
@@ -134,7 +134,7 @@ def queue(app, sid, project, request, action):
              'Import saved EquiScore analysis ' if action == 'block_adopt_scores' else
              'Search leading blocks and dock conformers ' if request.get('dock') else
              'Search leading blocks for conformers ') + key
-    matches = [j for j in app.jobs(sid) if j['request'] == title]
+    matches = [j for j in app.project_jobs(sid) if j['request'] == title]
     if matches:
         job = matches[-1]
         return dict(status=job['status'], task_id=job['id'], reused=True,
@@ -182,8 +182,8 @@ def retry_config(app, sid, project, task_id):
     if sha(entry) != params['request_sha256']:
         raise ValueError('Original campaign request changed')
     request = read(entry)
-    if request.get('session') != sid:
-        raise ValueError('Campaign belongs to another conversation')
+    if app.context_for(request['session'])['project_id']!=app.context_for(sid)['project_id']:
+        raise ValueError('Campaign belongs to another project')
     request['retry_of'] = task_id
     return queue(app, sid, project, request, 'block_search_dock')
 
@@ -192,11 +192,11 @@ def handle(app, sid, args):
     from .prompt_workflow import project_root
     op = validate(args)
     app.session(sid)
-    ctx = app.context
+    ctx = app.context_for(sid)
     project = project_root(Path(ctx['db']), ctx['user_id'], ctx['project_id'])
     if op == 'comparison':
         rows = []
-        for job in app.jobs(sid):
+        for job in app.project_jobs(sid):
             if not job['request'].startswith('Search leading blocks for conformers '):
                 continue
             plan = ensure_within(Path(job['plan']), project)
@@ -208,7 +208,7 @@ def handle(app, sid, args):
             if sha(entry)!=params['request_sha256']:
                 raise ValueError('Campaign request changed')
             request = read(entry)
-            if request.get('session')!=sid or request.get('search_policy')!='ranked_blocks_until_budget':
+            if app.context_for(request['session'])['project_id']!=ctx['project_id'] or request.get('search_policy')!='ranked_blocks_until_budget':
                 continue
             selection = request['selection']
             row = dict(task_id=job['id'],status=job['status'],scheme=selection['scheme'],
@@ -232,7 +232,7 @@ def handle(app, sid, args):
         from .block_saved_inputs import discover
         return discover(app,sid,project)
     if op == 'list':
-        tasks = app.jobs(sid)
+        tasks = app.project_jobs(sid)
         queries = []
         for job in tasks:
             if job['status'] != 'complete':
