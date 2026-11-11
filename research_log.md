@@ -2796,3 +2796,35 @@ reuse decision table. Equivalent queued/completed work should be reused, failed
 compatible tasks resumed, uncertain receipts reconciled, and changed inputs should
 invalidate only affected stages. Independent user-requested replicates remain
 possible. A unified semantic deduplication guard is proposed, not claimed delivered.
+
+### 2026-11-11 E133 project direction and learning implementation
+
+User authorized the mission-continuity work and clarified that project experience
+must accumulate during progress, not only at initial setup. Implemented canonical
+mission revisions preserving the original baseline, generated PROJECT.md with
+manual-edit conflict preservation, requirement-linked task cards, exact sourced
+feedback, completed-report observations and bounded project context. Direct user
+controls apply mission proposals, archive feedback, authorize independent repeats
+and accept revision-bound requirements using existing report evidence. The model
+cannot perform those direct mission/acceptance operations through its tool.
+
+The Chat worker checks typed mission rules and execution revisions before launch.
+Eligible preparation/search lanes reuse content-matched completed artifacts only
+after hash verification, with explicit source-task lineage. Same ligand-library
+query/catalog with a changed export count blocks rescanning and directs reuse of
+the saved ranking through candidate sets. Active/failed equivalent work is surfaced
+for diagnosis/resumption; explicit replicates are retained. Live lookup, AF3 GPU
+execution and mutable candidate actions keep their existing explicit mechanisms.
+No universal semantic drift detection, model-weight learning or increased scientific
+accuracy is claimed. This is operational project memory and scoped execution control.
+
+Fixed literal-SMILES preparation/query inspection rejecting an empty external-input
+hash map despite a sealed literal request. Kept evidence-only runtime resolution
+consistent between project preflight and executor. Updated the prompt workflow
+skill and published to_human/E133_PROJECT_DIRECTION_AND_LEARNING.md with exact
+scope and controls. Confirmatory software checks: 192 integrated Python cases,
+then 15 focused cases after final legacy-note rendering (193 distinct cases),
+four Markdown tests, JS syntax, English759files and whitespace checks. Real local
+ethanol preparation and a two-conformer library search/import/larger MOL2 export
+were exercised; providers were scripted. No live provider/GPU/production-library
+or browser visual acceptance was run. Protocol: experiments/E133-project-guidance.md.

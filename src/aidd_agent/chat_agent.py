@@ -540,6 +540,8 @@ class ChatAgent:
         initialize_projects(self)
         from .research_workflows import initialize as initialize_workflows
         initialize_workflows(self)
+        from .project_guidance import initialize as initialize_guidance
+        initialize_guidance(self)
         if start:
             self.worker = threading.Thread(target=self.work, daemon=True)
             self.worker.start()
@@ -723,6 +725,10 @@ class ChatAgent:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
+            if command == '/project_control':
+                from .project_guidance import user_control
+                answer=json.dumps(user_control(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
+                self.message(sid,'assistant',answer);return answer
             if command == '/target_search':
                 from .target_search_workflow import handle
                 answer=json.dumps(handle(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
@@ -1051,6 +1057,8 @@ class ChatAgent:
         if 'status' in fields:
             from .research_projects import remember_status
             remember_status(self,jid,fields['status'])
+            from .project_guidance import task_event
+            task_event(self,jid,fields['status'])
 
     @staticmethod
     def safe_error(exc):
@@ -1128,6 +1136,19 @@ class ChatAgent:
             self.message(sid,"assistant",f"Task {jid}: "+envelope["plan"]["summary"])
         if self.task(sid,jid)["cancel"] or self.stop.is_set():
             self.update(jid,status="interrupted" if self.stop.is_set() else "cancelled"); return
+        from . import project_execution as direction
+        try:
+            with self.lock:
+                card,reuse=direction.check(self,job)
+                if reuse:
+                    self.update(jid,status='complete',report=reuse['report'],error=None)
+                    self.message(sid,'assistant',f"Task {jid} reused verified results from {reuse['id']}. No scientific calculation was launched. Report: {reuse['report']}")
+                    return
+                direction.started(self,job)
+        except (ValueError,OSError,KeyError) as exc:
+            self.update(jid,status='blocked',error='Project direction/reuse check: '+str(exc))
+            self.message(sid,'assistant',f"Task {jid} blocked before scientific execution: {exc}")
+            return
         cmd = [sys.executable,"-u","-m","aidd_agent.prompt_workflow","run","--db",ctx["db"],"--user",ctx["user_id"],
                "--project",ctx["project_id"],"--plan",job["plan"]]
         if self.runtime: cmd += ["--runtime",str(self.runtime)]
@@ -1155,13 +1176,14 @@ class ChatAgent:
                 if not failures and status != 'complete':
                     failures = (report or {}).get('clarifications') or [f'Worker exited with code {process.returncode}; inspect the local execution log.']
                 error = None if status == 'complete' else self.safe_error(ValueError('\n'.join(failures)))
-                self.update(jid,status=status,error=error)
+                if status=='complete':direction.finished(self,job)
                 self.message(sid,"assistant",f"Task {jid}: {status}."+('\n'+error if error else '')+f"\nReport: {job['report']}")
                 if status == "complete":
                     summary = screening_summary(job)
                     if summary: self.message(sid,"assistant",screening_feedback(summary))
                 if status == "blocked" and report and report.get("clarifications"):
                     self.message(sid,"assistant"," ".join(report["clarifications"]))
+                self.update(jid,status=status,error=error)
 
     def close(self):
         self.stop.set()

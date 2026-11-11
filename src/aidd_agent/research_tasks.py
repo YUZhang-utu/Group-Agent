@@ -38,7 +38,9 @@ def request_file(execution,params):
 
 def execute(params,directory,execution,cfg,compute):
     from .screening_selection import check_hashes
-    request=read(request_file(execution,params));check_hashes(request['input_hashes'])
+    request=read(request_file(execution,params))
+    # Literal SMILES live in the sealed request, without an external input file.
+    if request['input_hashes']:check_hashes(request['input_hashes'])
     if request['kind']=='molecule_prepare':
         from .molecule_preparation import execute as prepare
         result=prepare(request['arguments'],directory)
@@ -46,7 +48,7 @@ def execute(params,directory,execution,cfg,compute):
         from .candidate_sets import execute as candidates
         result=candidates(request['arguments'],directory,execution.parent.parent.parent,cfg)
     else:raise ValueError('Unknown research task')
-    check_hashes(request['input_hashes'])
+    if request['input_hashes']:check_hashes(request['input_hashes'])
     result.update(report=str(directory/'report.json'))
     _atomic_json(directory/'report.json',result)
     return result

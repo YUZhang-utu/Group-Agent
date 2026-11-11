@@ -1,3 +1,24 @@
+project_direction_learning_e133:
+  date: 2026-11-11
+  protocol: experiments/E133-project-guidance.md
+  guide: to_human/E133_PROJECT_DIRECTION_AND_LEARNING.md
+  mission: original_baseline_and_user_authorized_revisions
+  memory: sourced_feedback_report_fields_task_ledger_and_dependency_progress
+  document: generated_project_md_preserves_manual_edits_on_conflict
+  context: bounded_project_brief_with_pinned_constraints_and_explicit_overflow
+  execution: chat_worker_typed_rules_requirement_links_and_revision_checks
+  reuse: scoped_content_signatures_and_verified_artifact_inventory
+  export_changes: saved_ranking_import_export_instead_of_repeat_ligand_library_scan
+  acceptance: user_only_revision_bound_evidence_linked
+  integrated_tests: 192_passed
+  final_guidance_regression: 15_passed
+  distinct_python_cases_across_runs: 193
+  markdown_tests: 4_passed
+  live_provider_gpu_and_production_library_acceptance: not_run
+  browser_visual_acceptance: not_run_prior_computer_use_url_identification_block
+  limitations: no_weight_training_universal_semantic_drift_detector_or_scientific_accuracy_claim
+  delivery_target: origin/feature/structure-guided-chat
+
 project_knowledge_contract_e132:
   date: 2026-11-11
   status: specification_and_template_only

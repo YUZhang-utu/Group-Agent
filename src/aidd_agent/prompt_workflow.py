@@ -190,6 +190,16 @@ def load_runtime(path):
     return cfg, inputs
 
 
+def plan_runtime(plan, runtime):
+    """Evidence-only plans must not depend on unrelated compute configuration."""
+    evidence_only = bool(plan['steps']) and all('source_run' in s['params'] and s['action'] not in {
+        'guided_funnel','consensus_funnel','consensus_budget','budget_page','block_plants_prepare',
+        'block_plants_run','block_analyze','plants_receptors'} for s in plan['steps'])
+    attachment_only = bool(plan['steps']) and all(s['action'] in {
+        'block_import_analysis','block_adopt_scores','block_adopt_query'} for s in plan['steps'])
+    return ({}, []) if evidence_only or attachment_only else load_runtime(runtime)
+
+
 def execute_step(step, directory, execution, results, cfg, allow_compute, services):
     if step['action'] == 'research_task':
         from .research_tasks import execute
@@ -456,9 +466,7 @@ def run_plan(db, user, project, plan_path, *, runtime=None, allow_compute=False,
     plan = validate_plan(envelope["plan"])
     # Evidence branches consume sealed source artifacts; unrelated AF3 image hashing
     # and runtime discovery would add avoidable startup cost to every preview.
-    evidence_only = bool(plan["steps"]) and all("source_run" in s["params"] and s['action'] not in {'guided_funnel','consensus_funnel','consensus_budget','budget_page','block_plants_prepare','block_plants_run','block_analyze','plants_receptors'} for s in plan["steps"])
-    attachment_only = bool(plan['steps']) and all(s['action'] in {'block_import_analysis','block_adopt_scores','block_adopt_query'} for s in plan['steps'])
-    cfg, config_inputs = ({}, []) if evidence_only or attachment_only else load_runtime(runtime)
+    cfg, config_inputs = plan_runtime(plan, runtime)
     services = services or Services()
     execution = ensure_within(path.parent / "execution", root)
     execution.mkdir(exist_ok=True)

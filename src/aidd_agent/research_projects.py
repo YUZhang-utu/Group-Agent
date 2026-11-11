@@ -122,6 +122,8 @@ def handle(app, sid, args):
             with connect(Path(ctx['db'])) as db: require_project_owner(db,ctx['user_id'],pid)
         # Never reassign a conversation with sealed tasks or uploaded assets.
         new_sid = app.new_session(project_id=pid)
+        from .project_guidance import render
+        render(app,new_sid)
         return dict(project_id=pid, session=new_sid, message='Opened a conversation in the selected project. Existing conversations and tasks keep their original project.')
     if operation == 'note':
         if set(args)-{'operation','kind','text','task_id'}: raise ValueError('Unknown project note fields')
@@ -131,6 +133,8 @@ def handle(app, sid, args):
         identifier = uuid.uuid4().hex
         with app.connect() as db:
             db.execute('INSERT INTO research_notes VALUES(?,?,?,?,?,?)', (identifier,ctx['project_id'],args['kind'],args['text'],args.get('task_id'),time.time()))
+        from .project_guidance import render
+        render(app,sid)
         return dict(note_id=identifier, project_id=ctx['project_id'], provenance='Recorded project statement; not independently verified scientific fact')
     if operation == 'assets':
         rows=[]

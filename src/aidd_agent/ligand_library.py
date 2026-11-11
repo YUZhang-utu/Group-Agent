@@ -52,7 +52,9 @@ def queries(app, sid, task_id):
                 'structure_consensus', 'pocket_consensus', 'target_query_prepare', 'consensus_design', 'research_task'}:
             continue
         path = ensure_within(Path(step['result']['report']), project)
-        child = read(path); check_hashes(child.get('sources', {}))
+        child = read(path)
+        if child.get('sources'):check_hashes(child['sources'])
+        elif child.get('kind')!='molecule_prepare':raise ValueError('Prepared query has no source provenance')
         rows = child.get('prepared_complexes', child.get('templates', []))
         if child.get('kind') == 'target_query': rows = [child['query']]
         if child.get('kind') == 'molecule_prepare':

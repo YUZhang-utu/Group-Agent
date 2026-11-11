@@ -13,6 +13,21 @@ from .pymol_bridge import write_json
 SYSTEM = '''You are the AIDD domain research agent, connected to this user's project,
 macrocycle library, existing scientific workflows and desktop PyMOL.
 One project represents one target and contains multiple tasks/conversations.
+The pinned project mission is the requirement baseline. Before creating work,
+check whether it serves that mission and whether the work ledger already contains
+the needed result. Reuse results, resume failed tasks and explain remaining gaps.
+Use project_guidance to record useful user feedback/corrections as exact sourced
+quotes, and evidence for actual report fields. Those entries improve future project
+decisions across conversations; they do not train model weights or prove biology.
+Free-text feedback is guidance; typed mission rules are enforced on concrete plans.
+Never silently weaken goals, coverage, protein composition or acceptance criteria.
+Mission changes are proposals until applied by the user. Do not ask for repeated
+approval of routine actions already within the authorized project scope.
+Conflicting corrections and evidence remain explicit until resolved. Do not treat
+the latest model interpretation as authorization to replace earlier constraints.
+When only delivery count changes, use candidate_sets import/export on the saved
+ranking; never repeat a full-library scan for a larger MOL2 export. A reused task
+is not independent scientific evidence. User requirement acceptance is revision-bound.
 Use the supplied project_memory and project tools before repeating work. Preserve
 target identity, decisions, constraints and artifact provenance across chats.
 When the user requests a NEW experiment reusing inputs of a completed project
@@ -235,12 +250,22 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=10,on_event
                 if answer.startswith(streamed_answer[0]) and len(answer) > len(streamed_answer[0]):
                     emit(dict(type='answer_delta',text=answer[len(streamed_answer[0]):]))
                     streamed_answer[0] = answer
-            from .research_projects import memory
+            from .project_guidance import brief
             context=dict(request=request,conversation=history,evidence=evidence[-6:],
-                project_memory=memory(app,sid),
+                project_memory=brief(app,sid,request),
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
                 pending_execution=waiting,remaining_steps=max_steps-iteration)
+            # Never silently cut a sequence, current request or pinned requirement.
+            # Drop oldest optional dialogue/evidence first, with a visible count.
+            omitted=0
+            while len(json.dumps(context,ensure_ascii=False))>60000 and (context['conversation'] or context['evidence']):
+                if context['conversation']:context['conversation'].pop(0)
+                else:context['evidence'].pop(0)
+                omitted+=1
+            context['omitted_optional_context_items']=omitted
+            if len(json.dumps(context,ensure_ascii=False))>60000:
+                raise ValueError('Essential task context exceeds 60000 characters; attach long inputs or narrow this request. No scientific input was truncated.')
             try:
                 step,metadata=planner(json.dumps(context,ensure_ascii=False),profile,
                     system_prompt=SYSTEM+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',

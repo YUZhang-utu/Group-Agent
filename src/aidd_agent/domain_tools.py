@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, build_opener
 
 TOOLS = {
+    'project_guidance': 'Project direction and learning. read returns mission, feedback, evidence, task cards and PROJECT.md path. propose(mission) saves a concrete mission revision for user application, never changes goals itself. feedback(kind,quote,optional task_id) records an EXACT quote from the current user message; kinds constraint/preference/correction/observation/hypothesis/next_step. evidence(task_id,pointer) imports an actual completed report field, not invented interpretation. link(task_id,requirement_ids,contribution) maps queued work to existing requirements. Consult pinned corrections before planning; do not promote user observations or hypotheses to verified facts. User controls alone apply mission revisions, archive feedback or authorize independent replicate tasks.',
     'molecule_prepare': 'Prepare project-owned SMILES or uploaded CSV/TSV/SMI/SDF/MOL/MOL2 as explicit 3D conformers. Exactly one attachment_id or literal smiles. Optional name, conformers (default 1, max 100), seed (default 47), smiles_column/name_column, allow_unspecified_stereo (default false). Preserve original 3D coordinates; generated conformers use ETKDGv3/MMFF. No implicit salt stripping, protonation or tautomer changes. Reports per-record failures and actual query IDs. Queues a task; inspect ligand_library after completion.',
     'candidate_sets': 'Local project candidate collections without rescanning. operations list; show(set_id,offset,limit); import(task_id,name,optional limit) from one completed ranking; union/intersection/difference(set_id,other_set_id,name); filter(set_id,name,optional limit,score_min,exclude_labels); diverse(set_id,name,optional max_per_scaffold,limit) uses Murcko groups; label(set_id,molecule_ids,label,optional note); export(set_id,count,optional start_rank) reuses saved poses and original MOL2. Mutations except label queue tasks. Preserve source rank, no cross-method score fusion. IDs must come from project evidence.',
     'research_workflow': 'Durable project goal across tasks. create requires objective and nodes (max 20), each {id,tool,arguments,depends_on}; tools molecule_prepare,ligand_library,candidate_sets,workflow,target_search. Use {{task:node_id}} for a preceding task ID, {{query:node_id}} for its sole prepared query (multiple choices block), {{set:node_id}} for its candidate set. Dependencies must precede a node. Background worker advances automatically, including after chat closes/restart; never resubmits uncertain dispatch. status lists goals; pause/resume/cancel require workflow_id. resolve requires workflow_id,node_id,arguments to replace an unsubmitted blocked node. reconcile requires workflow_id,node_id,task_id to bind an uncertain dispatch to its verified existing task. Pause/cancel stops future steps, not a running scientific task. Scientific choices must be explicit or resolved from evidence; do not guess a ligand/reference.',
@@ -37,6 +38,7 @@ TOOLS['project'] += ' search requires query and optional offset/limit; finds ear
 TOOLS['ligand_library'] = TOOLS['ligand_library'].replace('session-uploaded','project-uploaded')
 
 TOOL_ARGUMENTS = {
+    'project_guidance': {'operation','mission','kind','quote','task_id','pointer','requirement_ids','contribution'},
     'molecule_prepare': {'attachment_id','smiles','name','conformers','seed','smiles_column','name_column','allow_unspecified_stereo'},
     'candidate_sets': {'operation','name','task_id','set_id','other_set_id','limit','score_min','exclude_labels','max_per_scaffold','start_rank','count','offset','molecule_ids','label','note'},
     'research_workflow': {'operation','objective','nodes','workflow_id','node_id','arguments','task_id'},
@@ -213,6 +215,9 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name=='project_guidance':
+            from .project_guidance import handle
+            return handle(self.app,self.sid,args,self.request)
         if name == 'research_workflow':
             from .research_workflows import handle
             return handle(self.app,self.sid,args,self.provider,self.request)

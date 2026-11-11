@@ -57,8 +57,13 @@ research_workflow for explicitly authorized dependency goals and molecule_prepar
 for 2D/SMILES inputs. Continue from saved candidate sets without another search.
 See [the project/P0 guide](../../../to_human/E131_TARGET_PROJECTS_AND_P0.md).
 The [E132 knowledge contract](../../../to_human/E132_PROJECT_KNOWLEDGE_AND_EXECUTION.md)
-is a proposed specification and dossier template, not an implemented context
-builder. Distinguish recorded statements, verified observations and interpretations.
+defines the broader specification. [E133](../../../to_human/E133_PROJECT_DIRECTION_AND_LEARNING.md)
+implements versioned missions, generated PROJECT.md, bounded context, sourced
+feedback, task cards, typed dispatch checks and scoped reuse. Preserve current
+constraints and use prior results as the project progresses. Mission changes are
+model proposals until a direct user action applies them; user requirement acceptance
+is revision-bound. Generic semantic alignment and scientific validity remain review
+requirements. Distinguish recorded statements, report observations and interpretations.
 Do not retry an uncertain dispatch; reconcile the existing task receipt. Missing
 site/reference/query choices must remain explicit. Notes are statements, not
 independently verified scientific findings.

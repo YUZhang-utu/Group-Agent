@@ -121,6 +121,10 @@ def make_server(agent, port=8765, token=None):
                     from .research_projects import handle
                     sid = body.get('session') or agent.new_session()
                     result = handle(agent,sid,body['arguments'])
+                elif self.path == '/api/project-guidance':
+                    from .project_guidance import handle,user_control
+                    result=(handle(agent,body['session'],body['arguments']) if body['arguments'].get('operation')=='read'
+                            else user_control(agent,body['session'],body['arguments']))
                 elif self.path == '/api/research-workflow':
                     from .research_workflows import handle
                     if body['arguments'].get('operation') not in {'status','pause','resume','cancel'}:
