@@ -17,10 +17,16 @@ from .workflow_errors import Blocked
 
 def sample_summary(output):
     """Retain every sample confidence and structure hash; never infer missing seeds."""
-    rows=[]
-    for path in sorted(Path(output).rglob('summary_confidences.json')):
-        if not any(p.startswith('seed-') for p in path.parts):continue
-        model=path.with_name('model.cif')
+    import re
+    root=Path(output).resolve();rows=[];seen=set()
+    for path in sorted(root.rglob('*summary_confidences.json')):
+        if not re.fullmatch(r'seed-\d+_sample-\d+',path.parent.name):continue
+        if path.parent in seen:raise ValueError('Ambiguous summary confidence files in sample '+path.parent.name)
+        seen.add(path.parent)
+        from .project_context import ensure_within
+        path=ensure_within(path,root)
+        prefix=path.name.removesuffix('summary_confidences.json')
+        model=ensure_within(path.with_name(prefix+'model.cif'),root)
         row=dict(sample=path.parent.name,confidence=read(path),confidence_path=str(path),confidence_sha256=sha(path),
                  model=str(model) if model.is_file() else None,model_sha256=sha(model) if model.is_file() else None)
         rows.append(row)
@@ -38,6 +44,8 @@ def sample_summary(output):
         values=[r['confidence'][key] for r in rows if type(r['confidence'].get(key)) in (float,int)]
         if values:ranges[key]=dict(min=min(values),max=max(values),count=len(values))
     return dict(samples=rows,sample_count=len(rows),ranking_rows=ranking,best_recorded_sample=best,
+        sample_model_count=sum(bool(r['model']) for r in rows),
+        missing_sample_models=[r['sample'] for r in rows if not r['model']],
         metric_ranges=ranges,ranking_source=str(ranking_files[0]) if len(ranking_files)==1 else None,
         sample_coverage='recorded_outputs_only',affinity_ranking='not_supported')
 

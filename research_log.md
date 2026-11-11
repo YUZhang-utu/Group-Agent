@@ -2902,3 +2902,18 @@ to run real workstation tests after pulling GitHub and return task/report feedba
 Guide: to_human/E136_SCIENTIFIC_P0_AND_TESTING.md. Protocol:
 experiments/E136-scientific-p0.md. No affinity, enrichment superiority or production
 speedup is claimed. Existing public/internal knowledge boundaries remain unchanged.
+
+### 2026-11-11 E137 AF3 original-output review
+
+User returned a read-only CIP2A task review with correct saved inputs but no original
+ranking inspection. Split metric-dimension consistency from label correspondence:
+the supplied two-chain metric dimensions agree with each other, while 931 repeated
+summary labels do not establish matrix order. No raw scientific array is changed.
+Added read-only af3_review for owned completed af3_run tasks, supporting original
+ranking/sample discovery, hashes, seed coverage and best recorded sample path.
+Fixed E136 discovery to support official job-prefixed sample files as well as bare
+filenames. Missing report fields no longer require a new prediction to inspect.
+Validation: 86 related Python tests passed; original-report immutability, no task
+creation, project isolation, filename variants and ambiguity are covered. Actual
+workstation output remains to be inspected using the new tool. Reference and
+protocol: experiments/E137-af3-readonly-review.md.

@@ -67,3 +67,10 @@ E136 adds recorded sample confidence, exploratory aligned-pose consistency and
 independent available geometry checks. Missing chemistry/mapping is not assessed,
 not passed. No strain-energy, affinity or experimental acceptance follows.
 Local adapter tests do not establish successful AF3 inference or desktop GUI operation.
+
+For old completed single-prediction tasks, E137 `af3_review(task_id)` reads the
+original recorded directory and ranking table without recomputation or rewriting
+reports. It supports both bare and job-prefixed sample filenames. Use it before
+concluding that a report lacking sample fields means samples do not exist. Metric
+dimension consistency and chain-label correspondence are separate checks. Keep
+matrix order unverified when summary chain_ids are repeated; do not deduplicate.

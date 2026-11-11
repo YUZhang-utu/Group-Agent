@@ -62,6 +62,12 @@ TOOL_ARGUMENTS = {
 from .scientific_tools import FIELDS as SCIENTIFIC_FIELDS, DESCRIPTIONS as SCIENTIFIC_DESCRIPTIONS
 TOOL_ARGUMENTS.update(SCIENTIFIC_FIELDS)
 TOOLS.update(SCIENTIFIC_DESCRIPTIONS)
+TOOLS['af3_review'] = ('Read original output files of a completed project AF3 prediction without inference or changing reports. '
+    'Requires task_id, optional step_id if multiple af3_run steps, offset and limit for samples. '
+    'Reads ranking CSV, discovers bare or job-prefixed sample structures/confidence, checks recorded input/model hashes, '
+    'and reports best seed/sample and actual seed coverage. Use before declaring ranking unavailable from old reports. '
+    'Repeated labels do not establish matrix order; confidence is not affinity.')
+TOOL_ARGUMENTS['af3_review'] = {'task_id','step_id','offset','limit'}
 TOOLS['pose_qc'] += ' Alternatively specify set_id and count (1..1000) to check saved candidate poses, reusing original/posed MOL2 exports without rescanning.'
 TOOLS['af3_batch'] += ' Instead of literal protein_sequences, protein_task_id may reuse the exact assembly from one completed project AF3 preparation task; never multiply those copies again.'
 TOOLS['research_workflow'] += ' Additional queued node tools: af3_batch, pose_qc, screening_benchmark.'
@@ -228,6 +234,12 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name=='af3_review':
+            from .af3_review import review
+            value=review(self.app,self.sid,args)
+            samples=value.pop('samples');ranking=value.pop('ranking_rows')
+            return dict(value,samples=page(samples,args),ranking_rows=page(ranking,args),
+                        artifacts=self.discover(value,self.project))
         if name in SCIENTIFIC_FIELDS:
             from .scientific_tools import handle
             return handle(self.app,self.sid,name,args,self.request)

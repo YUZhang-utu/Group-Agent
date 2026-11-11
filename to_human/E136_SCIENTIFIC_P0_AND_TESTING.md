@@ -229,6 +229,18 @@ not claim browser visual acceptance or universal natural-language reliability.
 
 ## Feedback checklist
 
+E137 adds original-output review for an existing completed `af3_run` task:
+
+```text
+Use af3_review on task TASK_ID. Read the original AF3 ranking table and sample
+files without launching inference or rewriting existing reports. Report observed
+seeds, sample/model counts, the best recorded seed and sample, its CIF path, and
+missing evidence. Distinguish metric dimensions from chain-label correspondence.
+```
+
+Both bare and job-prefixed sample files are supported. Sample count is observed,
+not inferred from seed count. Follow pagination for long sample/ranking tables.
+
 For each manual case, record the exact prompt, task ID, terminal status, expected
 versus actual behavior and the relevant report. For a failure, include the task
 error and the last approximately 40 lines of its local execution log, without keys.

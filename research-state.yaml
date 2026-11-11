@@ -1,3 +1,15 @@
+af3_original_output_review_e137:
+  date: 2026-11-11
+  protocol: experiments/E137-af3-readonly-review.md
+  source: user_workstation_readonly_CIP2A_review_feedback
+  tool: af3_review
+  behavior: original_output_inspection_no_inference_no_old_report_mutation
+  filename_compatibility: bare_and_job_prefixed_samples
+  chain_diagnostics: metric_dimensions_separate_from_label_correspondence
+  related_tests: 86_passed
+  workstation_original_output_inspection: pending_user_feedback
+  delivery_target: origin/feature/structure-guided-chat
+
 scientific_p0_e136:
   date: 2026-11-11
   protocol: experiments/E136-scientific-p0.md

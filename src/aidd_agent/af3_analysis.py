@@ -72,13 +72,18 @@ def assess_chain_mapping(confidence):
         else:
             dimensions[key] = len(value)
     sizes = {size for size in dimensions.values() if size is not None}
-    if len(sizes) > 1 or (valid_labels and any(size != len(labels) for size in sizes)):
-        warnings.append('Chain-level score dimensions do not match each other or summary chain_ids.')
+    if len(sizes) > 1:
+        warnings.append('Chain-level metric dimensions disagree with one another.')
+    if valid_labels and any(size != len(labels) for size in sizes):
+        warnings.append('Chain-level metric dimensions differ from the supplied summary chain_ids length; '
+                        'this does not by itself mean the metric arrays disagree with one another.')
     verified = valid_labels and not warnings
     return dict(status='summary_labels_consistent' if verified else 'unverified',
                 matrix_chain_ids=list(labels) if verified else None,
                 label_count=len(labels) if isinstance(labels, list) else None,
-                label_counts=counts, metric_dimensions=dimensions, warnings=warnings)
+                label_counts=counts, metric_dimensions=dimensions,
+                metric_dimensions_consistent=bool(dimensions) and None not in dimensions.values() and len(sizes)==1,
+                warnings=warnings)
 
 
 def compact_confidence(confidence):
