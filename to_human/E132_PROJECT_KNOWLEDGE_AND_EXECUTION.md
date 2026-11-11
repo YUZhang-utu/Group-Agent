@@ -1,8 +1,105 @@
-# Target project knowledge and execution contract
+# Target project direction, knowledge and execution contract
 
 Status: proposed architecture and operating specification, 2026-11-11.
 This document does not mean the proposed dossier, context builder or execution
 gates are already implemented. E131 remains the current runtime baseline.
+
+## Primary purpose: keep work aligned with the user's intended outcome
+
+The user's clarification makes direction control the primary purpose of the
+dossier. Shared knowledge, context compression and task history support that
+purpose. A technically successful task can still be the wrong task.
+
+Pin an original mission at the start: the user's original request/source message,
+intended outcome, deliverables, acceptance criteria, scope, exclusions and fixed
+scientific requirements. Separate that mission from the agent's chosen methods.
+Do not continually rewrite the mission to match whatever work has been performed.
+Preserve the original baseline and a current authorized revision. Explicit later
+user changes update the current revision with provenance; the baseline must not
+prevent the user from changing direction.
+
+Every task must name a mission requirement ID and explain its concrete contribution
+to that requirement. Necessary preparation and investigation of blockers may be
+dependencies, but must retain that link and a stopping condition. New interesting
+findings belong in a backlog until they serve the active mission or the user
+authorizes their pursuit. Finishing more tool calls is not progress unless they
+satisfy a deliverable, resolve a needed dependency or close a relevant uncertainty.
+
+At task planning/dispatch, after results, on resumption and before selecting the
+next task, check alignment against the pinned authorized mission, not just against
+the previous task or latest generated summary:
+
+1. Which original/current authorized requirement does this action serve?
+2. Are target, construct, assembly, chemistry, library scope and requested outputs
+   still consistent with that requirement?
+3. Does the selected method produce the needed evidence/deliverable, and are we
+   reusing appropriate completed work instead of pursuing an unrelated branch?
+4. Have an error or missing dependency led us to weaken acceptance criteria or
+   substitute an easier but different task?
+5. Is this a method adjustment within existing authorization, or a mission change?
+
+Routine implementation choices and within-scope repairs proceed autonomously.
+Use authorization already present in the conversation; do not repeatedly ask the
+user to approve the same scope. A change to goals, fixed scientific requirements,
+deliverables or acceptance criteria requires user direction if not already
+authorized. Record a concrete proposed change and its reason; stop only dependent
+work while continuing independent authorized work. Do not let the agent approve
+its own proposal or treat a generated interpretation as a user instruction.
+
+Examples for this AIDD project:
+
+| Intended work | Direction drift to catch | Correct handling |
+| --- | --- | --- |
+| Target -> experimental ligand reference -> local-library candidates -> MOL2 | Ending after a literature review or reference download | Record completed prerequisite; retain screening/export as outstanding deliverables |
+| Score every configured library conformer | Silently substituting a retrieved subset after a slow run | Preserve the coverage requirement; report the blocker or propose an explicit scope change |
+| AF3 dimer with supplied sequence and exact seeds | Running one chain or default seeds because configuration is easier | Reject the mismatched plan; preserve inputs and fix or report the concrete blocker |
+| Re-export a saved candidate set | Launching another search, docking or model-training project | Reuse the saved ranking/poses; keep unrelated ideas outside the active plan |
+| Produce a scientific prediction | Declaring an interface fixture or queued receipt sufficient | Keep the scientific deliverable incomplete until actual required evidence exists |
+
+Record completion by requirement: satisfied with evidence, outstanding, blocked,
+or explicitly removed by the user. A blocked requirement is not silently removed.
+The mission summary and requirement status should remain small and always present
+in task context; detailed history and domain evidence can be retrieved as needed.
+
+### A long-running project needs requirements, a plan and an execution ledger
+
+Treat this like a software project whose implementation must continue to satisfy
+its requirements over many work sessions. The dossier has three linked layers:
+the user-authorized requirement baseline, the dependency/milestone plan, and the
+actual execution ledger. Requirements describe the desired outcome and limits;
+the plan describes the current method; the ledger records what really happened.
+Do not confuse a planned step with executed work or an executed step with an
+accepted deliverable. On a new chat or restart, reconstruct the next ready work
+item from these records instead of replanning the whole target project from scratch.
+
+### Check reuse before creating another scientific task
+
+Each proposed calculation needs a stable work signature based on operation,
+project/branch scope, exact input content hashes, scientific parameters (including
+seeds), query/reference identity, library version, relevant tool/runtime version
+and requested output semantics. Wording changes in a prompt or a new chat must
+not create a different scientific identity by themselves. Use stage-specific
+signatures: changing an export quota does not change an already computed full
+ranking. Required reproducibility checks must still hold when outputs are reused.
+
+| Prior work | Next action |
+| --- | --- |
+| Equivalent task queued/running | Attach to its progress; do not submit another copy |
+| Equivalent task complete, outputs present and valid | Reuse its artifacts and link the source task |
+| Required ranking exists; only selection/export differs | Create the downstream selection/export task only |
+| Task failed/interrupted and checkpoint is compatible | Resume the existing task under the established recovery rules |
+| Submission outcome is uncertain | Reconcile the receipt before any resubmission |
+| Inputs/parameters/library version changed | Record the delta; rerun only affected stages and dependent descendants |
+| Prior outputs are missing or invalid | Record the failure of reuse; recover outputs or justify recomputation |
+| User requests an independent replicate | Record that intent and replicate identity; do not deduplicate it away |
+
+Record the reuse decision and consulted task IDs before dispatch. A new task must
+state why an existing result is insufficient. Scientific freshness and parameter
+compatibility matter, not just matching filenames or finding a complete flag.
+Reuse links must preserve provenance and never copy a prior result into a new
+task as if a new calculation had occurred. Existing controls already protect some
+submission paths; a unified semantic reuse guard across all operations is proposed,
+not implemented by this document.
 
 ## 1. What currently shares information
 
@@ -29,6 +126,9 @@ notes are recorded statements, even when their kind is finding.
 Give each target project a visible `PROJECT.md` using
 [the dossier template](templates/TARGET_PROJECT_DOSSIER.md). It is a concise
 working record, not a cumulative chat transcript. It answers:
+
+First: are we still pursuing the originally intended outcome, as explicitly
+revised by the user, and how does the next action advance it?
 
 1. What exact target, construct and assembly are we studying?
 2. What is the user's objective and which constraints remain active?
@@ -88,6 +188,8 @@ Build a fresh context for each task rather than carrying a growing transcript:
 6. Only the tool contracts needed for the selected operation.
 
 Always retain applicable constraints by their active status, not by recency.
+Always retain the authorized mission revision, its acceptance criteria and the
+current task's requirement linkage. These take priority over conversational history.
 Retrieve evidence first by explicit task/asset/branch references; then use metadata
 or text search if necessary. A semantic retrieval component is optional and must
 not replace deterministic ownership, identity and version checks. Retrieval
@@ -135,6 +237,7 @@ Re-exporting or filtering a saved candidate set does not authorize another scan.
 Before dispatch, persist a task card with:
 
 - Goal and requested outputs; project, branch and parent task IDs.
+- Mission revision, requirement IDs, expected contribution and alignment verdict.
 - Exact input artifact IDs/hashes and selected construct/site/reference versions.
 - Parameters, configured tool/runtime, compute authorization and output location.
 - Execution completion criteria, scientific QC criteria and stop conditions.
@@ -157,6 +260,17 @@ superseded entries without deleting their lineage. A stale or missing artifact
 invalidates dependent claims until checked; it does not erase the historical run.
 
 ## 7. Acceptance checks before calling this implemented
+
+- An apparently successful but out-of-scope task is rejected or left as a proposal;
+  successful execution alone cannot satisfy an unrelated mission requirement.
+- Rephrasing the same calculation in a new chat reuses its compatible completed
+  outputs or existing job; it does not dispatch an equivalent new calculation.
+- Changing an export count reuses the ranking; changing a query invalidates only
+  stages that depend on that query. Deliberate independent replicates remain possible.
+- Failure of the intended workflow cannot silently change library coverage,
+  protein assembly, requested outputs or the definition of completion.
+- An explicit user revision takes effect and remains linked to the original
+  mission; routine within-scope repairs do not trigger unnecessary approval loops.
 
 - An old active constraint remains enforced after more than 100 later messages.
 - The same task produces the same selected facts/constraints in a fresh chat and

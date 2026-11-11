@@ -1,6 +1,7 @@
 project_knowledge_contract_e132:
   date: 2026-11-11
   status: specification_and_template_only
+  primary_purpose: prevent_task_direction_drift_from_user_authorized_mission
   specification: to_human/E132_PROJECT_KNOWLEDGE_AND_EXECUTION.md
   template: to_human/templates/TARGET_PROJECT_DOSSIER.md
   runtime_baseline: e131_project_memory

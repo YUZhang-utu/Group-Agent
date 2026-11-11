@@ -2776,3 +2776,23 @@ revisioned updates and acceptance cases. Corrected older skill wording about
 session-scoped access to match E131 project sharing. No runtime code changed;
 automatic dossier generation, hard context budgets and evidence-update gates are
 not yet implemented or behaviorally validated. No new scientific experiment run.
+
+### 2026-11-11 E132 clarification: mission alignment is primary
+
+User clarified that the document primarily prevents work drifting away from its
+original objective. Revised the specification/template to pin the original mission
+and current user-authorized revision, scope/exclusions, fixed scientific requirements,
+deliverables and acceptance criteria. Every task must link to a mission requirement
+and pass an alignment check at dispatch, result review, resumption and next-step
+selection. Within-scope method changes remain autonomous; unauthorized objective
+changes remain proposals. Errors cannot silently weaken coverage/assembly/output
+requirements, and completed subtasks do not substitute for the final deliverable.
+Documentation only; runtime alignment gates remain proposed.
+
+The user further compared target discovery to long-running software development:
+requirements and limits must remain stable while many implementation steps occur.
+Added the explicit requirements/plan/actual-ledger separation and a pre-dispatch
+reuse decision table. Equivalent queued/completed work should be reused, failed
+compatible tasks resumed, uncertain receipts reconciled, and changed inputs should
+invalidate only affected stages. Independent user-requested replicates remain
+possible. A unified semantic deduplication guard is proposed, not claimed delivered.
