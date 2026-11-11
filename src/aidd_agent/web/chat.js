@@ -108,13 +108,13 @@ const memoryPanel=node('details',undefined,'project-memory');memoryPanel.append(
 const memoryBody=node('div');memoryPanel.append(memoryBody);projectBox.append(projectLabel,projectSelect,projectCreate,memoryPanel);$('new').before(projectBox);
 const knowledgeButton=node('button','Knowledge libraries');knowledgeButton.type='button';projectBox.append(knowledgeButton);
 const knowledgeDialog=node('dialog',undefined,'project-dialog direction-dialog');document.body.append(knowledgeDialog);
-let knowledgeSession=null;
-async function knowledgeCall(arguments_){return api('/api/knowledge',{session:knowledgeSession,arguments:arguments_});}
 knowledgeButton.onclick=async()=>{
   try{
-    if(!session)await newSession();knowledgeSession=session;knowledgeDialog.replaceChildren();
+    if(!session)await newSession();const knowledgeSession=session;knowledgeDialog.replaceChildren();
+    const knowledgeCall=arguments_=>api('/api/knowledge',{session:knowledgeSession,arguments:arguments_});
     const close=node('button','Close');close.onclick=()=>knowledgeDialog.close();
-    const state=node('p'),output=node('pre');output.setAttribute('aria-live','polite');
+    const state=node('p'),notice=node('p'),output=node('div',undefined,'knowledge-results');notice.setAttribute('aria-live','polite');output.setAttribute('aria-live','polite');
+    let generation=0,currentArgs=null;
     async function status(){await knowledgeCall({operation:'status'});state.textContent='Public documents can be used by the cloud model. Internal documents stay in this local interface. Cloud use for the rest of this project remains available.';}
     const collection=node('select');collection.setAttribute('aria-label','Document classification');collection.append(new Option('Internal / group-only','internal'),new Option('Public literature','public'));
     const source=node('input');source.type='url';source.placeholder='Public source URL (required for public documents)';source.setAttribute('aria-label','Public source URL');
@@ -122,19 +122,50 @@ knowledgeButton.onclick=async()=>{
     const file=node('input');file.type='file';file.accept='.pdf,.txt,.md,.csv,.tsv,.json';file.setAttribute('aria-label','Knowledge document');
     const ingest=node('button','Import into selected library');ingest.onclick=async()=>{
       ingest.disabled=true;
+      for(const control of [collection,source,confirmation,file])control.disabled=true;
       try{
         if(!file.files.length)throw Error('Choose a document.');
         const chosen=file.files[0];if(chosen.size>20*1024*1024)throw Error('Use a document no larger than 20 MiB.');
         if(collection.value==='public'&&(!confirmation.checked||!source.value))throw Error('Supply a public source URL and confirm the public classification.');
         const query=new URLSearchParams({session:knowledgeSession,name:chosen.name,collection:collection.value,source:source.value,public_confirmed:String(confirmation.checked)});
         const r=await fetch('/api/knowledge-upload?'+query,{method:'POST',headers:{'Authorization':'Bearer '+(sessionStorage.getItem('aidd-token')||''),'Content-Type':'application/octet-stream'},body:chosen});
-        const result=await r.json();if(!r.ok)throw Error(result.error||'Import failed');output.textContent=JSON.stringify(result,null,2);file.value='';
-      }catch(e){output.textContent=e.message;}finally{ingest.disabled=false;await status();}
+        const result=await r.json();if(!r.ok)throw Error(result.error||'Import failed');
+        notice.textContent=(result.status==='already_indexed'?'Existing document verified and reindexed: ':'Document indexed: ')+result.document_id+(result.archived?' (remains archived)':'');
+        if(result.previous_public_copy_archived)notice.textContent+=' Its identical public copy was archived. Earlier chat/provider disclosures are not erased.';
+        file.value='';confirmation.checked=false;await load({operation:'list',collection:collection.value,limit:10,offset:0,include_archived:archived.checked});
+      }catch(e){notice.textContent=e.message;}finally{ingest.disabled=false;for(const control of [collection,source,confirmation,file])control.disabled=false;}
     };
     const query=node('input');query.placeholder='Search words in the selected library';query.setAttribute('aria-label','Local knowledge query');
-    const search=node('button','Search locally');search.onclick=async()=>{try{output.textContent=JSON.stringify(await knowledgeCall({operation:'search',collection:collection.value,query:query.value,limit:5}),null,2);}catch(e){output.textContent=e.message;}};
-    const list=node('button','List documents');list.onclick=async()=>{try{output.textContent=JSON.stringify(await knowledgeCall({operation:'list',collection:collection.value,limit:20}),null,2);}catch(e){output.textContent=e.message;}};
-    knowledgeDialog.append(close,node('h2','Public and internal knowledge'),state,node('p','Internal search results are displayed here only and are not added to chat or project memory. Do not paste internal content into ordinary cloud chat. This classification applies to documents imported here.'),collection,source,confirmationLabel,file,ingest,node('h3','Local retrieval'),query,search,list,output);
+    const archived=node('input');archived.type='checkbox';const archivedLabel=node('label','Include archived documents (local view only)');archivedLabel.prepend(archived);
+    async function load(args){
+      const call=++generation;currentArgs={...args};output.replaceChildren(node('p','Reading the selected local library...'));
+      try{
+        const result=await knowledgeCall(args);if(call!==generation)return;output.replaceChildren();
+        if(!result.results.length)output.append(node('p','No matching passages or documents. Try another query or page.'));
+        if(args.operation==='read'){
+          const page=node('input');page.type='number';page.min='1';page.placeholder='All pages';page.value=args.page||'';page.setAttribute('aria-label','Document page');
+          const go=node('button','Read page');go.onclick=()=>load({...args,offset:0,page:page.value?Number(page.value):undefined});output.append(node('p','Page number (leave blank to read across the document)'),page,go);
+        }
+        for(const row of result.results){
+          const card=node('article',undefined,'knowledge-card');card.append(node('h4',row.title+(row.archived?' (archived)':'')),node('div',row.citation||row.id,'path'));
+          if(row.source)card.append(node('p','Source: '+row.source));
+          if(row.page)card.append(node('p','Page '+row.page+' · Passage '+(row.part+1)));
+          else card.append(node('p','Last indexed page: '+row.last_indexed_page));
+          if(row.text)card.append(node('p',row.text,'knowledge-passage'));
+          const read=node('button',row.page?'Read this page':'Read document');read.onclick=()=>load({operation:'read',collection:args.collection,document_id:row.id,page:row.page,limit:5,offset:0,include_archived:archived.checked});
+          const change=node('button',row.archived?'Restore':'Archive');change.onclick=async()=>{change.disabled=true;try{const receipt=await knowledgeCall({operation:row.archived?'restore':'archive',collection:args.collection,document_id:row.id});notice.textContent=receipt.status+'. '+receipt.history;await load({...currentArgs,offset:0});}catch(e){notice.textContent=e.message;change.disabled=false;}};
+          card.append(read,change);output.append(card);
+        }
+        const nav=node('div');if(result.offset>0){const previous=node('button','Previous');previous.onclick=()=>load({...args,offset:Math.max(0,result.offset-result.limit)});nav.append(previous);}
+        if(result.has_more){const next=node('button','Next');next.onclick=()=>load({...args,offset:result.next_offset});nav.append(next);}
+        output.append(nav);
+      }catch(e){if(call===generation)output.replaceChildren(node('p',e.message,'task-error'));}
+    }
+    const search=node('button','Search locally');search.onclick=()=>load({operation:'search',collection:collection.value,query:query.value,limit:5,offset:0,include_archived:archived.checked});
+    const list=node('button','List documents');list.onclick=()=>load({operation:'list',collection:collection.value,limit:10,offset:0,include_archived:archived.checked});
+    collection.onchange=()=>{generation++;query.value='';confirmation.checked=false;currentArgs=null;output.replaceChildren();notice.textContent='';};
+    query.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();search.click();}};
+    knowledgeDialog.append(close,node('h2','Public and internal knowledge'),state,node('p','Internal search results are displayed here only and are not added to chat or project memory. Do not paste internal content into ordinary cloud chat. This classification applies to documents imported here.'),collection,source,confirmationLabel,file,ingest,notice,node('h3','Local retrieval'),archivedLabel,query,search,list,output);
     await status();knowledgeDialog.showModal();
   }catch(e){$('error').textContent=e.message;}
 };

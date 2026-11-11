@@ -1,3 +1,20 @@
+knowledge_hardening_e135:
+  date: 2026-11-11
+  protocol: experiments/E135-knowledge-hardening.md
+  guide: to_human/E135_KNOWLEDGE_UPDATE.md
+  boundary: internal_documents_only_project_cloud_use_preserved
+  private_commands: rejected_before_history_insertion
+  retrieval: stable_pagination_local_chinese_bigrams_and_english_terms
+  controls: local_archive_restore_idempotent_import_repair
+  integrity: source_metadata_and_passage_hash_checks
+  migration: existing_ids_originals_and_sources_retained
+  integrated_tests: 222_passed
+  knowledge_cases: 29_passed
+  markdown_tests: 4_passed
+  provider_payload_check: fake_transport_actual_serialized_requests
+  live_provider_production_quality_and_browser_visual_acceptance: not_run
+  delivery_target: origin/feature/structure-guided-chat
+
 document_knowledge_privacy_e134:
   date: 2026-11-11
   protocol: experiments/E134-private-knowledge.md

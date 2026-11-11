@@ -1,5 +1,9 @@
 # Public and internal knowledge in one project
 
+The [E135 update](E135_KNOWLEDGE_UPDATE.md) adds pagination, readable result cards,
+archive/restore, duplicate import handling, integrity checks and internal command
+history protection. Use that guide for current installation and library controls.
+
 E134 applies confidentiality to documents and retrieval routes. Importing internal
 group material does **not** disable cloud use for the project. Public literature
 and normal authorized scientific work remain available in the same project.

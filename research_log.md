@@ -2854,3 +2854,30 @@ an existing cancellation handle/status race found in regression. No live cloud
 provider, production retrieval-quality or browser visual acceptance performed.
 Guide: to_human/E134_PUBLIC_AND_INTERNAL_KNOWLEDGE.md; protocol:
 experiments/E134-private-knowledge.md.
+
+### 2026-11-11 E135 knowledge usability and privacy hardening
+
+User requested completion and delivery of the public/internal knowledge feature.
+Closed an internal-command history path: /knowledge private requests now fail
+before either their query or result is stored as a chat message. Retained the
+document-level boundary and cloud use for other work in the same project.
+Implemented complete list/search/read paging, readable result cards, page controls,
+local archive/restore, idempotent imports with verified-source index repair and
+original/metadata/passage hashes. Existing indexes migrate locally while retaining
+document IDs and source references. Added local Chinese bigram terms alongside
+English lexical terms without an embedding or external service.
+
+Exact-content imports already classified internal cannot be published/restored to
+public retrieval in that project. An internal import archives an identical public
+copy with a notice that previous disclosures cannot be erased. Ordinary pasted
+chat and unclassified attachments remain outside this boundary. No universal DLP
+or host-compromise protection claimed. Updated the workflow skill and published
+to_human/E135_KNOWLEDGE_UPDATE.md with pull/install/restart instructions.
+
+Confirmatory software validation: 222 integrated Python cases including 29
+knowledge/privacy cases, Markdown4, JS syntax, English765files and whitespace.
+A fake transport captures actual serialized model HTTP payloads and confirms
+public retrieval without private query/document data. Pagination, duplicate IDs,
+archive/restore, integrity mutation/repair, legacy migration, restart and Chinese
+literal retrieval passed. No live-provider, production retrieval-quality, GPU or
+browser visual acceptance performed. Protocol: experiments/E135-knowledge-hardening.md.

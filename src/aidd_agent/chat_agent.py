@@ -720,16 +720,18 @@ class ChatAgent:
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 100000: raise ValueError("Message must contain 1-100000 characters")
         # Serialize decisions, not scientific execution. Session messages stay ordered.
         with self.lock:
+            if text.strip().split()[0].lower()=='/knowledge':
+                from .project_knowledge import model_tool
+                # Reject private commands before even their query enters history.
+                args=json.loads(text.strip()[len('/knowledge'):].strip())
+                answer=json.dumps(model_tool(self,sid,args),indent=2)
+                self.message(sid,'user',text);self.message(sid,'assistant',answer)
+                return answer
             self.message(sid, "user", text)
             with self.connect() as db:
                 db.execute("UPDATE sessions SET title=? WHERE id=? AND title='New conversation'", (text[:70], sid))
             parts = text.strip().split()
             command = parts[0].lower()
-            if command == '/knowledge':
-                from .project_knowledge import model_tool
-                # Chat responses enter conversation memory: private retrieval is UI-only.
-                answer=json.dumps(model_tool(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)
-                self.message(sid,'assistant',answer);return answer
             if command == '/project_control':
                 from .project_guidance import user_control
                 answer=json.dumps(user_control(self,sid,json.loads(text.strip()[len(command):].strip())),indent=2)

@@ -70,6 +70,10 @@ tools. Internal imports and retrieval stay in the local Knowledge libraries UI;
 they do not block cloud use for the rest of the same project and are not inserted
 into chat or project memory. Never reclassify internal passages to bypass this
 boundary. This does not automatically protect ordinary chat attachments or text.
+The [E135 update](../../../to_human/E135_KNOWLEDGE_UPDATE.md) adds source/passage
+integrity checks, duplicate import repair and complete paging. Follow has_more /
+next_offset for long documents. Model tools cannot archive/restore or include
+archived documents. Internal chat commands are rejected before history insertion.
 Do not retry an uncertain dispatch; reconcile the existing task receipt. Missing
 site/reference/query choices must remain explicit. Notes are statements, not
 independently verified scientific findings.
