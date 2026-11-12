@@ -168,7 +168,7 @@ def test_listing_alone_never_triggers_scientific_synthesis(library):
         return dict(kind='tool',tool='project_knowledge',arguments=dict(operation='list'),purpose='Find imported documents'),{}
     reply=run(app,sid,'Review public literature','deepseek',planner=planner,max_steps=2,
         finalizer=lambda *a:pytest.fail('Listing is not paper evidence'))
-    assert 'metadata only' in reply and 'scientific literature summary is incomplete' in reply
+    assert 'metadata only' in reply and 'Scientific synthesis has not started' in reply
     assert public['document_id'] in reply
 
 

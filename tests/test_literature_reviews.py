@@ -133,7 +133,8 @@ def test_saved_review_supports_existing_synthesis_recovery(project):
         seen.append(context)
         assert context['public_read_progress']['saved_review_passages_read']==1
         assert 'PRIVATE_LIBRARY_MARKER' not in json.dumps(context)
-        return dict(kind='answer',answer='Saved interpretation, not fresh reading. [E1]',evidence_ids=['E1']),{}
+        citation=next(r['id'] for r in context['evidence'] if r['result'].get('summary'))
+        return dict(kind='answer',answer='Saved interpretation, not fresh reading. ['+citation+']',evidence_ids=[citation]),{}
     reply=run(app,other,'Recall earlier review','deepseek',planner=planner,finalizer=finalizer)
     assert len(seen)==1 and 'Saved interpretation' in reply and '[E1]' not in reply
 

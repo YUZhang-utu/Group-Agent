@@ -74,6 +74,11 @@ def present(answer,steps,state,replace_document_ids=True):
         partial=sorted(p['page'] for p in pages if not p['indexed_page_complete'])
         scope=f'This turn: complete page reads {complete}; fragment/partial pages {partial}.' if pages else 'Saved review/source metadata; original paper text was not reread this turn.'
         details.append(source_link(doc)+'\n'+scope+' Recorded source pages: '+str(doc['pages'])+'.')
+    if state.get('saved_review_scope'):
+        scope=state['saved_review_scope']
+        details.append(f"Saved review records read: {len(scope['read_review_ids'])}/{len(scope['selected_review_ids'])}; "
+            f"partially read records: {len(scope['partial_review_ids'])}; failed reads: {len(scope['failed_review_ids'])}. "
+            'This is a bounded selection, not an exhaustive project literature review.')
     text+='\n\nSources: '+'; '.join(source_link(doc) for doc in docs.values())
     text+='\n\n```sources\n'+'\n\n'.join(details)+'\nIndexed text only; section/full-paper completion is not established. Figures and scientific accuracy require review.\n```'
     return text,list(docs.values()),True

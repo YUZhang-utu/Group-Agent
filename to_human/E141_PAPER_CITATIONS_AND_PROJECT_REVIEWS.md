@@ -66,6 +66,28 @@ missing evidence; explain any such gap first.
 
 ## Update and acceptance
 
+E142 removes repeated model JSON planning for explicit read-only requests to
+summarize saved literature reviews. The local coordinator lists available reviews,
+can index up to two batches of ten old traces when no review is available, then
+reads up to three records with a total 20000-character summary budget. Per-record
+reading is capped at 10000 characters. A failed/stalled read is not retried blindly.
+It then invokes text synthesis with actual retrieved summaries and the valid
+citations for that turn. Existing citation correction and overall turn limits
+remain. This is a bounded selection, not an exhaustive review of all project work.
+
+This route recognizes explicit saved-review summaries in English or Chinese;
+general planning still handles plain lists, newly imported papers and mixed
+scientific-action requests. Explicit instructions not to index old traces are
+respected. A direct saved review ID reads that record rather than searching other
+records. No calculation or project-mission change is part of this route.
+
+If no usable summary can be retrieved, the response says that synthesis has not
+started and reports listing/indexing progress. If the final model response fails
+after reading, it reports saved reviews/text segments actually read, separately
+from original-paper passage counts. Neither message implies a failed PDF import.
+The existing saved-review summary prompt above can be reused unchanged after
+updating and restarting the server.
+
 Pull feature/structure-guided-chat, restart the existing Agent server with the same
 storage directory, and refresh the browser to load the new JavaScript. Do not
 re-import documents. Check that paper links replace E-number citations in final

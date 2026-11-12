@@ -80,6 +80,12 @@ them across chats in the same project, or index to adopt older eligible traces.
 Do not recursively treat review summaries as fresh paper evidence or silently resolve
 contradictions by selecting the newest record. Archived, reclassified and changed
 sources are excluded. See [the paper citation and project review guide](../../../to_human/E141_PAPER_CITATIONS_AND_PROJECT_REVIEWS.md).
+E142 coordinates explicit read-only saved-review summaries locally, without JSON
+planning between list/index/read and synthesis. It reads at most three available
+records and 20000 summary characters, with at most two bounded legacy-index batches.
+Partial and unread coverage must remain explicit. Plain listing, fresh-paper work
+and mixed compute requests retain normal planning. Progress distinguishes review
+metadata/indexing, saved text retrieval and final synthesis failures.
 
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)

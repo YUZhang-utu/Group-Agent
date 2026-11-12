@@ -236,6 +236,8 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
     from .literature_reading import coverage,next_page_call,previous_summary,methods_feedback,coverage_note
     profile=read_json(select_llm_profile(provider,config_dir=app.config_dir))
     native_planner = planner is None
+    from .saved_review_flow import SavedReviewFlow,matches as saved_summary_request
+    review_flow=SavedReviewFlow(request) if (native_planner or finalizer is not None) and saved_summary_request(request) else None
     planner=planner or chat_plan;tools=tools or DomainTools(app,sid,request,provider)
     emit = on_event or (lambda event: None)
     with app.connect() as db:
@@ -252,10 +254,18 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
     def save():write_json(path,audit)
     try:
         for iteration in range(max_steps):
-            if time.time()-audit['started']>180:break
+            if time.time()-audit['started']>180:
+                if review_flow:review_flow.reason='turn_time_budget'
+                break
             from .literature_recovery import progress, GUIDE
             reading=progress(audit['steps'])
-            if reading['successful_public_tool_calls'] and (iteration==max_steps-1 or time.time()-audit['started']>140):break
+            if reading['successful_public_tool_calls'] and (iteration==max_steps-1 or time.time()-audit['started']>140):
+                if review_flow:review_flow.reason='reading_step_or_time_budget'
+                break
+            review_args=review_flow.next_call() if review_flow else None
+            if review_flow:
+                audit['saved_review_coordination']=review_flow.report()
+                if review_args is None:break
             emit(dict(type='status',text='Reading evidence and choosing the next step.'))
             streamed_content = []
             streamed_answer = ['']
@@ -291,7 +301,10 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                     planning_deadline=140 if reading['successful_public_tool_calls'] else 180
                     call_profile['timeout_seconds']=min(profile.get('timeout_seconds',120),max(1,int(planning_deadline-(time.time()-audit['started']))))
                 page_args=next_page_call(audit['steps'])
-                if page_args:
+                if review_args:
+                    step=dict(kind='tool',tool='literature_reviews',arguments=review_args,purpose='Read available saved project reviews locally')
+                    metadata=dict(coordinator='saved_review_read_only_no_model_call')
+                elif page_args:
                     step=dict(kind='tool',tool='project_knowledge',arguments=page_args,purpose='Continue the selected public page at its recorded cursor')
                     metadata=dict(coordinator='explicit_page_pagination_no_model_call')
                 else:
@@ -358,6 +371,9 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 last_error=record['error']
             row=dict(id='E'+str(len(evidence)+1),tool=name,status=record['status'],result=compact(result,12000))
             record['evidence_id']=row['id'];evidence.append(row);save()
+            if review_flow and metadata.get('coordinator')=='saved_review_read_only_no_model_call':
+                review_flow.accept(args,result,record['status'])
+                audit['saved_review_coordination']=review_flow.report();save()
             emit(dict(type='tool_end',tool=name,status=record['status'],text=name+' / '+record['status']))
             if name == 'project' and record['status'] == 'complete' and result.get('session'):
                 emit(dict(type='project_opened',session=result['session'],project_id=result['project_id']))
@@ -409,17 +425,18 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 try:
                     final_profile=dict(profile,timeout_seconds=min(profile.get('timeout_seconds',120),max(1,int(180-(time.time()-audit['started'])))))
                     final_context=recovery_context(request,evidence,audit['steps'],previous=previous_summary(full_history,audit['steps']))
+                    if review_flow:final_context['saved_review_coordination']=review_flow.report()
                     step,metadata=(finalizer or synthesize)(final_context,final_profile)
                     step=validate_step(step)
                     known={r['id'] for r in final_context['evidence']}
                     if step['kind']!='answer' or not step['evidence_ids'] or set(step['evidence_ids'])-known:raise ValueError('Invalid final synthesis evidence contract')
-                    answer=step['answer'];audit.update(status='complete',answer=answer,evidence_ids=step['evidence_ids'],answer_mode='read_only_text_recovery')
+                    answer=step['answer'];audit.update(status='complete',answer=answer,evidence_ids=step['evidence_ids'],answer_mode='saved_review_text_synthesis' if review_flow else 'read_only_text_recovery')
                     audit['steps'].append(dict(step=step,model=metadata,status='complete',phase='read_only_synthesis'));save()
                 except (ValueError,RuntimeError,OSError) as exc:
                     last_error=str(exc);audit['steps'].append(dict(status='answer_failed',phase='read_only_synthesis',error=last_error,diagnostics=getattr(exc,'diagnostics',{})));save()
         if answer is None:
             audit['status']='pending' if waiting else 'incomplete'
-            audit['failure_stage']='answer_synthesis' if ledger['successful_public_tool_calls'] else 'model_planning'
+            audit['failure_stage']='answer_synthesis' if read_evidence else 'literature_retrieval' if ledger['successful_public_tool_calls'] else 'model_planning'
             answer='The agent reached its step/time limit before producing a valid final answer. Saved tool receipts determine which operations were submitted; do not resubmit them without checking task status. '
             if waiting:answer+='A submitted operation is still pending. '
             if last_error:answer+='Planner error: '+last_error
@@ -430,6 +447,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
     except Exception as exc:
         audit.update(status='failed',error=f'{type(exc).__name__}: {exc}');save();raise
     finally:
+        if review_flow:audit['saved_review_coordination']=review_flow.report()
         audit['indexed_reading_coverage']=coverage(audit['steps'])
         audit['finished']=time.time();save()
     receipts=[]
@@ -451,7 +469,9 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 if item.get('source'):
                     sources.append(label+': '+item.get('citation',item['id'])+' '+item['source'])
     from .literature_citations import present
-    displayed,refs,is_literature=present(answer,audit['steps'],audit['indexed_reading_coverage'],replace_document_ids=audit['status']=='complete')
+    display_coverage=dict(audit['indexed_reading_coverage'])
+    if review_flow:display_coverage['saved_review_scope']=review_flow.report()
+    displayed,refs,is_literature=present(answer,audit['steps'],display_coverage,replace_document_ids=audit['status']=='complete')
     if is_literature:
         answer=displayed
         audit['paper_references']=refs
