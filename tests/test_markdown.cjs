@@ -20,3 +20,11 @@ test('code keeps its exact text escaped and includes copy control', () => {
 test('unfinished fences remain safe during streaming', () => {
   assert.ok(render('```html\n<script>x').includes('&lt;script&gt;x'));
 });
+test('source details collapse safely with clickable paper links', () => {
+  const html=render('Result.\n\n```sources\n[Paper](https://example.org/paper)\nPage 13\n<img src=x onerror=alert(1)>\n[bad](javascript:alert)\n```');
+  assert.ok(html.includes('<details class="literature-sources">'));
+  assert.ok(html.includes('<summary>Sources and reading details</summary>'));
+  assert.ok(html.includes('href="https://example.org/paper"'));
+  assert.ok(!html.includes('<img')&&!html.includes('href="javascript:'));
+  assert.ok(!html.includes(' open'));
+});

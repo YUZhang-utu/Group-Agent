@@ -326,6 +326,10 @@ def brief(app,sid,request='',budget=22000):
                 ready.append(dict(workflow_id=flow['id'],node_id=node['id'],tool=node['tool'],workflow_status=flow['status'],blocker=flow.get('error')));break
         if len(ready)>=3:break
     if len(encoded(payload))+len(encoded(ready))+10<=budget:payload['next_work']=ready
+    from .literature_reviews import brief as literature_brief
+    literature=literature_brief(app,sid,request)
+    if literature['reviews'] and len(encoded(payload))+len(encoded(literature))+40<=budget:
+        payload['literature_reviews']=literature
     # Account for the length field itself without evicting mandatory constraints.
     for _ in range(3):payload['context_characters']=len(encoded(payload))
     if len(encoded(payload))>budget:raise ValueError('Pinned project constraints exceed context budget; constraints were not silently dropped.')

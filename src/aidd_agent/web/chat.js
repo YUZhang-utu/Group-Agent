@@ -147,14 +147,23 @@ knowledgeButton.onclick=async()=>{
           const go=node('button','Read page');go.onclick=()=>load({...args,offset:0,page:page.value?Number(page.value):undefined});output.append(node('p','Page number (leave blank to read across the document)'),page,go);
         }
         for(const row of result.results){
-          const card=node('article',undefined,'knowledge-card');card.append(node('h4',row.title+(row.archived?' (archived)':'')),node('div',row.citation||row.id,'path'));
+          const card=node('article',undefined,'knowledge-card');card.append(node('h4',((row.bibliography||{}).display_title||row.title)+(row.archived?' (archived)':'')),node('div',row.citation||row.id,'path'));
           if(row.source)card.append(node('p','Source: '+row.source));
           if(row.page)card.append(node('p','Page '+row.page+' · Passage '+(row.part+1)));
           else card.append(node('p','Last indexed page: '+row.last_indexed_page));
           if(row.text)card.append(node('p',row.text,'knowledge-passage'));
           const read=node('button',row.page?'Read this page':'Read document');read.onclick=()=>load({operation:'read',collection:args.collection,document_id:row.id,page:row.page,limit:5,offset:0,include_archived:archived.checked});
           const change=node('button',row.archived?'Restore':'Archive');change.onclick=async()=>{change.disabled=true;try{const receipt=await knowledgeCall({operation:row.archived?'restore':'archive',collection:args.collection,document_id:row.id});notice.textContent=receipt.status+'. '+receipt.history;await load({...currentArgs,offset:0});}catch(e){notice.textContent=e.message;change.disabled=false;}};
-          card.append(read,change);output.append(card);
+          card.append(read,change);
+          const edit=node('details');edit.append(node('summary','Citation details'));
+          const fields={};for(const [key,caption] of [['display_title','Short paper title'],['authors','Author label (optional)'],['year','Publication year (optional)']]){
+            const input=node('input');input.value=(row.bibliography||{})[key]||'';input.placeholder=caption;input.setAttribute('aria-label',caption);fields[key]=input;edit.append(input);
+          }
+          const save=node('button','Save citation details');save.onclick=async()=>{save.disabled=true;try{
+            await knowledgeCall({operation:'bibliography',collection:args.collection,document_id:row.id,...Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.value]))});
+            notice.textContent='Citation details saved. Original document content is unchanged.';await load(currentArgs);
+          }catch(e){notice.textContent=e.message;}finally{save.disabled=false;}};
+          edit.append(save);card.append(edit);output.append(card);
         }
         const nav=node('div');if(result.offset>0){const previous=node('button','Previous');previous.onclick=()=>load({...args,offset:Math.max(0,result.offset-result.limit)});nav.append(previous);}
         if(result.has_more){const next=node('button','Next');next.onclick=()=>load({...args,offset:result.next_offset});nav.append(next);}
@@ -163,9 +172,40 @@ knowledgeButton.onclick=async()=>{
     }
     const search=node('button','Search locally');search.onclick=()=>load({operation:'search',collection:collection.value,query:query.value,limit:5,offset:0,include_archived:archived.checked});
     const list=node('button','List documents');list.onclick=()=>load({operation:'list',collection:collection.value,limit:10,offset:0,include_archived:archived.checked});
-    collection.onchange=()=>{generation++;query.value='';confirmation.checked=false;currentArgs=null;output.replaceChildren();notice.textContent='';};
+    const savedReviews=node('button','Saved public reviews');savedReviews.disabled=true;
+    const indexReviews=node('button','Index previous public reviews');indexReviews.disabled=true;
+    const reviewCall=arguments_=>api('/api/literature-reviews',{session:knowledgeSession,arguments:arguments_});
+    async function reviewList(offset=0){
+      const call=++generation;output.replaceChildren(node('p','Reading saved project reviews...'));
+      try{
+        const result=await reviewCall({operation:'list',offset,limit:5});if(call!==generation)return;output.replaceChildren();
+        if(!result.reviews.length)output.append(node('p','No available saved public reviews. New paper reviews are recorded automatically; older ones can be indexed below.'));
+        for(const review of result.reviews){
+          const card=node('article',undefined,'knowledge-card');card.append(node('h4',review.papers.map(p=>p.title).join(' / ')),node('p',review.verification));
+          const read=node('button','Read saved review');read.onclick=()=>readReview(review.review_id,0);card.append(read);output.append(card);
+        }
+        if(offset){const back=node('button','Previous reviews');back.onclick=()=>reviewList(Math.max(0,offset-5));output.append(back);}
+        if(result.has_more){const next=node('button','Next reviews');next.onclick=()=>reviewList(result.next_offset);output.append(next);}
+      }catch(e){if(call===generation)output.replaceChildren(node('p',e.message,'task-error'));}
+    }
+    async function readReview(reviewId,offset){
+      const call=++generation;
+      try{
+        const result=await reviewCall({operation:'read',review_id:reviewId,offset});if(call!==generation)return;
+        output.replaceChildren(node('p',result.verification),markdown(result.summary));
+        const back=node('button','Back to saved reviews');back.onclick=()=>reviewList();output.append(back);
+        if(result.has_more){const next=node('button','Continue saved review');next.onclick=()=>readReview(reviewId,result.next_offset);output.append(next);}
+      }catch(e){if(call===generation)output.replaceChildren(node('p',e.message,'task-error'));}
+    }
+    savedReviews.onclick=()=>reviewList();let indexOffset=0;
+    indexReviews.onclick=async()=>{indexReviews.disabled=true;const call=++generation;try{
+      const result=await reviewCall({operation:'index',offset:indexOffset,limit:10});if(call!==generation)return;indexOffset=result.next_offset||0;
+      notice.textContent=result.indexed_reviews+' public review(s) indexed. '+(result.has_more?'Click again to inspect the next batch.':'Index pass finished.');
+      await reviewList();
+    }catch(e){notice.textContent=e.message;}finally{indexReviews.disabled=collection.value!=='public';}};
+    collection.onchange=()=>{generation++;query.value='';confirmation.checked=false;currentArgs=null;output.replaceChildren();notice.textContent='';savedReviews.disabled=indexReviews.disabled=collection.value!=='public';};
     query.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();search.click();}};
-    knowledgeDialog.append(close,node('h2','Public and internal knowledge'),state,node('p','Internal search results are displayed here only and are not added to chat or project memory. Do not paste internal content into ordinary cloud chat. This classification applies to documents imported here.'),collection,source,confirmationLabel,file,ingest,notice,node('h3','Local retrieval'),archivedLabel,query,search,list,output);
+    knowledgeDialog.append(close,node('h2','Public and internal knowledge'),state,node('p','Internal search results are displayed here only and are not added to chat or project memory. Do not paste internal content into ordinary cloud chat. This classification applies to documents imported here.'),collection,source,confirmationLabel,file,ingest,notice,node('h3','Local retrieval'),archivedLabel,query,search,list,savedReviews,indexReviews,output);
     await status();knowledgeDialog.showModal();
   }catch(e){$('error').textContent=e.message;}
 };

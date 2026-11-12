@@ -138,6 +138,9 @@ def make_server(agent, port=8765, token=None):
                 elif self.path == '/api/knowledge':
                     from .project_knowledge import control
                     result=control(agent,body['session'],body['arguments'])
+                elif self.path == '/api/literature-reviews':
+                    from .literature_reviews import handle
+                    result=handle(agent,body['session'],body['arguments'])
                 elif self.path == '/api/research-workflow':
                     from .research_workflows import handle
                     if body['arguments'].get('operation') not in {'status','pause','resume','cancel'}:

@@ -68,7 +68,18 @@ an explicitly selected page within the existing budget. Search is discovery; rea
 relevant section pages before reporting a Methods review. The local coverage receipt
 distinguishes complete contiguous indexed-page reads from fragments. Previous answers
 are comparison context, not fresh evidence; old E-number citations cannot be reused.
-This is not cross-chat literature-summary retrieval or full-section comprehension.
+E141 adds cross-chat review retrieval below; full-section comprehension remains a
+scientific acceptance task.
+
+E141 renders public literature citations as paper labels/links with deduplicated
+sources and collapsed reading details. E-number IDs remain internal trace evidence.
+Public bibliography labels are edited in the local Knowledge libraries interface;
+do not invent author/year metadata. Eligible completed public reviews are retained
+as source-hashed model interpretations. Use literature_reviews list/read to reuse
+them across chats in the same project, or index to adopt older eligible traces.
+Do not recursively treat review summaries as fresh paper evidence or silently resolve
+contradictions by selecting the newest record. Archived, reclassified and changed
+sources are excluded. See [the paper citation and project review guide](../../../to_human/E141_PAPER_CITATIONS_AND_PROJECT_REVIEWS.md).
 
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)

@@ -53,6 +53,7 @@ def connect(directory):
             CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING fts5(document_id UNINDEXED,page UNINDEXED,part UNINDEXED,text,tokenize='unicode61');
             CREATE TABLE IF NOT EXISTS document_state(id TEXT PRIMARY KEY,archived INTEGER NOT NULL DEFAULT 0,metadata_sha TEXT);
             CREATE TABLE IF NOT EXISTS passage_hashes(id INTEGER PRIMARY KEY,sha256 TEXT);
+            CREATE TABLE IF NOT EXISTS bibliography(id TEXT PRIMARY KEY,payload TEXT,sha256 TEXT);
             CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(terms,tokenize='unicode61');''')
         if db.execute('PRAGMA user_version').fetchone()[0]<1:
             for row in db.execute('SELECT * FROM documents').fetchall():
@@ -212,6 +213,7 @@ def retrieve(app,sid,args):
                 row.pop('document_id');row['page']=int(row['page']);row['part']=int(row['part'])
             row['last_indexed_page']=db.execute('SELECT MAX(CAST(page AS INTEGER)) FROM chunks WHERE document_id=?',(row['id'],)).fetchone()[0]
             row['citation']=row['id']+(f":page-{row['page']}:part-{row['part']}" if 'page' in row else '')
+            row['bibliography']=bibliography(db,row['id'])
             response['results'].append(row)
     return response
 
@@ -241,10 +243,32 @@ def model_tool(app,sid,args):
     return result
 
 
+def bibliography(db,identifier):
+    row=db.execute('SELECT payload,sha256 FROM bibliography WHERE id=?',(identifier,)).fetchone()
+    if not row:return {}
+    payload=json.loads(row['payload'])
+    if digest(payload)!=row['sha256']:raise ValueError('Bibliographic details changed outside the local editor')
+    return payload
+
+
 def control(app,sid,args):
     with app.lock:
         if not isinstance(args,dict):raise ValueError('Knowledge arguments must be an object')
         if args.get('operation')=='status':return dict(public_and_internal_stores='separate',internal_model_access='denied',project_cloud_access='unchanged')
+        if args.get('operation')=='bibliography':
+            if set(args)-{'operation','collection','document_id','display_title','authors','year'}:raise ValueError('Unsupported bibliographic fields')
+            directory=folder(app,sid,args.get('collection','internal'));identifier=args.get('document_id')
+            if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Use a document ID')
+            payload={k:args.get(k,'').strip() if isinstance(args.get(k,''),str) else None for k in ('display_title','authors','year')}
+            if any(v is None or len(v)>limit for v,limit in zip(payload.values(),(250,150,4))):raise ValueError('Use bounded title, author label and year strings')
+            if payload['year'] and not re.fullmatch(r'(?:18|19|20|21)\d{2}',payload['year']):raise ValueError('Use a four-digit publication year or leave blank')
+            if not (directory/'index.sqlite').exists():raise ValueError('Document unavailable')
+            with connect(directory) as db:
+                row=db.execute('SELECT * FROM documents WHERE id=?',(identifier,)).fetchone()
+                if not row:raise ValueError('Document unavailable')
+                verify_document(db,directory,row)
+                db.execute('INSERT OR REPLACE INTO bibliography VALUES(?,?,?)',(identifier,json.dumps(payload),digest(payload)))
+            return dict(status='updated',document_id=identifier,bibliography=payload,provenance='User-edited display metadata; not independently verified')
         if args.get('operation') in {'archive','restore'}:
             if set(args)-{'operation','collection','document_id'}:raise ValueError('Unsupported archive arguments')
             directory=folder(app,sid,args.get('collection','internal'));identifier=args.get('document_id')

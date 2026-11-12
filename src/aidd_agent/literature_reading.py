@@ -53,11 +53,13 @@ def next_page_call(steps):
 
 def previous_summary(history,steps,maximum=18000):
     docs={r['id'] for _,result in public_records(steps) for r in result.get('results',[]) if 'text' in r}
+    sources={r['source'] for _,result in public_records(steps) for r in result.get('results',[]) if 'text' in r and r.get('source')}
     for row in reversed(history):
         if row.get('role')!='assistant':continue
         text=row.get('text','')
-        if not any(doc in text for doc in docs) or text.lstrip().startswith(('{','[')):continue
+        if not any(doc in text for doc in docs|sources) or text.lstrip().startswith(('{','[')):continue
         text=text.split('\n\nEvidence sources:',1)[0].split('\n\nAgent trace:',1)[0]
+        text=text.split('\n\nSources:',1)[0]
         if len(text)>maximum:
             return dict(status='omitted_over_budget',characters=len(text),reason='Previous answer is not silently truncated')
         return dict(status='available',text=text,

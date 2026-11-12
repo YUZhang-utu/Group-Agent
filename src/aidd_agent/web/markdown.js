@@ -35,6 +35,10 @@
         const code = []; i++;
         while (i < lines.length && !(lines[i].trim().length >= fence[1].length && [...lines[i].trim()].every(c => c === fence[1][0]))) code.push(lines[i++]);
         if (i < lines.length) i++;
+        if(fence[2]==='sources'){
+          output+='<details class="literature-sources"><summary>Sources and reading details</summary>'+code.filter(s=>s.trim()).map(s=>'<p>'+inline(s)+'</p>').join('')+'</details>';
+          continue;
+        }
         output += '<div class="code-block"><div class="code-toolbar"><span>'+escape(fence[2] || 'Code')+'</span><button type="button" data-copy-code>Copy code</button></div><pre><code>'+escape(code.join('\n'))+'</code></pre></div>';
         continue;
       }
