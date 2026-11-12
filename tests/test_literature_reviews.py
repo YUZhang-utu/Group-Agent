@@ -49,7 +49,8 @@ def test_one_paper_repeated_receipts_are_deduplicated(project):
     app,sid,doc,_=project;_,audit=make_review(app,sid,doc)
     first=audit['steps'][0];second=dict(first,evidence_id='E2')
     reply,refs,_=present('Result [E1][E2].',[first,second],audit['indexed_reading_coverage'])
-    assert len(refs)==1 and len(reply.split('Sources:',1)[0].split('https://example.org/paper'))==2
+    assert len(refs)==1 and reply.split('Sources:',1)[0].strip()=='Result.'
+    assert reply.split('```sources',1)[0].count('https://example.org/paper')==1
 
 
 def test_multiple_papers_with_same_title_remain_distinct(project):

@@ -51,15 +51,19 @@ def references(steps):
 def present(answer,steps,state,replace_document_ids=True):
     docs,ids=references(steps)
     if not docs:return answer,[],False
+    single_paper=(len(docs)==1 and replace_document_ids and all(
+        r.get('step',{}).get('tool') in {None,'project_knowledge','literature_reviews'} for r in steps))
     def replace(match):
         for identifier,doc in docs.items():
-            if re.fullmatch(re.escape(identifier)+r':page-\d+(?::part-\d+)?',match[1].strip()):return source_link(doc)
+            if re.fullmatch(re.escape(identifier)+r':page-\d+(?::part-\d+)?',match[1].strip()):return '' if single_paper else source_link(doc)
         if not re.fullmatch(r'\s*E\d+(?:\s*[,;]\s*E\d+)*(?:\s*,\s*(?:pp?\.?|page)\s*[\d, -]+)?\s*',match[1]):return match[0]
         cited=re.findall(r'\bE\d+\b',match[1]);selected=set()
         if not cited or any(key not in ids for key in cited):return match[0]
         for key in cited:selected.update(ids[key])
+        if single_paper:return ''
         return ' '.join(source_link(docs[key]) for key in sorted(selected))
     text=re.sub(r'\[([^\[\]\n]+)\]',replace,answer)
+    if single_paper:text=re.sub(r'[ \t]+([.,;:!?])',r'\1',text)
     if replace_document_ids:
         for identifier,doc in docs.items():
             text=re.sub(re.escape(identifier)+r'(?::page-\d+(?::part-\d+)?)?',lambda _:label(doc),text)

@@ -3,6 +3,10 @@
 ## Reader-facing sources
 
 Public-literature answers display paper names linked to their recorded source.
+For a single-paper literature-only answer, the paper is cited once at the end;
+per-bullet internal citations are removed from the display, not the audit. Multiple
+papers and mixed scientific-tool results retain inline paper attribution. Reading
+scope is stated once, with substantive limitations preserved.
 Multiple tool receipts for the same paper collapse to one paper in the source list.
 The Sources and reading details disclosure contains page coverage; tool evidence
 IDs, document UUIDs and full execution receipts remain in the Agent trace panel.

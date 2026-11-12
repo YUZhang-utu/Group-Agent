@@ -86,6 +86,9 @@ records and 20000 summary characters, with at most two bounded legacy-index batc
 Partial and unread coverage must remain explicit. Plain listing, fresh-paper work
 and mixed compute requests retain normal planning. Progress distinguishes review
 metadata/indexing, saved text retrieval and final synthesis failures.
+E143 presents a single-paper literature-only answer with one source at the end;
+multi-paper/mixed-tool answers retain inline attribution. State scope once while
+preserving substantive uncertainty and the internal evidence trace.
 
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)

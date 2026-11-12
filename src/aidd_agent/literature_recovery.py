@@ -20,6 +20,10 @@ GUIDE += ''' User-facing citations are rendered as paper titles/links; E-number 
 are an internal output contract. Do not dump document UUIDs, passage IDs, trace
 paths or repeated source lists in the answer. Use internal citations beside claims;
 the application supplies a deduplicated paper list and expandable reading details.
+For one-paper answers the application places the citation at the end. Do not repeat
+the filename or paper identifier in each bullet. State saved-review scope once,
+then synthesize findings and relevant limitations without repeating the same
+verification disclaimer throughout. Preserve substantive uncertainty and conflicts.
 Use literature_reviews to reuse project reviews across chats. Saved summaries are
 model interpretations, not fresh source text. Do not claim to have reread their
 pages, verified them experimentally, or resolved contradictions without evidence.'''
