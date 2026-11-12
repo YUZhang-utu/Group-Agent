@@ -231,12 +231,14 @@ def pending(value):
 def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event=None,finalizer=None):
     from .chat_agent import ROUTER,WORKFLOWS,read_json
     from .llm_profiles import select_llm_profile
+    from .literature_reading import coverage,next_page_call,previous_summary,methods_feedback,coverage_note
     profile=read_json(select_llm_profile(provider,config_dir=app.config_dir))
     native_planner = planner is None
     planner=planner or chat_plan;tools=tools or DomainTools(app,sid,request,provider)
     emit = on_event or (lambda event: None)
     with app.connect() as db:
         history=[dict(row) for row in db.execute('SELECT role,text FROM messages WHERE session=? ORDER BY id DESC LIMIT 10',(sid,))][::-1]
+    full_history=history
     history=[dict(role=row['role'],text=row['text'][:1500]) for row in history]
     identifier=uuid.uuid4().hex;directory=app.root/'agents'/sid
     directory.mkdir(parents=True,exist_ok=True);path=directory/(identifier+'.json')
@@ -244,6 +246,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                validation='Tool execution traces; no live-provider quality or scientific superiority claim')
     write_json(path,audit)
     evidence=[];mutations=set();waiting=False;last_error=None;answer=None;failed_calls={};invalid_streak=0;synthesis_allowed=True
+    reading_nudged=False
     def save():write_json(path,audit)
     try:
         for iteration in range(max_steps):
@@ -267,7 +270,9 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 evidence_index=[dict(id=row['id'],tool=row['tool'],status=row['status']) for row in evidence],
                 previous_error=last_error,compute_enabled=app.allow_compute,
                 pending_execution=waiting,remaining_steps=max_steps-iteration)
-            if reading['successful_public_tool_calls']:context['public_read_progress']=reading
+            if reading['successful_public_tool_calls']:
+                context.update(public_read_progress=reading,indexed_reading_coverage=coverage(audit['steps']),
+                    previous_literature_summary=previous_summary(full_history,audit['steps']))
             # Never silently cut a sequence, current request or pinned requirement.
             # Drop oldest optional dialogue/evidence first, with a visible count.
             omitted=0
@@ -283,14 +288,24 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 if native_planner:
                     planning_deadline=140 if reading['successful_public_tool_calls'] else 180
                     call_profile['timeout_seconds']=min(profile.get('timeout_seconds',120),max(1,int(planning_deadline-(time.time()-audit['started']))))
-                step,metadata=planner(json.dumps(context,ensure_ascii=False),call_profile,
-                    system_prompt=SYSTEM+'\n'+GUIDE+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
-                    capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000,
-                    **({'on_content': content_delta} if native_planner and on_event else {}))
+                page_args=next_page_call(audit['steps'])
+                if page_args:
+                    step=dict(kind='tool',tool='project_knowledge',arguments=page_args,purpose='Continue the selected public page at its recorded cursor')
+                    metadata=dict(coordinator='explicit_page_pagination_no_model_call')
+                else:
+                    step,metadata=planner(json.dumps(context,ensure_ascii=False),call_profile,
+                        system_prompt=SYSTEM+'\n'+GUIDE+'\nThe following contract applies ONLY inside workflow arguments.decision, not to the outer response:\n'+ROUTER+'\nAlways return the outer tool/answer schema specified above.',
+                        capabilities=dict(tools=TOOLS,argument_contracts=argument_contracts(),workflows=WORKFLOWS),validator=validate_step,max_prompt_chars=200000,
+                        **({'on_content': content_delta} if native_planner and on_event else {}))
                 step=validate_step(step)
                 if step['kind']=='answer':
                     known={row['id'] for row in evidence if row['status']=='complete'}
                     if set(step['evidence_ids'])-known:raise ValueError('Answer cited unknown or failed evidence')
+                    feedback=methods_feedback(request,audit['steps'])
+                    if feedback and not reading_nudged:
+                        reading_nudged=True;last_error=feedback
+                        emit(dict(type='answer_reset'))
+                        audit['steps'].append(dict(status='reading_feedback',message=feedback));save();continue
                     answer=step['answer'];audit.update(status='pending' if waiting else 'complete',answer=answer,evidence_ids=step['evidence_ids'],public_read_progress=reading)
                     audit['steps'].append(dict(step=step,model=metadata));save();break
             except LLMRequestError as exc:
@@ -391,7 +406,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 emit(dict(type='status',text='Preparing a read-only summary from the public passages already retrieved.'))
                 try:
                     final_profile=dict(profile,timeout_seconds=min(profile.get('timeout_seconds',120),max(1,int(180-(time.time()-audit['started'])))))
-                    final_context=recovery_context(request,evidence,audit['steps'])
+                    final_context=recovery_context(request,evidence,audit['steps'],previous=previous_summary(full_history,audit['steps']))
                     step,metadata=(finalizer or synthesize)(final_context,final_profile)
                     step=validate_step(step)
                     known={r['id'] for r in final_context['evidence']}
@@ -413,6 +428,7 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
     except Exception as exc:
         audit.update(status='failed',error=f'{type(exc).__name__}: {exc}');save();raise
     finally:
+        audit['indexed_reading_coverage']=coverage(audit['steps'])
         audit['finished']=time.time();save()
     receipts=[]
     for record in audit['steps']:
@@ -433,5 +449,6 @@ def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event
                 if item.get('source'):
                     sources.append(label+': '+item.get('citation',item['id'])+' '+item['source'])
     if sources:answer+='\n\nEvidence sources:\n'+'\n'.join(sources[:20])
+    answer+=coverage_note(audit['indexed_reading_coverage'])
     answer+='\n\nAgent trace: '+str(path)
     return answer

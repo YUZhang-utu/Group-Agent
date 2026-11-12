@@ -175,10 +175,11 @@ def retrieve(app,sid,args):
     if op not in {'search','list','read'}:raise ValueError('Use search, list or read')
     where='1=1' if archived else 's.archived=0'
     parameters=[]
-    if op=='read':
+    if op in {'read','search'}:
         identifier=args.get('document_id');page=args.get('page')
-        if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier) or (page is not None and (type(page) is not int or page<1)):raise ValueError('Supply a document ID and optional positive page')
-        where+=' AND d.id=?';parameters.append(identifier)
+        if (op=='read' or identifier is not None) and (not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier)):raise ValueError('Supply a valid document ID')
+        if page is not None and (type(page) is not int or page<1):raise ValueError('Supply a positive page')
+        if identifier is not None:where+=' AND d.id=?';parameters.append(identifier)
         if page is not None:where+=' AND c.page=?';parameters.append(page)
     if op=='search':
         query=args.get('query')

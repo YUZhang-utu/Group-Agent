@@ -70,6 +70,31 @@ the original PDF during workstation acceptance.
 
 ## Verification boundary
 
+E140 update: document_id and page filters now apply to search as well as read.
+After an explicit page read, the coordinator follows its exact next_offset without
+another model planning call, until the page ends, an error occurs, or the existing
+turn budget is reached. Searches and whole-document reads are not auto-expanded.
+Coverage checks require contiguous page reads starting at offset zero; the final
+chunk alone does not prove completion. A local footer distinguishes complete
+indexed-page reads from fragment/partial pages. It does not certify section coverage,
+figures, tables or scientific interpretation. A Methods review based only on search
+fragments receives one bounded prompt to select and read relevant pages.
+
+For follow-up corrections, the most recent same-document assistant answer among
+the last ten messages in this conversation is preserved in full (up to 18000
+characters, excluding the generated source/trace footer) for both planning and
+recovery. Larger answers are explicitly omitted, not silently cut. This comparison
+context is not scientific evidence; corrections must cite current source passages.
+It does not retrieve literature summaries from other conversations. Internal-library
+content is not added. Reading receipts describe this turn, not cumulative history.
+
+Workstation follow-up: in the same conversation, ask the agent to continue reading
+the located Methods pages for the existing document and correct its prior summary.
+It should use scoped search, explicit page reads and their continuation cursors;
+the coverage footer must agree with the tool receipts. If context is unavailable
+or a budget stops the read, that limitation must remain explicit. No re-import is
+needed. Native cloud-provider behavior and the actual PDF remain user acceptance.
+
 E139 update: synthesis receives an explicit evidence/document/page reference table.
 It accepts grouped IDs such as [E1, E2] and exact retrieved passage citations;
 document/page aliases resolve only to pages present in the supplied passages.

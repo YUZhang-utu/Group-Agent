@@ -62,6 +62,13 @@ E139 supplies a passage citation reference table, resolves exact document/page
 citations and grouped evidence IDs, and allows one bounded tool-free citation
 correction. Do not invent references or silently attach evidence to uncited prose.
 Citation resolution checks source identity; scientific support requires review.
+E140 scopes document/page searches, carries the complete bounded prior same-document
+answer from this conversation into planning and recovery, and automatically pages
+an explicitly selected page within the existing budget. Search is discovery; read
+relevant section pages before reporting a Methods review. The local coverage receipt
+distinguishes complete contiguous indexed-page reads from fragments. Previous answers
+are comparison context, not fresh evidence; old E-number citations cannot be reused.
+This is not cross-chat literature-summary retrieval or full-section comprehension.
 
 E136 adds project-scoped `af3_batch`, `pose_qc` and `screening_benchmark` tools and
 durable workflow nodes. Use the [P0 testing guide](../../../to_human/E136_SCIENTIFIC_P0_AND_TESTING.md)

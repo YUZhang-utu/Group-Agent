@@ -16,6 +16,15 @@ scientific questions over repeatedly reading the same page. Use the remaining st
 budget to synthesize a bounded answer and explicitly state coverage limitations.
 Do not turn a literature-review request into a new calculation or project change.'''
 
+GUIDE += ''' For a requested section review (such as Methods), search locates pages;
+then read the relevant pages explicitly. Do not stop at matching search fragments
+when the requested pages can be read. A selected page is paginated automatically
+within the turn budget. Check indexed_reading_coverage before claiming completion.
+previous_literature_summary, when available, is the complete prior answer for
+comparison, not source evidence. Do not say it was not supplied when available.
+Previous-turn evidence IDs are not current evidence IDs. Cite current passages for
+corrections. Current-turn coverage must not be presented as cumulative coverage.'''
+
 
 def progress(steps):
     documents={};cursors={};calls=0
@@ -40,8 +49,10 @@ def progress(steps):
         continuation_cursors=list(cursors.values())[-8:],coverage='Only returned passages; listings and search hits do not establish full-text review')
 
 
-def recovery_context(request,evidence,steps,maximum=50000):
-    ledger=progress(steps);selected=[];used=len(request)+len(json.dumps(ledger))
+def recovery_context(request,evidence,steps,maximum=50000,previous=None):
+    from .literature_reading import coverage
+    ledger=progress(steps);state=coverage(steps);selected=[]
+    used=len(request)+len(json.dumps(ledger))+len(json.dumps(previous))+len(json.dumps(state))
     # Retain recent complete evidence records, never cut passage text or JSON.
     for row in reversed(evidence):
         if row['tool']!='project_knowledge' or row['status']!='complete' or row['result'].get('collection')!='public':continue
@@ -49,7 +60,7 @@ def recovery_context(request,evidence,steps,maximum=50000):
         if used+size>maximum:continue
         selected.append(row);used+=size
     selected.reverse()
-    return dict(request=request,public_read_progress=ledger,evidence=selected,
+    return dict(request=request,public_read_progress=ledger,evidence=selected,previous_literature_summary=previous,indexed_reading_coverage=state,
                 omitted_evidence_records=sum(r['tool']=='project_knowledge' and r['status']=='complete' for r in evidence)-len(selected),
                 instruction='Only cite facts present in this context. Explicitly state unread or omitted coverage. No tool calls or scientific execution.')
 
