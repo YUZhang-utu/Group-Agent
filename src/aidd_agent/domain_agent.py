@@ -78,7 +78,8 @@ That requirement applies to receptor-contact target_search, not every library se
 For inspection of an explicit PDB ID, request workflow action pdb_inspect. It saves
 the structure and deposited-evidence report within the project without selecting
 an isoform, adopting a receptor or running calculations. Read its completed report
-with task_report/read_artifact and use project notes for requested narrative findings.
+with pdb_review for a local summary and an explicitly requested source-linked project
+note. task_report/read_artifact remain available for narrower details.
 Unreported metadata is a field-level limitation, not a reason to block inspection.
 Never ask the user to authorize an unavailable coordinator or invent a tool.
 For broader target discovery, use protein resolution and experimental structure discovery,
@@ -237,6 +238,11 @@ def pending(value):
 
 
 def run(app,sid,request,provider,*,planner=None,tools=None,max_steps=18,on_event=None,finalizer=None):
+    if planner is None and tools is None:
+        from .pdb_review import coordinate
+        local_answer = coordinate(app, sid, request, on_event)
+        if local_answer is not None:
+            return local_answer
     from .chat_agent import ROUTER,WORKFLOWS,read_json
     from .llm_profiles import select_llm_profile
     from .literature_reading import coverage,next_page_call,previous_summary,methods_feedback,coverage_note

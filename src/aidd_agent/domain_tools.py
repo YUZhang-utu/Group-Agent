@@ -70,6 +70,11 @@ TOOLS['af3_review'] = ('Read original output files of a completed project AF3 pr
     'and reports best seed/sample and actual seed coverage. Use before declaring ranking unavailable from old reports. '
     'Repeated labels do not establish matrix order; confidence is not affinity.')
 TOOL_ARGUMENTS['af3_review'] = {'task_id','step_id','offset','limit'}
+TOOLS['pdb_review'] = ('Review one completed pdb_inspect task locally. Requires task_id; optional save_note boolean '
+    'only for an explicit current-user request to record a project note. Verifies saved report and structure hashes, '
+    'returns a deterministic bounded summary, coverage and saved paths. No new structure retrieval, inference or '
+    'receptor adoption. Notes are source-linked and idempotent. Use instead of repeatedly planning report reads.')
+TOOL_ARGUMENTS['pdb_review'] = {'task_id', 'save_note'}
 TOOLS['pose_qc'] += ' Alternatively specify set_id and count (1..1000) to check saved candidate poses, reusing original/posed MOL2 exports without rescanning.'
 TOOLS['af3_batch'] += ' Instead of literal protein_sequences, protein_task_id may reuse the exact assembly from one completed project AF3 preparation task; never multiply those copies again.'
 TOOLS['research_workflow'] += ' Additional queued node tools: af3_batch, pose_qc, screening_benchmark.'
@@ -236,6 +241,9 @@ class DomainTools:
         from .chat_agent import read_json,validate_route
         from .project_context import ensure_within
         validate_arguments(name, args)
+        if name=='pdb_review':
+            from .pdb_review import review
+            return review(self.app, self.sid, args, self.request)
         if name=='literature_reviews':
             from .literature_reviews import handle
             return handle(self.app,self.sid,args)

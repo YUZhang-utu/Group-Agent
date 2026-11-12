@@ -50,6 +50,13 @@ Provider changes create fresh plans; they do not silently replace sealed plans.
 
 ## Persistent chat
 
+E145 routes explicit single-task saved PDB inspection reviews through a local
+coordinator before provider configuration or JSON planning. `pdb_review` verifies
+owned report/structure hashes and renders a bounded deposited-evidence summary.
+An explicitly requested project note is source-linked and idempotent. No source
+retrieval, computation or receptor adoption occurs. Other artifact types and mixed
+compute requests retain their existing routes; this is not universal recovery.
+
 E138 public-literature reading returns whole passages within the model evidence
 budget. Follow next_offset exactly, not the requested limit. The trace records
 reading coverage and failure stage. A bounded tool-free text synthesis may recover
