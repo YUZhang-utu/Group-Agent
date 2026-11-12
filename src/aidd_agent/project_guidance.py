@@ -220,7 +220,8 @@ def task_event(app,jid,status):
             raw=path.read_bytes();report=json.loads(raw)
             facts={}
             fields={'kind','status','prepared_molecules','failed_molecules','ranked_molecules','processed_conformers',
-                'exported_molecules','full_coverage','shortfall','set_id','count','model','input_json','confidence_analysis','names'}
+                'exported_molecules','full_coverage','shortfall','set_id','count','model','input_json','confidence_analysis','names',
+                'pdb_id','report','report_sha256','isoform_assignment','polymer_entity_count','assembly_annotation_count'}
             for step_id,step in report.get('steps',{}).items():
                 if step.get('status')!='complete':continue
                 facts[step_id]={k:v for k,v in step.get('result',{}).items() if k in fields and isinstance(v,(str,int,float,bool))}

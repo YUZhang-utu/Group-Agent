@@ -32,6 +32,7 @@ ACTION_FIELDS = {
     "protein_resolve": ({"gene", "organism_id"}, set()),
     "pdb_search": ({"protein_step"}, {"max_resolution"}),
     "pdb_fetch": ({"pdb_id"}, set()),
+    "pdb_inspect": ({"pdb_id"}, set()),
     "structure_survey": ({"protein_step"}, {"max_resolution", "max_structures", "pdb_ids"}),
     "structure_diversity": ({"protein_step", "reference_pdb"}, {"maximum_references", "similarity_threshold"}),
     "anchor_recommend": ({"source_run", "provider"}, set()),
@@ -87,6 +88,15 @@ User-supplied literal protein sequences may be copied into af3_prepare.protein_s
 protein_resolve uses gene and organism taxonomy ID; when identity is ambiguous, use clarifications.
 protein_fetch uses a known UniProt accession, optionally organism_id.
 pdb_search consumes a prior protein step; max_resolution is optional Angstrom cutoff.
+pdb_inspect takes only an explicit pdb_id and saves its mmCIF plus a project-local
+inspection report: deposited polymer sequences, per-model coordinate coverage,
+author/label chains, assembly annotations/operators, nonwater ligand/ion instances,
+database alignments, sequence differences and unobserved-residue annotations.
+Use it for single-structure inspection without protein_from_pdb or isoform selection.
+Missing annotations remain unreported; reference isoforms and mutations are not
+independently verified. It does not adopt receptors, prepare molecules or run inference.
+Its saved task report is project persistence; additional narrative notes belong to
+the outer project coordinator and must not block this executable inspection.
 structure_survey consumes a prior verified protein step to discover ligand-bound PDBs,
 analyze crystal contacts and mapped recurrence, and fall back to literature when no usable
 crystal exists. Use this for a pre-search structure/anchor survey, not search_3d.

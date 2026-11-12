@@ -26,6 +26,14 @@ CLI/profile setup. Existing adapters are in `src/aidd_agent/protein_data.py`,
 structures at resolution<=3Angstrom. `pdb_fetch` downloads an explicit PDB ID into
 the Project with provenance. The prompt adapter does not select a receptor.
 
+`pdb_inspect` takes an explicit PDB ID without an identity dependency. It saves the
+mmCIF and an inspection report with deposited sequences, coordinate coverage,
+author/label chains, assembly annotations, nonwater nonpolymer instances, database
+alignments and sequence differences. Missing metadata stays unreported; deposited
+mapping does not verify an isoform. Task artifacts persist in the active Project.
+Use the outer project tools for narrative notes; their absence from a scientific
+plan is not a reason to block inspection. No receptor or screening ligand is adopted.
+
 A UniProt association alone does not establish the desired chain/domain, complete
 pocket, ligand state or suitable conformation. Review the actual structure and
 existing comparison/campaign records before selection. Preserve missing residues,

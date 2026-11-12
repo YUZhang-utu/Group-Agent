@@ -51,7 +51,7 @@ def structures(job, project, collection='diverse'):
         payload=step.get('result',{});action=step.get('action')
         if action=='af3_run':
             add(payload['model'],'AF3 predicted complex',expected=payload.get('structure_sha256'),kind='prediction')
-        elif action=='pdb_fetch' and payload.get('path'):
+        elif action in {'pdb_fetch', 'pdb_inspect'} and payload.get('path'):
             add(payload['path'],payload.get('pdb_id','PDB structure'),expected=payload.get('sha256'))
         elif payload.get('report'):
             path=ensure_within(Path(payload['report']),project); child=consensus_report(read(path),project)

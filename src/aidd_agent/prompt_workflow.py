@@ -366,6 +366,9 @@ def execute_step(step, directory, execution, results, cfg, allow_compute, servic
         return dict(accession=protein["accession"], candidates=len(candidates), receptor_selected=False)
     if action == "pdb_fetch":
         return services.pdb_fetch(params["pdb_id"], directory)
+    if action == "pdb_inspect":
+        from .pdb_inspection import run
+        return run(params["pdb_id"], directory, services)
     if action == "af3_prepare":
         from .af3_inputs import resolve, seeds
         sequences, proteins = resolve(params, execution)

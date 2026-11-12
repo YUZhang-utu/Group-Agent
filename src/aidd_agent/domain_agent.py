@@ -75,7 +75,13 @@ start for an explicitly requested full scan, run for an owned prepared query.
 Missing site/reference/chain information requires clarification. Follow-up task
 status or result questions must not resubmit start. Preserve any specified cofactors.
 That requirement applies to receptor-contact target_search, not every library search.
-For a target name, use protein resolution and experimental structure discovery,
+For inspection of an explicit PDB ID, request workflow action pdb_inspect. It saves
+the structure and deposited-evidence report within the project without selecting
+an isoform, adopting a receptor or running calculations. Read its completed report
+with task_report/read_artifact and use project notes for requested narrative findings.
+Unreported metadata is a field-level limitation, not a reason to block inspection.
+Never ask the user to authorize an unavailable coordinator or invent a tool.
+For broader target discovery, use protein resolution and experimental structure discovery,
 diversity/pocket/consensus analysis to obtain actual cocrystal ligand queries. Do not
 demand that the user manually supply a receptor when they asked you to discover it.
 Use structure_workflow to inspect available stages and reference choices. Do not

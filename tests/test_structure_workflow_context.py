@@ -49,7 +49,11 @@ def test_unresolved_reference_or_failed_child_has_no_next_execution(tmp_path):
     con=next(r for r in rows if r['task_id']=='con')
     assert con['stages'][0]['reference_options'][0]['query_id']=='actual-reference'
     other=app.new_session()
-    assert not DomainTools(app,other,'inspect','deepseek').call('structure_workflow',{})['tasks']
+    shared=DomainTools(app,other,'inspect','deepseek').call('structure_workflow',{})['tasks']
+    assert {row['task_id'] for row in shared}=={'con','bad'}
+    foreign=DomainTools(app,sid,'Create a separate project','deepseek').call('project',
+        dict(operation='create',name='Other target',target='Other',objective='Separate work'))['session']
+    assert not DomainTools(app,foreign,'inspect','deepseek').call('structure_workflow',{})['tasks']
 
 
 def test_report_path_escape_is_reported_without_offering_transition(tmp_path):
